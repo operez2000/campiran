@@ -1,0 +1,44 @@
+{
+    "user": {
+        "id": "dab09684-5aee-456a-8764-ea08da6b29b9",
+        "aud": "authenticated",
+        "role": "authenticated",
+        "email": "opereznet@hotmail.com",
+        "phone": "",
+        "confirmation_sent_at": "2025-08-20T06:07:11.454310148Z",
+        "app_metadata": {
+            "provider": "email",
+            "providers": [
+                "email"
+            ]
+        },
+        "user_metadata": {
+            "email": "opereznet@hotmail.com",
+            "email_verified": false,
+            "phone_verified": false,
+            "sub": "dab09684-5aee-456a-8764-ea08da6b29b9"
+        },
+        "identities": [
+            {
+                "identity_id": "6d8a011f-5e19-4895-a656-1d74a4e44b5b",
+                "id": "dab09684-5aee-456a-8764-ea08da6b29b9",
+                "user_id": "dab09684-5aee-456a-8764-ea08da6b29b9",
+                "identity_data": {
+                    "email": "opereznet@hotmail.com",
+                    "email_verified": false,
+                    "phone_verified": false,
+                    "sub": "dab09684-5aee-456a-8764-ea08da6b29b9"
+                },
+                "provider": "email",
+                "last_sign_in_at": "2025-08-20T06:07:11.441428899Z",
+                "created_at": "2025-08-20T06:07:11.44148Z",
+                "updated_at": "2025-08-20T06:07:11.44148Z",
+                "email": "opereznet@hotmail.com"
+            }
+        ],
+        "created_at": "2025-08-20T06:07:11.428232Z",
+        "updated_at": "2025-08-20T06:07:13.058709Z",
+        "is_anonymous": false
+    },
+    "session": null
+}

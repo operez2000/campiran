@@ -1,0 +1,73 @@
+.background-layout-ant {
+  min-height: 100vh;
+  min-width: 100vw;
+//   display: flex;
+//   align-items: center;
+//   justify-content: center;
+  background: linear-gradient(135deg, #0f2027 0%, #2c5364 40%, #56ccf2 80%, #fff 100%);
+  overflow: auto;
+}
+
+.glass-element {
+  backdrop-filter: blur(20px) saturate(70%);
+  -webkit-backdrop-filter: blur(20px) saturate(70%);
+  background: rgba(26, 66, 83, 0.785);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(35, 151, 209, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+//   max-width: 370px;
+//   width: 100%;
+//   padding: 32px 24px;
+}// app global css in SCSS form
+
+.my-sticky-header-table {
+  /* height or max-height is important */
+  height: auto;
+}
+
+.q-table__top,
+.q-table__bottom,
+thead tr:first-child th {
+  /* bg color is important for th; just specify one */
+  // background-color: #00b4ff;
+}
+
+thead tr th {
+  position: sticky;
+  z-index: 1;
+}
+
+thead tr:first-child th {
+  top: 0;
+}
+
+  /* this is when the loading indicator appears */
+.q-table--loading thead tr:last-child th {
+  /* height of all previous header rows */
+  top: 48px;
+}
+
+  /* prevent scrolling behind sticky top row on focus */
+tbody {
+  /* height of all previous header rows */
+  scroll-margin-top: 48px;
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #aaa #2f2f2f;
+}
+
+html::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: #aaa;
+  border-radius: 10px;
+}
+
+html::-webkit-scrollbar-track {
+  background: #4c4c4c;
+}

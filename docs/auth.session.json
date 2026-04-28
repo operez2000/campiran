@@ -1,0 +1,55 @@
+{
+    "id": "d2bfbcfd-dd4e-4bd6-9f80-dafdecdca117",
+    "aud": "authenticated",
+    "role": "authenticated",
+    "email": "operez2000@gmail.com",
+    "email_confirmed_at": "2025-06-26T03:04:38.941468Z",
+    "phone": "",
+    "confirmed_at": "2025-06-26T03:04:38.941468Z",
+    "last_sign_in_at": "2025-09-08T05:11:35.744479Z",
+    "app_metadata": {
+        "provider": "google",
+        "providers": [
+            "google"
+        ]
+    },
+    "user_metadata": {
+        "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocJqI9ip0NN8Ra2KurebWFluwdq97TsWGEKAiHyhVk8RF87EMtIUFA=s96-c",
+        "email": "operez2000@gmail.com",
+        "email_verified": true,
+        "full_name": "Oscar Perez",
+        "iss": "https://accounts.google.com",
+        "name": "Oscar Perez",
+        "phone_verified": false,
+        "picture": "https://lh3.googleusercontent.com/a/ACg8ocJqI9ip0NN8Ra2KurebWFluwdq97TsWGEKAiHyhVk8RF87EMtIUFA=s96-c",
+        "provider_id": "114862864652414277217",
+        "sub": "114862864652414277217"
+    },
+    "identities": [
+        {
+            "identity_id": "ede6e707-7296-4a95-bdc6-0a2664bb2d3b",
+            "id": "114862864652414277217",
+            "user_id": "d2bfbcfd-dd4e-4bd6-9f80-dafdecdca117",
+            "identity_data": {
+                "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocJqI9ip0NN8Ra2KurebWFluwdq97TsWGEKAiHyhVk8RF87EMtIUFA=s96-c",
+                "email": "operez2000@gmail.com",
+                "email_verified": true,
+                "full_name": "Oscar Perez",
+                "iss": "https://accounts.google.com",
+                "name": "Oscar Perez",
+                "phone_verified": false,
+                "picture": "https://lh3.googleusercontent.com/a/ACg8ocJqI9ip0NN8Ra2KurebWFluwdq97TsWGEKAiHyhVk8RF87EMtIUFA=s96-c",
+                "provider_id": "114862864652414277217",
+                "sub": "114862864652414277217"
+            },
+            "provider": "google",
+            "last_sign_in_at": "2025-06-26T03:04:38.934554Z",
+            "created_at": "2025-06-26T03:04:38.934605Z",
+            "updated_at": "2025-09-08T05:11:35.734926Z",
+            "email": "operez2000@gmail.com"
+        }
+    ],
+    "created_at": "2025-06-26T03:04:38.922565Z",
+    "updated_at": "2025-09-10T03:57:49.674914Z",
+    "is_anonymous": false
+}
