@@ -63,7 +63,7 @@ onBeforeMount(() => {
   <div>
     <q-page class="flex items-center justify-center background-layout" v-if="isHydrated">
       <div v-if="verificaUsuario" class="q-pa-md">
-        <img alt="Campiran logo" src="~assets/logo.png" width="400">
+        <img alt="Campiran logo" src="/logo.png" width="400">
       </div>
       <div v-else>
         <h1 class="text-h4 text-center">En espera de Verificación...</h1>

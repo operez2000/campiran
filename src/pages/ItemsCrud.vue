@@ -63,7 +63,7 @@
                 <q-tooltip>Editar</q-tooltip>
               </q-btn>
               <q-btn dense flat round icon="print" color="secondary" @click="printLabel(props.row)">
-                <q-tooltip>Imprimir</q-tooltip>
+                <q-tooltip>Imprimir Etiqueta</q-tooltip>
               </q-btn>
               <q-btn dense flat round icon="delete" color="negative" @click="confirmDelete(props.row)">
                 <q-tooltip>Eliminar</q-tooltip>
@@ -236,7 +236,6 @@
                       label="Precio 1"
                       outlined
                       type="number"
-                      :rules="[val => !!val || 'Campo requerido']"
                       @focus="$event.target.select()"
                     />
                   </div>
@@ -247,7 +246,6 @@
                       label="Precio 2"
                       outlined
                       type="number"
-                      :rules="[val => !!val || 'Campo requerido']"
                       @focus="$event.target.select()"
                     />
                   </div>
@@ -258,7 +256,6 @@
                       label="Precio 3"
                       outlined
                       type="number"
-                      :rules="[val => !!val || 'Campo requerido']"
                       @focus="$event.target.select()"
                     />
                   </div>
@@ -482,27 +479,27 @@ const pagination = ref({
 })
 
 const columns = [
+  { name: 'actions', label: 'Acciones', field: 'actions', align: 'center' },
   { name: 'code', label: 'Código', field: 'code', align: 'left', sortable: true },
-  { name: 'barcode', label: 'Código de Barras', field: 'barcode', align: 'left', sortable: true },
+  // { name: 'barcode', label: 'Código de Barras', field: 'barcode', align: 'left', sortable: true },
   { name: 'description', label: 'Descripción', field: 'description', align: 'left', sortable: true },
   { name: 'description_short', label: 'Descripción Corta (para recibo)', field: 'description_short', align: 'left', sortable: true },
   { name: 'type', label: 'Tipo', field: 'type', align: 'left', sortable: true, format: val => val === 'P' ? 'Producto' : 'Servicio' },
   { name: 'price1', label: 'Precio 1', field: 'price1', align: 'right', sortable: true, format: val => `$${parseFloat(val || 0).toFixed(2)}` },
   { name: 'price2', label: 'Precio 2', field: 'price2', align: 'right', sortable: true, format: val => `$${parseFloat(val || 0).toFixed(2)}` },
-  { name: 'price3', label: 'Precio 3', field: 'price3', align: 'right', sortable: true, format: val => `$${parseFloat(val || 0).toFixed(2)}` },
-  { name: 'actions', label: 'Acciones', field: 'actions', align: 'center' }
+  { name: 'price3', label: 'Precio 3', field: 'price3', align: 'right', sortable: true, format: val => `$${parseFloat(val || 0).toFixed(2)}` }
 ]
 
 const tab = ref('datos')
 const images = ref([])
 const imageFile = ref(null)
 const slide = ref(0)
-// Images stored in DB table item_images (BYTEA)
+// Images stored in Supabase Storage (bucket: item_images) and referenced in DB table item_images
 
 // Handle image selection from QFile
-const onImageSelected = (val) => {
+const onImageSelected = async (val) => {
   try {
-    const file = Array.isArray(val) ? val[0] : val
+    let file = Array.isArray(val) ? val[0] : val
 
     // Clear selection if none
     if (!file) {
@@ -511,7 +508,6 @@ const onImageSelected = (val) => {
     }
 
     // Basic validations
-    const maxSizeMB = 5
     if (!file.type || !file.type.startsWith('image/')) {
       imageFile.value = null
       $q.notify({
@@ -522,14 +518,81 @@ const onImageSelected = (val) => {
       return
     }
 
+    const maxSizeMB = 5;
+    const maxSizeKB = 800;
+
     if (file.size > maxSizeMB * 1024 * 1024) {
       imageFile.value = null
       $q.notify({
         color: 'warning',
-        message: `La imagen supera ${maxSizeMB}MB`,
+        message: `La imagen supera ${maxSizeMB}MB y no puede ser procesada`,
         position: 'top-right'
       })
       return
+    }
+
+    if (file.size > maxSizeKB * 1024) {
+      const originalSizeKB = (file.size / 1024).toFixed(2);
+      
+      const compressImage = (fileToCompress) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(fileToCompress);
+          reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              
+              const max_width = 800;
+              if (width > max_width) {
+                height = Math.round((height * max_width) / width);
+                width = max_width;
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+
+              canvas.toBlob((blob) => {
+                if (!blob) return reject(new Error('Canvas is empty'));
+                const newFile = new File([blob], fileToCompress.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                resolve(newFile);
+              }, 'image/jpeg', 0.8);
+            };
+            img.onerror = reject;
+          };
+          reader.onerror = reject;
+        });
+      };
+
+      try {
+        const compressedFile = await compressImage(file);
+        const newSizeKB = (compressedFile.size / 1024).toFixed(2);
+        
+        $q.notify({
+          color: 'info',
+          message: `La imagen se redujo porque superaba los 800 KB. Tamaño original: ${originalSizeKB} KB, Nuevo tamaño: ${newSizeKB} KB.`,
+          position: 'top-right',
+          timeout: 4000
+        });
+        
+        file = compressedFile;
+      } catch (err) {
+        console.error('Error compressing image:', err);
+        $q.notify({
+          color: 'negative',
+          message: 'Error al intentar reducir el tamaño de la imagen',
+          position: 'top-right'
+        });
+        imageFile.value = null;
+        return;
+      }
     }
 
     // Accept the file
@@ -546,16 +609,7 @@ const onImageSelected = (val) => {
   }
 }
 
-// Load images for current item from DB
-// Helper: convert Postgres BYTEA hex (e.g., "\\x4141...") back to ASCII string
-const byteaHexToAscii = (hex) => {
-  const clean = String(hex).startsWith('\\x') ? String(hex).slice(2) : String(hex)
-  let out = ''
-  for (let i = 0; i < clean.length; i += 2) {
-    out += String.fromCharCode(parseInt(clean.slice(i, i + 2), 16))
-  }
-  return out
-}
+
 
 const fetchItemImages = async () => {
   if (!form.value.id_item) {
@@ -564,7 +618,7 @@ const fetchItemImages = async () => {
   }
   const { data, error } = await supabase
     .from('item_images')
-    .select('id_item_image, image, created_at')
+    .select('id_item_image, image_url, image_path, created_at')
     .eq('id_item', form.value.id_item)
     .order('created_at', { ascending: true })
   if (error) {
@@ -573,10 +627,10 @@ const fetchItemImages = async () => {
     return
   }
   images.value = (data || []).map(row => {
-    const base64FromDb = byteaHexToAscii(row.image)
     return {
       id: row.id_item_image,
-      dataUrl: `data:image/*;base64,${base64FromDb}`,
+      dataUrl: row.image_url,
+      path: row.image_path,
       created_at: row.created_at
     }
   })
@@ -607,32 +661,46 @@ const uploadImage = async () => {
       return
     }
 
-    // Convert file to base64 and insert into item_images (BYTEA)
-    const toBase64 = (f) => new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const result = reader.result // data URL
-        const base64 = String(result).split(',')[1] || ''
-        resolve(base64)
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(f)
-    })
+    loading.value = true
 
-    const base64 = await toBase64(file)
+    // 1. Upload to Supabase Storage
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${form.value.id_item}/${Date.now()}.${fileExt}`
+    
+    const { error: uploadError } = await supabase.storage
+      .from('item_images')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      })
 
+    if (uploadError) throw uploadError
+
+    // 2. Get Public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('item_images')
+      .getPublicUrl(fileName)
+
+    // 3. Insert record into item_images table
     const { data: insertData, error: insertError } = await supabase
       .from('item_images')
-      .insert({ id_item: form.value.id_item, image: base64 })
-      .select('id_item_image, image, created_at')
+      .insert({ 
+        id_item: form.value.id_item, 
+        image_url: publicUrl,
+        image_path: fileName
+      })
+      .select()
       .single()
 
     if (insertError) throw insertError
 
-    // item_images.image is returned as BYTEA hex, convert to base64 ASCII for data URL
-    const base64FromDb = byteaHexToAscii(insertData.image)
-    const dataUrl = `data:image/*;base64,${base64FromDb}`
-    images.value.push({ id: insertData.id_item_image, dataUrl, created_at: insertData.created_at })
+    images.value.push({ 
+      id: insertData.id_item_image, 
+      dataUrl: insertData.image_url, 
+      path: insertData.image_path,
+      created_at: insertData.created_at 
+    })
+    
     // Reset QFile
     imageFile.value = null
     slide.value = images.value.length - 1
@@ -649,6 +717,8 @@ const uploadImage = async () => {
       message: `Error al subir imagen: ${error.message || error}`,
       position: 'top-right'
     })
+  } finally {
+    loading.value = false
   }
 }
 
@@ -657,21 +727,34 @@ const removeImage = async (idx) => {
   const img = images.value[idx]
   if (!img) return
   try {
+    // 1. Delete from Storage
+    if (img.path) {
+      const { error: storageError } = await supabase.storage
+        .from('item_images')
+        .remove([img.path])
+      if (storageError) {
+        console.warn('Error deleting from storage:', storageError.message)
+      }
+    }
+
+    // 2. Delete from DB
     const { error: deleteError } = await supabase
       .from('item_images')
       .delete()
       .eq('id_item_image', img.id)
+    
     if (deleteError) {
       console.warn('Error deleting image row:', deleteError.message)
-      $q.notify({ color: 'warning', message: 'No se pudo eliminar la imagen', position: 'top-right' })
+      $q.notify({ color: 'warning', message: 'No se pudo eliminar la imagen del registro', position: 'top-right' })
+    } else {
+      images.value.splice(idx, 1)
+      if (slide.value >= images.value.length) {
+        slide.value = Math.max(0, images.value.length - 1)
+      }
+      $q.notify({ color: 'positive', message: 'Imagen eliminada', position: 'top-right' })
     }
   } catch (e) {
     console.warn('removeImage error:', e)
-  } finally {
-    images.value.splice(idx, 1)
-    if (slide.value >= images.value.length) {
-      slide.value = Math.max(0, images.value.length - 1)
-    }
   }
 }
 

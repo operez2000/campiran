@@ -3,7 +3,7 @@
     <div class="glass-card">
       <q-card-section>
         <q-img
-          src="~assets/logo.png"
+          src="/logo.png"
           alt="Logo"
           fit="cover"
           spinner-color="primary"

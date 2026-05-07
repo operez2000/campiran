@@ -31,3 +31,5 @@ yarn-error.log*
 
 # local .env files
 .env.local*
+docs/signin.google.json
+docs/signin.google.json

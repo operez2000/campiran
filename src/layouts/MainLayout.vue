@@ -71,7 +71,7 @@ watch(
     <q-header>
       <q-toolbar class="flex justify-between q-my-none q-py-none">
         <div v-if="!verificaUsuario">
-          <img class="q-mt-sm" src="~assets/logo.png" alt="Campiran Logo" width="100" />
+          <img class="q-mt-sm" src="/logo.png" alt="Campiran Logo" width="100" />
         </div>
         <div v-else>
           <div class="cursor-pointer non-selectable">
