@@ -15,15 +15,21 @@ export async function GET(request: NextRequest) {
   const protocol = forwardedProto || (request.nextUrl.protocol ? request.nextUrl.protocol.replace(':', '') : (isLocalOrPort ? 'http' : 'https'))
   const origin = `${protocol}://${host}`
 
-  if (code) {
-    const supabase = await createClient()
-    const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(code)
+  try {
+    if (code) {
+      const supabase = await createClient()
+      const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(code)
 
-    if (!error && session?.user) {
-      // Ensure profile is resolved and ready
-      await getAuthenticatedProfile(supabase, session.user)
-      return NextResponse.redirect(`${origin}${next}`)
+      if (error) {
+        console.error('[auth/callback] exchangeCodeForSession error:', error.message)
+      } else if (session?.user) {
+        // Ensure profile is resolved and ready
+        await getAuthenticatedProfile(supabase, session.user)
+        return NextResponse.redirect(`${origin}${next}`)
+      }
     }
+  } catch (err) {
+    console.error('[auth/callback] Unexpected error during code exchange:', err)
   }
 
   // If code exchange failed
