@@ -10,15 +10,22 @@ import { type Profile, type Store } from '@/lib/types'
 import { toast } from 'sonner'
 import {
   Moon, Sun, Menu, ChevronDown, LogOut, User,
-  Store as StoreIcon, Check,
+  Store as StoreIcon, Check, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
 
 interface HeaderProps {
   profile: Profile
   onMenuClick: () => void
+  onToggleDesktop?: () => void
+  isDesktopOpen?: boolean
 }
 
-export function Header({ profile, onMenuClick }: HeaderProps) {
+export function Header({
+  profile,
+  onMenuClick,
+  onToggleDesktop,
+  isDesktopOpen = true,
+}: HeaderProps) {
   const router = useRouter()
   const supabase = createClient()
   const { currentStore, setStore, storeId } = useStore()
@@ -104,9 +111,28 @@ export function Header({ profile, onMenuClick }: HeaderProps) {
         <Menu size={20} />
       </button>
 
-      {/* Logo (Visible ONLY on mobile, desktop sidebar already displays it) */}
-      <div className="lg:hidden flex items-center gap-2.5 mr-2">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+      {/* Desktop sidebar toggle button */}
+      <button
+        onClick={onToggleDesktop}
+        className="hidden lg:flex p-2 rounded-xl btn-ghost text-muted-foreground hover:text-foreground transition-colors"
+        title={isDesktopOpen ? 'Ocultar menú lateral (⌘B)' : 'Mostrar menú lateral (⌘B)'}
+        aria-label={isDesktopOpen ? 'Ocultar menú lateral' : 'Mostrar menú lateral'}
+      >
+        {isDesktopOpen ? (
+          <PanelLeftClose size={20} />
+        ) : (
+          <PanelLeftOpen size={20} className="text-emerald-500" />
+        )}
+      </button>
+
+      {/* Logo (Visible on mobile, OR on desktop when desktop sidebar is hidden) */}
+      <div
+        className={cn(
+          'items-center gap-2.5 mr-2 transition-all duration-300',
+          isDesktopOpen ? 'flex lg:hidden' : 'flex'
+        )}
+      >
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0">
           <span className="text-white font-bold text-sm">C</span>
         </div>
         <span className="font-bold text-base text-[var(--foreground)]">
