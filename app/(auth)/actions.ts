@@ -70,7 +70,12 @@ export async function signInWithGoogle() {
 export async function forgotPassword(formData: FormData) {
   const email = formData.get('email') as string
   const headersList = await headers()
-  const origin = headersList.get('origin') ?? ''
+  const forwardedHost = headersList.get('x-forwarded-host')
+  const host = forwardedHost || headersList.get('host') || 'localhost:3000'
+  const forwardedProto = headersList.get('x-forwarded-proto')
+  const isLocalOrPort = host.includes('localhost') || host.includes(':')
+  const protocol = forwardedProto || (isLocalOrPort ? 'http' : 'https')
+  const origin = headersList.get('origin') || `${protocol}://${host}`
 
   const supabase = await createClient()
   const { error } = await supabase.auth.resetPasswordForEmail(email, {

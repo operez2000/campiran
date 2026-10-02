@@ -36,7 +36,16 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // 1. Skip API routes and static assets
-  if (pathname.startsWith('/api/')) return NextResponse.next()
+  if (
+    pathname.startsWith('/api/') ||
+    pathname === '/manifest.json' ||
+    pathname.endsWith('.json') ||
+    pathname.endsWith('.svg') ||
+    pathname.endsWith('.png') ||
+    pathname.endsWith('.ico')
+  ) {
+    return NextResponse.next()
+  }
 
   // 1.1 If OAuth code arrives on root or outside /auth/callback (e.g. Supabase redirect fallback),
   // forward immediately to /auth/callback preserving all query params
@@ -127,6 +136,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest.json|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|ico|webmanifest)$).*)',
   ],
 }
