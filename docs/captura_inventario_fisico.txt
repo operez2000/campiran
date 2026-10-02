@@ -1,0 +1,55 @@
+Plan de implementación para lectura de Inventario Físico:
+- Pantalla nueva
+    - Utilizar como acceso la opción Captura (Físico) del menú lateral "Inventario" 
+- Adaptar el componente a 100% responsivo para mòvil.
+- EL componente debe dejar por default un autofocus en el input de búsqueda de código de barras, también el usuario puede capturar manualmente el código o ID del item y dejar listo con un Enter para que sirva 
+  de buscador ya sea por código de barras, código de artículo. 
+- Agregar una opción para poder buscar un item por descripción o por parte de la descripción en una tabla con los siguientes campos:
+    - Imagen
+    - Código (Id)
+    - Código de barras
+    - Descripción
+- Debe poder filtrar por ubicación
+- Considerar la sucursal del usuario logueado, mostrarla por default en el filtro de ubicación y realizar las afectaciones a las existencias de esa sucursal en Base de Datos.
+- Todos los cambios deben ser en tiempo real.
+- Debe mostrar el stock actual de cada producto
+- Debe mostrar el stock físico (lo que se está escaneando)
+- Debe mostrar la diferencia entre el stock actual y el stock físico
+- Por default la cantidad debe ser 1 pero si el usuario se equivoca puede agregar cantidad en negativo para compensar el error.
+- El usuario puede agregar una cantidad para antes de hacer el escaneo o captura 
+- Una vez registrada la lectura o captura, el foco debe regresar al input inicial para poder continuar con la captura de otro producto, siempre se debe regresar al input inicial y limpiar la cantidad a 1.
+- Realizar un registro en la tabla de movimientos "inventarios" para que se muestre el historial de las lecturas
+- Almacenar el usuario que esta realizando el inventario y en que sucursal
+- Al realizar la lectura o captura se debe mostrar en tiempo real las diferencias del stock actual y el stock físico
+- Al realizar la lectura o captura la aplicación debe desplegar los datos del item.
+    - Stock actual
+    - Stock físico
+    - Diferencia
+- Debe mostrar una tabla de los items que se han escaneado con la siguiente información:
+    - Producto
+    - Stock actual
+    - Stock físico
+    - Diferencia
+    - usuario
+    - ubicación
+    - Fecha y hora
+- Debe mostrar el historial de los items escaneados con la siguiente información:
+    - Fecha y hora
+    - Producto
+    - Stock actual
+    - Stock físico
+    - Diferencia
+    - usuario
+    - ubicación
+- Debe mostrar el historial general de los inventarios realizados con la siguiente información:
+    - Fecha y hora
+    - Usuario
+    - Sucursal
+    - Diferencia
+- Debe mostrar el detalle de cada inventario realizado con la siguiente información:
+    - Fecha y hora
+    - Producto
+    - Stock actual
+    - Stock físico
+    - Diferencia
+- El documento pdf debe estar firmado digitalmente por el usuario que esta realizando el inventario
