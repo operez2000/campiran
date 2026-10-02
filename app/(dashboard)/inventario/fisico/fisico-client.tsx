@@ -22,9 +22,26 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import {
   ScanLine, Search, Plus, Minus, Check, AlertCircle,
-  FileText, History, CheckCircle2, MapPin, X, ArrowUpDown,
+  FileText, History, CheckCircle2, MapPin, X,
   Boxes, RefreshCw
 } from 'lucide-react'
+
+// Normalize user object whether it comes from users (id_user, user_name) or profiles (id, full_name)
+function normalizeUser(rawUser?: Record<string, unknown> | null): Profile | undefined {
+  if (!rawUser) return undefined
+  return {
+    id: String(rawUser.id || rawUser.id_user || ''),
+    full_name: (rawUser.full_name as string) || (rawUser.user_name as string) || (rawUser.email as string) || 'Usuario',
+    email: (rawUser.email as string) || null,
+    phone: (rawUser.phone as string) || null,
+    role: (rawUser.role as Profile['role']) || 'ADMIN',
+    id_store: (rawUser.id_store as string) || null,
+    status: rawUser.status === 'I' ? 'inactive' : 'active',
+    avatar_url: (rawUser.avatar_url as string) || null,
+    created_at: (rawUser.created_at as string) || '',
+    updated_at: (rawUser.updated_at as string) || '',
+  }
+}
 
 export function FisicoClient() {
   const supabase = createClient()
@@ -120,11 +137,13 @@ export function FisicoClient() {
   const fetchActiveSession = useCallback(async () => {
     if (!storeId) return
     setLoadingSession(true)
-    const { data, error } = await supabase
+
+    // 1. Try with user:users (matches current database foreign key)
+    let { data, error } = await supabase
       .from('inventory_sessions')
       .select(`
         *,
-        user:profiles(full_name, email)
+        user:users(id_user, user_name, email)
       `)
       .eq('id_store', storeId)
       .eq('status', 'A')
@@ -132,10 +151,50 @@ export function FisicoClient() {
       .limit(1)
       .maybeSingle()
 
+    // 2. If relationship fails (e.g. if 005 migration to profiles is applied)
     if (error) {
+      const retryProfiles = await supabase
+        .from('inventory_sessions')
+        .select(`
+          *,
+          user:profiles(full_name, email)
+        `)
+        .eq('id_store', storeId)
+        .eq('status', 'A')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (!retryProfiles.error) {
+        data = retryProfiles.data
+        error = null
+      } else {
+        // 3. Fallback without embedded relation so the session is never blocked
+        const retryPlain = await supabase
+          .from('inventory_sessions')
+          .select('*')
+          .eq('id_store', storeId)
+          .eq('status', 'A')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        data = retryPlain.data
+        error = retryPlain.error
+      }
+    }
+
+    if (error) {
+      console.error('Error al verificar sesión de inventario:', error)
       toast.error('Error al verificar sesión de inventario')
     } else {
-      setActiveSession(data as unknown as InventorySession | null)
+      const rawSession = data as unknown as (Omit<InventorySession, 'user'> & { user?: Record<string, unknown> }) | null
+      const sessionData: InventorySession | null = rawSession
+        ? {
+            ...rawSession,
+            user: normalizeUser(rawSession.user),
+          }
+        : null
+      setActiveSession(sessionData)
     }
     setLoadingSession(false)
   }, [storeId, supabase])
@@ -147,19 +206,57 @@ export function FisicoClient() {
   // Load readings for active session
   const fetchReadings = useCallback(async (sessionId: string) => {
     setLoadingReadings(true)
-    const { data } = await supabase
+
+    // 1. Try with user:users
+    let { data, error } = await supabase
       .from('inventory_readings')
       .select(`
         *,
         item:items (id_item, code, barcode, description, unit),
         location:locations (id_location, description),
-        user:profiles (id, full_name)
+        user:users (id_user, user_name, email)
       `)
       .eq('id_session', sessionId)
       .order('created_at', { ascending: false })
 
+    // 2. If relationship fails, fallback to user:profiles or plain
+    if (error) {
+      const retryProfiles = await supabase
+        .from('inventory_readings')
+        .select(`
+          *,
+          item:items (id_item, code, barcode, description, unit),
+          location:locations (id_location, description),
+          user:profiles (id, full_name)
+        `)
+        .eq('id_session', sessionId)
+        .order('created_at', { ascending: false })
+
+      if (!retryProfiles.error) {
+        data = retryProfiles.data
+        error = null
+      } else {
+        const retryPlain = await supabase
+          .from('inventory_readings')
+          .select(`
+            *,
+            item:items (id_item, code, barcode, description, unit),
+            location:locations (id_location, description)
+          `)
+          .eq('id_session', sessionId)
+          .order('created_at', { ascending: false })
+        data = retryPlain.data
+        error = retryPlain.error
+      }
+    }
+
     if (data) {
-      setReadings(data as unknown as InventoryReading[])
+      const rawReadings = data as unknown as Array<InventoryReading & { user?: Record<string, unknown> }>
+      const mapped = rawReadings.map((r) => ({
+        ...r,
+        user: normalizeUser(r.user),
+      }))
+      setReadings(mapped as unknown as InventoryReading[])
     }
     setLoadingReadings(false)
   }, [supabase])
@@ -534,38 +631,108 @@ export function FisicoClient() {
   const openHistory = async () => {
     setShowHistoryModal(true)
     if (!storeId) return
-    const { data } = await supabase
+
+    let { data, error } = await supabase
       .from('inventory_sessions')
       .select(`
         *,
-        user:profiles(full_name, email)
+        user:users(id_user, user_name, email)
       `)
       .eq('id_store', storeId)
       .eq('status', 'C')
       .order('created_at', { ascending: false })
       .limit(20)
 
+    if (error) {
+      const retryProfiles = await supabase
+        .from('inventory_sessions')
+        .select(`
+          *,
+          user:profiles(full_name, email)
+        `)
+        .eq('id_store', storeId)
+        .eq('status', 'C')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (!retryProfiles.error) {
+        data = retryProfiles.data
+        error = null
+      } else {
+        const retryPlain = await supabase
+          .from('inventory_sessions')
+          .select('*')
+          .eq('id_store', storeId)
+          .eq('status', 'C')
+          .order('created_at', { ascending: false })
+          .limit(20)
+        data = retryPlain.data
+        error = retryPlain.error
+      }
+    }
+
     if (data) {
-      setPastSessions(data as unknown as InventorySession[])
+      const rawSessions = data as unknown as Array<InventorySession & { user?: Record<string, unknown> }>
+      const mapped = rawSessions.map((s) => ({
+        ...s,
+        user: normalizeUser(s.user),
+      }))
+      setPastSessions(mapped as unknown as InventorySession[])
     }
   }
 
   const handleSelectPastSession = async (session: InventorySession) => {
     setSelectedPastSession(session)
     setLoadingPastReadings(true)
-    const { data } = await supabase
+
+    let { data, error } = await supabase
       .from('inventory_readings')
       .select(`
         *,
         item:items (id_item, code, barcode, description, unit),
         location:locations (id_location, description),
-        user:profiles (id, full_name)
+        user:users (id_user, user_name, email)
       `)
       .eq('id_session', session.id_session)
       .order('created_at', { ascending: false })
 
+    if (error) {
+      const retryProfiles = await supabase
+        .from('inventory_readings')
+        .select(`
+          *,
+          item:items (id_item, code, barcode, description, unit),
+          location:locations (id_location, description),
+          user:profiles (id, full_name)
+        `)
+        .eq('id_session', session.id_session)
+        .order('created_at', { ascending: false })
+
+      if (!retryProfiles.error) {
+        data = retryProfiles.data
+        error = null
+      } else {
+        const retryPlain = await supabase
+          .from('inventory_readings')
+          .select(`
+            *,
+            item:items (id_item, code, barcode, description, unit),
+            location:locations (id_location, description)
+          `)
+          .eq('id_session', session.id_session)
+          .order('created_at', { ascending: false })
+        data = retryPlain.data
+        error = retryPlain.error
+      }
+    }
+
     if (data) {
-      setPastSessionReadings(data as unknown as InventoryReading[])
+      const rawReadings = data as unknown as Array<InventoryReading & { user?: Record<string, unknown> }>
+      const mapped = rawReadings.map((r) => ({
+        ...r,
+        user: normalizeUser(r.user),
+      }))
+      setPastSessionReadings(mapped as unknown as InventoryReading[])
     }
     setLoadingPastReadings(false)
   }

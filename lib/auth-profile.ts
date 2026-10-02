@@ -103,22 +103,20 @@ export async function getAuthenticatedProfile(
 
   const defaultRole: UserRole = isTeamAdmin ? 'ADMIN' : 'ADMIN'
 
-  // Attempt to save into users table so it persists
+  // Attempt to save into users table so it persists (use admin client to bypass RLS)
   try {
-    await supabase.from('users').upsert({
+    const { createAdminClient } = await import('@/utils/supabase/admin')
+    const adminClient = createAdminClient()
+    await adminClient.from('users').upsert({
       id_user: user.id,
       user_name: fullName,
       email: user.email,
       role: defaultRole === 'ADMIN' ? 'A' : 'O',
       status: 'A',
     })
-  } catch {
-    // Ignore insertion error if constraint fails
-  }
-
-  // Also try to insert into profiles if the table is created
-  try {
-    await supabase.from('profiles').upsert({
+    
+    // Also try to insert into profiles if the table is created
+    await adminClient.from('profiles').upsert({
       id: user.id,
       full_name: fullName,
       email: user.email,
@@ -127,7 +125,18 @@ export async function getAuthenticatedProfile(
       avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
     })
   } catch {
-    // profiles table might not exist
+    // Fallback to regular supabase client if admin client fails
+    try {
+      await supabase.from('users').upsert({
+        id_user: user.id,
+        user_name: fullName,
+        email: user.email,
+        role: defaultRole === 'ADMIN' ? 'A' : 'O',
+        status: 'A',
+      })
+    } catch {
+      // Ignore insertion error if constraint fails
+    }
   }
 
   return {

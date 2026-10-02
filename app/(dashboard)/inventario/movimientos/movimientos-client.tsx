@@ -6,13 +6,12 @@ import { useStore } from '@/components/providers/store-provider'
 import { GlassCard } from '@/components/glass-card'
 import { GlassButton } from '@/components/glass-button'
 import { GlassInput } from '@/components/glass-input'
-import { StatusBadge } from '@/components/status-badge'
 import { InventarioTabs } from '@/components/inventario/inventario-tabs'
 import { type Transaction, type MovimType } from '@/lib/types'
 import { formatDateTime, formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
-  ArrowLeftRight, Search, Filter, RefreshCw,
+  ArrowLeftRight, Search, RefreshCw,
   ArrowDownLeft, ArrowUpRight, ShoppingCart, ScanLine, Wrench
 } from 'lucide-react'
 
@@ -41,22 +40,55 @@ export function MovimientosClient() {
     }
 
     setLoading(true)
-    const { data, error } = await supabase
+
+    // 1. Fetch transactions for the current store
+    const { data: rawTxs, error } = await supabase
       .from('transactions')
-      .select(`
-        *,
-        item:items (id_item, code, barcode, description, unit),
-        location:locations (id_location, description)
-      `)
+      .select('*')
       .eq('id_store', storeId)
       .order('date_transaction', { ascending: false })
       .limit(150)
 
     if (error) {
+      console.error('Error al cargar movimientos:', error)
       toast.error('Error al cargar movimientos: ' + error.message)
-    } else if (data) {
-      setTransactions(data as unknown as Transaction[])
+      setTransactions([])
+      setLoading(false)
+      return
     }
+
+    const txList = (rawTxs ?? []) as Transaction[]
+    if (txList.length === 0) {
+      setTransactions([])
+      setLoading(false)
+      return
+    }
+
+    // 2. Collect unique item and location IDs
+    const itemIds = Array.from(new Set(txList.map((t) => t.id_item).filter((id): id is string => Boolean(id))))
+    const locationIds = Array.from(new Set(txList.map((t) => t.id_location).filter((id): id is string => Boolean(id))))
+
+    // 3. Batch query items and locations in parallel
+    const [itemsRes, locsRes] = await Promise.all([
+      itemIds.length > 0
+        ? supabase.from('items').select('id_item, code, barcode, description, unit').in('id_item', itemIds)
+        : Promise.resolve({ data: [] }),
+      locationIds.length > 0
+        ? supabase.from('locations').select('id_location, description').in('id_location', locationIds)
+        : Promise.resolve({ data: [] }),
+    ])
+
+    const itemsMap = new Map((itemsRes.data ?? []).map((it) => [it.id_item, it]))
+    const locsMap = new Map((locsRes.data ?? []).map((loc) => [loc.id_location, loc]))
+
+    // 4. Hydrate transactions with their relations
+    const hydratedTransactions: Transaction[] = txList.map((t) => ({
+      ...t,
+      item: t.id_item ? (itemsMap.get(t.id_item) as Transaction['item']) : undefined,
+      location: t.id_location ? (locsMap.get(t.id_location) as Transaction['location']) : undefined,
+    }))
+
+    setTransactions(hydratedTransactions)
     setLoading(false)
   }, [storeId, supabase])
 

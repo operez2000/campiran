@@ -1,87 +1,66 @@
-# 📌 Seguimiento del Proyecto — CAMPIRAN POS & Inventario
+# NavBar 
+## Agregar logo de Campiran
+## Agregar menú para esconder o mostrar el menu lateral
+## Agregar menú para esconder o mostrar el menú superior
 
-## ✅ Fase 1: Fundación y Arquitectura Base
-- [x] Inicialización con Next.js 16 (App Router), TailwindCSS v4, TypeScript y Framer Motion
-- [x] Sistema de diseño Apple Glassmorphism completo (`.glass`, `.glass-card`, `.glass-input`, `.dashboard-bg`, etc.)
-- [x] Componentes base: `<GlassCard />`, `<GlassButton />`, `<GlassInput />`, `<StatusBadge />`, `<ConfirmDialog />`
-- [x] Providers y Contextos globales: `StoreProvider` (multi-tienda), `UserStatusGuard` (Realtime), `ClientProviders`
-- [x] Layout maestro `DashboardLayout`: Sidebar responsive con submenús colapsables + Header con selector de sucursal y dark mode
-- [x] Clientes Supabase: browser (`utils/supabase/client.ts`), server (`utils/supabase/server.ts`), admin (`utils/supabase/admin.ts`)
-- [x] Middleware / Proxy (`proxy.ts`) con protección estricta por roles (`ADMIN`, `MANAGER`, `CASHIER`, `ALMACENISTA`, `PENDING`)
-- [x] Flujos de autenticación: Login (Google + Email), Signup, Forgot Password, Reset Password, Callback y `/pending`
-- [x] Migraciones SQL: `001`, `002`, `003_profiles.sql`, `004_realtime.sql`, `005_fix_foreign_keys_profiles.sql`
+# Tablas
+## Todas las tablas deben ser sticky en el header
+## Todas las tablas deben tener un paginador
+## Todas las tablas deben tener un buscador
+## Todas las tablas deben tener un exportar a excel
+## Todas las tablas deben tener opción para ordenar de mayor a menor o de menor a mayor dando click en la columna
 
-## ✅ Fase 2: Módulos Core Operativos
-- [x] **Dashboard de Stock (`/inventario`)**:
-  - KPIs en tiempo real (artículos totales, bajo mínimo, unidades, valuación en $)
-  - Filtro por sucursal y ubicación
-  - Filtro toggle de stock bajo mínimo
-  - Búsqueda en vivo por código, código de barras o descripción
-  - Ajuste rápido de umbrales mínimos/máximos
-  - Sincronización en vivo vía Supabase Realtime
-- [x] **Captura de Inventario Físico (`/inventario/fisico`)**:
-  - Cumplimiento del 100% de `docs/captura_inventario_fisico.txt`
-  - Escaneo con pistola de código de barras con autofocus permanente
-  - Contador de cantidades (con soporte de números negativos para correcciones)
-  - Modal de búsqueda por descripción con catálogo completo
-  - Selector de ubicación de escaneo
-  - Banner en tiempo real con último producto escaneado (Stock Sistema vs Stock Físico vs Diferencia)
-  - Gestión de sesiones: abrir sesión, capturar lecturas en vivo, cerrar sesión y actualizar inventario en BD
-  - Auditoría automática en `transactions` (tipo `I`)
-  - Exportación de reporte PDF firmado digitalmente con datos del responsable
-  - Historial de inventarios cerrados
-- [x] **Movimientos de Inventario (`/inventario/movimientos`)**:
-  - Tabla de auditoría en tiempo real para todos los movimientos
-  - Filtros por tipo (Entrada, Salida, Venta, Inventario, Ajuste)
-  - Búsqueda por artículo, referencia y concepto
-- [x] **Punto de Venta POS (`/pos`)**:
-  - Escáner rápido y catálogo visual interactivo
-  - Selector de clientes con asignación de listas de precios dinámica (`price1`, `price2`, `price3`)
-  - Carrito de compras con cálculo de subtotales, IVA y total
-  - Modal de cobro con métodos de pago (Efectivo con cambio en vivo, Tarjeta, Transferencia)
-  - Generación de órdenes (`orders`), detalle (`order_items`), descuento de stock y registro en `transactions`
-  - Ticket térmico con vista previa e impresión (`window.print()`)
+# Login
+## Agregar imagen del usuario Gmail en el avatar después del login en el extremo superior derecho
 
-## ✅ Fase 3: Catálogos y Maestros
-- [x] **Artículos & Catálogo (`/catalogo/items`)**:
-  - CRUD completo de productos y servicios
-  - Precios múltiples (`price1`, `price2`, `price3`), costos, comisión e IVA
-  - Datos fiscales SAT (clave de producto y unidad SAT)
-  - Clasificación por categoría, área y departamento
-  - Eliminación lógica (`status = 'I'`) y reactivación
-  - Píldoras de navegación rápida `CatalogoTabs`
-- [x] **Catálogos Simples**:
-  - Categorías (`/catalogo/categorias`)
-  - Áreas (`/catalogo/areas`)
-  - Departamentos (`/catalogo/departamentos`)
-  - Ubicaciones por sucursal (`/catalogo/ubicaciones`)
-- [x] **Clientes (`/clientes`)**:
-  - Directorio completo con RFC y datos de contacto
-  - Asignación de lista de precios personalizada
-  - Modal de historial de compras por cliente
-  - Eliminación lógica y reactivación
-- [x] **Proveedores (`/proveedores`)**:
-  - Directorio completo con datos fiscales y contacto
-  - Condiciones comerciales: días de crédito y límite de crédito
-  - Eliminación lógica y reactivación
+# Vistas
+## Dashboard
+### Ventas del día
+### Compras del día
+### Productos más vendidos
+### Productos menos vendidos
+### Productos sin stock
+### Productos con stock bajo
+## Productos
+## Clientes
+## Proveedores
+## Compras
+## Ventas
+## Reportes
+## Configuración
 
-## ✅ Fase 4: Reportes y Administración
-- [x] **Reportes & Rendimiento (`/reportes`)**:
-  - Gráfica interactiva de evolución de ventas con Recharts
-  - KPIs financieros: Ventas totales, Órdenes, Ticket promedio, Utilidad bruta estimada
-  - Ranking de Top Productos más vendidos por ingreso
-  - Alerta de artículos bajo mínimos
-  - Tabla de detalle de ventas con filtros de período (Hoy, 7 días, 30 días, Año)
-  - Exportación de reportes a PDF (jsPDF) y Excel (XLSX)
-- [x] **Administración de Sucursales (`/admin/tiendas`)**:
-  - CRUD de tiendas/sucursales con activación/desactivación
-- [x] **Usuarios y Roles (`/admin/usuarios`)**:
-  - Gestión de perfiles `profiles`
-  - Asignación de roles (`ADMIN`, `MANAGER`, `CASHIER`, `ALMACENISTA`, `PENDING`)
-  - Asignación de sucursal por usuario
-  - Suspensión y activación en tiempo real (con expulsión automática vía `UserStatusGuard`)
+## Dashboard Solo para el usuario admin
 
-## ✅ Fase 5: PWA y Polish
-- [x] `public/manifest.json` configurado para PWA instalable
-- [x] Página 404 personalizada en español (`app/not-found.tsx`) con diseño Glassmorphism
-- [x] Verificación de compilación: 22/22 rutas operativas, 0 errores, 0 advertencias
+# POS
+## Cajeros
+### Agregar WebAuth y Face Detection para cada cajero, además No. de Cajero y Contraseña. Cualquiera de estos métodos debe ser válido para iniciar sesión.
+### Agregar apertura de Caja con credenciales del Cajero
+### Validar que el Cajero tenga su sesión iniciada para poder realizar ventas, el cajero debe cerrar caja cuando termine de trabajar su jornada y sin cuentas pendientes de cerrar.
+### En cada cobro debe existir en campo de observaciones que serán impresos en el recibo de la venta.
+### Agregar recepción de pagos con datáfono
+### Agregar opción para pago mixto y utilizar los códigos del catálogo del SAT para Formas de Pago
+### Agregar Cancelaciones solo con autorización también con WebAuth, huella, faceID o contraseña del usuario que realiza la cancelación (Administrador o quien tenga permisos)
+### Agregar Ticket
+### Agregar abono a cuenta
+### Agregar consulta de credito
+### Agregar registro de devoluciones
+### Agregar registro de pagos
+### Agregar registro de cortes
+### Agregar registro de arqueos
+### Agregar registro de ventas
+### Agregar registro de compras
+### Agregar registro de productos
+### Agregar registro de clientes
+### Agregar registro de proveedores
+### Agregar registro de reportes
+### Agregar registro de configuración
+### Agregar registro de usuarios
+### Agregar registro de roles
+### Agregar registro de permisos
+### Agregar registro de bitacoras
+### Agregar un Corte de caja por cajero tipo Z
+
+## Usuarios
+### Agregar también WebAuth, huella, faceID o contraseña del usuario que realiza la cancelación (Administrador o quien tenga permisos)
+
+
