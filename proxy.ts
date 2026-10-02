@@ -38,6 +38,18 @@ export async function proxy(request: NextRequest) {
   // 1. Skip API routes and static assets
   if (pathname.startsWith('/api/')) return NextResponse.next()
 
+  // 1.1 If OAuth code arrives on root or outside /auth/callback (e.g. Supabase redirect fallback),
+  // forward immediately to /auth/callback preserving all query params
+  const code = request.nextUrl.searchParams.get('code')
+  const errorParam = request.nextUrl.searchParams.get('error')
+  if ((code || (errorParam && pathname === '/')) && !pathname.startsWith('/auth/callback')) {
+    const callbackUrl = new URL('/auth/callback', request.url)
+    request.nextUrl.searchParams.forEach((val, key) => {
+      callbackUrl.searchParams.set(key, val)
+    })
+    return NextResponse.redirect(callbackUrl)
+  }
+
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(

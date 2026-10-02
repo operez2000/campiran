@@ -10,7 +10,9 @@ export async function GET(request: NextRequest) {
   // Resolve origin robustly (handles reverse proxy and custom host/port)
   const forwardedHost = request.headers.get('x-forwarded-host')
   const host = forwardedHost || request.headers.get('host') || 'localhost:3000'
-  const protocol = request.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https')
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  const isLocalOrPort = host.includes('localhost') || host.includes(':')
+  const protocol = forwardedProto || (request.nextUrl.protocol ? request.nextUrl.protocol.replace(':', '') : (isLocalOrPort ? 'http' : 'https'))
   const origin = `${protocol}://${host}`
 
   if (code) {

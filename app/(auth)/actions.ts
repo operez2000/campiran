@@ -46,7 +46,9 @@ export async function signInWithGoogle() {
   const headersList = await headers()
   const forwardedHost = headersList.get('x-forwarded-host')
   const host = forwardedHost || headersList.get('host') || 'localhost:3000'
-  const protocol = headersList.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https')
+  const forwardedProto = headersList.get('x-forwarded-proto')
+  const isLocalOrPort = host.includes('localhost') || host.includes(':')
+  const protocol = forwardedProto || (isLocalOrPort ? 'http' : 'https')
   const origin = headersList.get('origin') || `${protocol}://${host}`
 
   const supabase = await createClient()
