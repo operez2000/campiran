@@ -125,17 +125,41 @@ export function ItemsClient() {
     fetchData()
   }, [fetchData])
 
-  // Realtime subscription on items
+  // 100% Realtime multi-table subscriptions (items, item_images, categories, areas, departments)
   useEffect(() => {
     const channel = supabase
-      .channel('items-live')
+      .channel('catalog-items-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
+        fetchData()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'item_images' }, () => {
+        fetchData()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
+        fetchData()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'areas' }, () => {
+        fetchData()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'departments' }, () => {
         fetchData()
       })
       .subscribe()
 
+    // Immediate sync fallback on tab focus or visibility change
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus)
+    window.addEventListener('focus', handleVisibilityOrFocus)
+
     return () => {
       supabase.removeChannel(channel)
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+      window.removeEventListener('focus', handleVisibilityOrFocus)
     }
   }, [supabase, fetchData])
 
@@ -587,19 +611,32 @@ export function ItemsClient() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-3">
                 <h3 className="text-base font-bold text-foreground">
                   {editingItem ? 'Editar Artículo' : 'Nuevo Artículo'}
                 </h3>
-                <button
-                  onClick={() => setModalOpen(false)}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
-                >
-                  <X size={18} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <GlassButton
+                    type="submit"
+                    form="item-form"
+                    variant="primary"
+                    size="sm"
+                    disabled={saving}
+                  >
+                    <Check size={14} className="mr-1" />
+                    {saving ? 'Guardando...' : editingItem ? 'Actualizar' : 'Guardar Artículo'}
+                  </GlassButton>
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
-              <form onSubmit={handleSave} className="space-y-4 overflow-y-auto scroll-modern pr-1">
+              <form id="item-form" onSubmit={handleSave} className="space-y-4 overflow-y-auto scroll-modern pr-1">
                 {/* Basic Identification */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>

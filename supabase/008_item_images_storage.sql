@@ -95,3 +95,15 @@ END $$;
 
 -- 4. Index on item_images (id_item) for fast lookups
 CREATE INDEX IF NOT EXISTS idx_item_images_id_item ON public.item_images(id_item);
+
+-- 5. Enable Realtime for item_images table
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'item_images'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.item_images;
+  END IF;
+END $$;
+
