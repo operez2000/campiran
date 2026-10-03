@@ -13,8 +13,11 @@ import { formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
   Tags, Search, Plus, Edit3, Trash2, RotateCcw,
-  X, Check, Filter, Layers, DollarSign, Barcode
+  X, Check, Filter, Layers, DollarSign, Barcode,
+  Image as ImageIcon
 } from 'lucide-react'
+import { ProductImageManager, type ManagedImageItem } from '@/components/catalogo/product-image-manager'
+import { ProductImageCarouselModal } from '@/components/catalogo/product-image-carousel-modal'
 
 interface ItemFormData {
   code: string
@@ -80,6 +83,11 @@ export function ItemsClient() {
   const [formData, setFormData] = useState<ItemFormData>(INITIAL_FORM)
   const [saving, setSaving] = useState(false)
 
+  // Images State
+  const [itemImages, setItemImages] = useState<ManagedImageItem[]>([])
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([])
+  const [carouselModalItem, setCarouselModalItem] = useState<Item | null>(null)
+
   // Delete Confirm Dialog
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null)
@@ -96,7 +104,8 @@ export function ItemsClient() {
           *,
           category:categories(id_category, description),
           area:areas(id_area, description),
-          department:departments(id_department, description)
+          department:departments(id_department, description),
+          item_images(*)
         `)
         .order('description'),
       supabase.from('categories').select('*').eq('status', 'A').order('description'),
@@ -152,6 +161,8 @@ export function ItemsClient() {
   const handleOpenCreate = () => {
     setEditingItem(null)
     setFormData(INITIAL_FORM)
+    setItemImages([])
+    setDeletedImageIds([])
     setModalOpen(true)
   }
 
@@ -179,7 +190,53 @@ export function ItemsClient() {
       id_sat: item.id_sat || '',
       unit_sat: item.unit_sat || 'H87',
     })
+
+    // Map existing images to image manager state
+    const mappedImages: ManagedImageItem[] = (item.item_images || []).map((img) => ({
+      id: img.id_item_image,
+      url: img.image_url || '',
+      storagePath: img.image_path || undefined,
+      isExisting: true,
+    }))
+    setItemImages(mappedImages)
+    setDeletedImageIds([])
     setModalOpen(true)
+  }
+
+  // Sync images with Supabase Storage and public.item_images
+  const handleSyncImages = async (targetItemId: string) => {
+    // 1. Delete removed images from DB and Storage
+    if (deletedImageIds.length > 0) {
+      await supabase.from('item_images').delete().in('id_item_image', deletedImageIds)
+    }
+
+    // 2. Upload any newly added images
+    const newItems = itemImages.filter((img) => img.isNew && img.blob)
+    for (let i = 0; i < newItems.length; i++) {
+      const imgItem = newItems[i]
+      const filePath = `items/${targetItemId}/${Date.now()}_${i}_${Math.random().toString(36).substring(2, 7)}.webp`
+
+      const { error: uploadError } = await supabase.storage
+        .from('item_images')
+        .upload(filePath, imgItem.blob!, {
+          contentType: 'image/webp',
+          upsert: true,
+        })
+
+      if (!uploadError) {
+        const { data: publicUrlData } = supabase.storage
+          .from('item_images')
+          .getPublicUrl(filePath)
+
+        await supabase.from('item_images').insert({
+          id_item: targetItemId,
+          image_url: publicUrlData.publicUrl,
+          image_path: filePath,
+        })
+      } else {
+        console.error('Error al subir imagen al bucket item_images:', uploadError)
+      }
+    }
   }
 
   // Save Item (Create or Update)
@@ -220,27 +277,35 @@ export function ItemsClient() {
         .update(payload)
         .eq('id_item', editingItem.id_item)
 
-      setSaving(false)
       if (error) {
+        setSaving(false)
         toast.error('Error al actualizar artículo: ' + error.message)
-      } else {
-        toast.success('Artículo actualizado correctamente')
-        setModalOpen(false)
-        fetchData()
+        return
       }
+
+      await handleSyncImages(editingItem.id_item)
+      setSaving(false)
+      toast.success('Artículo actualizado correctamente')
+      setModalOpen(false)
+      fetchData()
     } else {
-      const { error } = await supabase
+      const { data: createdItem, error } = await supabase
         .from('items')
         .insert([{ ...payload, status: 'A' }])
+        .select()
+        .single()
 
-      setSaving(false)
-      if (error) {
-        toast.error('Error al crear artículo: ' + error.message)
-      } else {
-        toast.success('Artículo creado exitosamente')
-        setModalOpen(false)
-        fetchData()
+      if (error || !createdItem) {
+        setSaving(false)
+        toast.error('Error al crear artículo: ' + (error?.message || ''))
+        return
       }
+
+      await handleSyncImages(createdItem.id_item)
+      setSaving(false)
+      toast.success('Artículo creado exitosamente con sus imágenes')
+      setModalOpen(false)
+      fetchData()
     }
   }
 
@@ -396,13 +461,46 @@ export function ItemsClient() {
                 filteredItems.map((item) => (
                   <tr key={item.id_item} className="hover:bg-white/[0.02] transition-colors group">
                     <td className="px-4 py-3.5">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-foreground group-hover:text-emerald-400 transition-colors">
-                          {item.description}
-                        </span>
-                        <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground font-mono">
-                          {item.code && <span>Cód: {item.code}</span>}
-                          {item.barcode && <span>CB: {item.barcode}</span>}
+                      <div className="flex items-center gap-3">
+                        {/* Product Thumbnail with quick carousel preview */}
+                        {item.item_images && item.item_images.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => setCarouselModalItem(item)}
+                            className="relative w-11 h-11 rounded-xl overflow-hidden border border-border/60 hover:border-emerald-500/80 transition-all shrink-0 group/img shadow-xs active:scale-95"
+                            title={`Ver ${item.item_images.length} fotos en carrusel`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={item.item_images[0].image_url || ''}
+                              alt={item.description || 'Producto'}
+                              className="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-300"
+                              loading="lazy"
+                            />
+                            {item.item_images.length > 1 && (
+                              <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded-tl-md bg-black/80 backdrop-blur-xs text-[9px] font-bold text-emerald-400">
+                                +{item.item_images.length - 1}
+                              </span>
+                            )}
+                          </button>
+                        ) : (
+                          <div
+                            onClick={() => handleOpenEdit(item)}
+                            className="w-11 h-11 rounded-xl bg-white/[0.03] border border-border/40 flex items-center justify-center text-muted-foreground/40 hover:text-emerald-400 hover:border-emerald-500/40 cursor-pointer transition-colors shrink-0"
+                            title="Haz clic para agregar fotografías"
+                          >
+                            <ImageIcon size={18} />
+                          </div>
+                        )}
+
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-foreground group-hover:text-emerald-400 transition-colors">
+                            {item.description}
+                          </span>
+                          <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground font-mono">
+                            {item.code && <span>Cód: {item.code}</span>}
+                            {item.barcode && <span>CB: {item.barcode}</span>}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -592,6 +690,18 @@ export function ItemsClient() {
                   </div>
                 </div>
 
+                {/* Product Images Manager (Mobile Camera + Drag & Drop + 720px resize + Carousel) */}
+                <div className="pt-2 border-t border-border/20">
+                  <ProductImageManager
+                    key={editingItem?.id_item || 'new-product-images'}
+                    initialImages={itemImages}
+                    onChange={(nextImgs, nextDels) => {
+                      setItemImages(nextImgs)
+                      setDeletedImageIds(nextDels)
+                    }}
+                  />
+                </div>
+
                 {/* Costs and Prices */}
                 <div className="pt-2 border-t border-border/20">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">
@@ -753,6 +863,14 @@ export function ItemsClient() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Modal: Product Images Carousel (Table Quick View) */}
+      <ProductImageCarouselModal
+        open={!!carouselModalItem}
+        onClose={() => setCarouselModalItem(null)}
+        productName={carouselModalItem?.description || ''}
+        images={carouselModalItem?.item_images || []}
+      />
     </div>
   )
 }
