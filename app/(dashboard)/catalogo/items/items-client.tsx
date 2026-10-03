@@ -14,7 +14,7 @@ import { toast } from 'sonner'
 import {
   Tags, Search, Plus, Edit3, Trash2, RotateCcw,
   X, Check, Filter, Layers, DollarSign, Barcode,
-  Image as ImageIcon
+  Image as ImageIcon, Package, Wrench, Sparkles, Percent, Loader2
 } from 'lucide-react'
 import { ProductImageManager, type ManagedImageItem } from '@/components/catalogo/product-image-manager'
 import { ProductImageCarouselModal } from '@/components/catalogo/product-image-carousel-modal'
@@ -76,6 +76,21 @@ export function ItemsClient() {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState<'A' | 'I' | 'ALL'>('A')
+  const [activeTab, setActiveTab] = useState<'P' | 'S' | 'ALL'>('P')
+
+  // Realtime counters for products & services
+  const stats = useMemo(() => {
+    let products = 0
+    let services = 0
+    items.forEach((item) => {
+      if (item.type === 'S') {
+        services++
+      } else {
+        products++
+      }
+    })
+    return { products, services, total: items.length }
+  }, [items])
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false)
@@ -125,6 +140,19 @@ export function ItemsClient() {
     fetchData()
   }, [fetchData])
 
+  // Tab switching: re-read catalog from DB and show spinner on the selected tab
+  const [switchingTab, setSwitchingTab] = useState<'P' | 'S' | 'ALL' | null>(null)
+  const handleTabChange = async (tab: 'P' | 'S' | 'ALL') => {
+    if (tab === activeTab || switchingTab) return
+    setSwitchingTab(tab)
+    setActiveTab(tab)
+    try {
+      await fetchData()
+    } finally {
+      setSwitchingTab(null)
+    }
+  }
+
   // 100% Realtime multi-table subscriptions (items, item_images, categories, areas, departments)
   useEffect(() => {
     const channel = supabase
@@ -166,6 +194,10 @@ export function ItemsClient() {
   // Filtered Items
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
+      // Classification Tab Filter
+      if (activeTab === 'P' && item.type === 'S') return false
+      if (activeTab === 'S' && item.type !== 'S') return false
+
       if (statusFilter !== 'ALL' && item.status !== statusFilter) return false
       if (categoryFilter !== 'ALL' && item.id_category !== categoryFilter) return false
 
@@ -179,12 +211,18 @@ export function ItemsClient() {
 
       return true
     })
-  }, [items, search, categoryFilter, statusFilter])
+  }, [items, search, categoryFilter, statusFilter, activeTab])
 
   // Open Create Modal
-  const handleOpenCreate = () => {
+  const handleOpenCreate = (targetType?: 'P' | 'S') => {
+    const selectedType: 'P' | 'S' = targetType || (activeTab === 'S' ? 'S' : 'P')
     setEditingItem(null)
-    setFormData(INITIAL_FORM)
+    setFormData({
+      ...INITIAL_FORM,
+      type: selectedType,
+      unit: selectedType === 'S' ? 'Servicio' : 'Pza',
+      unit_sat: selectedType === 'S' ? 'E48' : 'H87',
+    })
     setItemImages([])
     setDeletedImageIds([])
     setModalOpen(true)
@@ -228,7 +266,10 @@ export function ItemsClient() {
   }
 
   // Sync images with Supabase Storage and public.item_images
-  const handleSyncImages = async (targetItemId: string) => {
+  const handleSyncImages = async (targetItemId: string, itemType: 'P' | 'S') => {
+    // Los servicios no tienen fotografía
+    if (itemType === 'S') return
+
     // 1. Delete removed images from DB and Storage
     if (deletedImageIds.length > 0) {
       await supabase.from('item_images').delete().in('id_item_image', deletedImageIds)
@@ -307,9 +348,13 @@ export function ItemsClient() {
         return
       }
 
-      await handleSyncImages(editingItem.id_item)
+      await handleSyncImages(editingItem.id_item, formData.type)
       setSaving(false)
-      toast.success('Artículo actualizado correctamente')
+      toast.success(
+        formData.type === 'S'
+          ? 'Servicio actualizado correctamente'
+          : 'Producto actualizado correctamente'
+      )
       setModalOpen(false)
       fetchData()
     } else {
@@ -325,9 +370,13 @@ export function ItemsClient() {
         return
       }
 
-      await handleSyncImages(createdItem.id_item)
+      await handleSyncImages(createdItem.id_item, formData.type)
       setSaving(false)
-      toast.success('Artículo creado exitosamente con sus imágenes')
+      toast.success(
+        formData.type === 'S'
+          ? 'Servicio creado exitosamente'
+          : 'Producto creado exitosamente con sus imágenes'
+      )
       setModalOpen(false)
       fetchData()
     }
@@ -369,15 +418,96 @@ export function ItemsClient() {
             Catálogo de Artículos
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Gestión completa de productos, precios dinámicos y códigos SAT
+            Gestión de productos y servicios
           </p>
         </div>
         <div className="flex items-center gap-3">
           <CatalogoTabs />
-          <GlassButton variant="primary" onClick={handleOpenCreate}>
+          <GlassButton variant="primary" onClick={() => handleOpenCreate()}>
             <Plus size={16} className="mr-1.5" />
-            Nuevo Artículo
+            {activeTab === 'S' ? 'Nuevo Servicio' : activeTab === 'P' ? 'Nuevo Producto' : 'Nuevo Artículo'}
           </GlassButton>
+        </div>
+      </div>
+
+      {/* Tabs de Segmentación: Productos vs Servicios */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-1.5 rounded-2xl glass border border-white/10">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl glass-input">
+          <button
+            type="button"
+            onClick={() => handleTabChange('P')}
+            disabled={!!switchingTab}
+            aria-busy={switchingTab === 'P'}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer disabled:cursor-wait ${activeTab === 'P'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+              }`}
+          >
+            {switchingTab === 'P' ? <Loader2 size={16} className="animate-spin" /> : <Package size={16} />}
+            <span>Productos</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${activeTab === 'P' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
+                }`}
+            >
+              {stats.products}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTabChange('S')}
+            disabled={!!switchingTab}
+            aria-busy={switchingTab === 'S'}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer disabled:cursor-wait ${activeTab === 'S'
+                ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/25'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+              }`}
+          >
+            {switchingTab === 'S' ? <Loader2 size={16} className="animate-spin" /> : <Wrench size={16} />}
+            <span>Servicios</span>
+            <span
+              className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${activeTab === 'S' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
+                }`}
+            >
+              {stats.services}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTabChange('ALL')}
+            disabled={!!switchingTab}
+            aria-busy={switchingTab === 'ALL'}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer disabled:cursor-wait ${activeTab === 'ALL'
+                ? 'bg-gradient-to-r from-slate-600 to-slate-800 text-white shadow-md shadow-slate-500/25 dark:from-white/20 dark:to-white/10'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+              }`}
+          >
+            {switchingTab === 'ALL' && <Loader2 size={14} className="animate-spin" />}
+            <span>Todos</span>
+            <span className="text-[10px] opacity-75">({stats.total})</span>
+          </button>
+        </div>
+
+        {/* Info contextual sutil */}
+        <div className="hidden sm:flex items-center gap-2 text-xs px-3">
+          {activeTab === 'P' && (
+            <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Artículos físicos · Control de inventario y fotografías
+            </span>
+          )}
+          {activeTab === 'S' && (
+            <span className="flex items-center gap-1.5 text-indigo-400 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+              Servicios intangibles · Sin fotografías · Mano de obra & comisiones
+            </span>
+          )}
+          {activeTab === 'ALL' && (
+            <span className="flex items-center gap-1.5 text-muted-foreground font-medium">
+              Vista general consolidada del catálogo
+            </span>
+          )}
         </div>
       </div>
 
@@ -415,31 +545,28 @@ export function ItemsClient() {
             <div className="flex items-center gap-1 p-1 rounded-xl glass">
               <button
                 onClick={() => setStatusFilter('A')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  statusFilter === 'A'
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === 'A'
                     ? 'bg-emerald-500 text-white shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 Activos
               </button>
               <button
                 onClick={() => setStatusFilter('I')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  statusFilter === 'I'
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === 'I'
                     ? 'bg-emerald-500 text-white shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 Inactivos
               </button>
               <button
                 onClick={() => setStatusFilter('ALL')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  statusFilter === 'ALL'
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === 'ALL'
                     ? 'bg-emerald-500 text-white shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 Todos
               </button>
@@ -454,13 +581,23 @@ export function ItemsClient() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-3.5">Artículo</th>
+                <th className="px-4 py-3.5">
+                  {activeTab === 'S' ? 'Servicio' : activeTab === 'P' ? 'Producto' : 'Artículo'}
+                </th>
                 <th className="px-4 py-3.5">Categoría / Área</th>
                 <th className="px-4 py-3.5 text-center">Tipo / Unidad</th>
-                <th className="px-4 py-3.5 text-right">Costo</th>
-                <th className="px-4 py-3.5 text-right">Precio 1</th>
-                <th className="px-4 py-3.5 text-right">Precio 2</th>
-                <th className="px-4 py-3.5 text-right">Precio 3</th>
+                <th className="px-4 py-3.5 text-right">
+                  {activeTab === 'S' ? 'Costo Base' : 'Costo'}
+                </th>
+                <th className="px-4 py-3.5 text-right">
+                  {activeTab === 'S' ? 'Tarifa 1' : 'Precio 1'}
+                </th>
+                <th className="px-4 py-3.5 text-right">
+                  {activeTab === 'S' ? 'Tarifa 2' : 'Precio 2'}
+                </th>
+                <th className="px-4 py-3.5 text-right">
+                  {activeTab === 'S' ? 'Tarifa 3' : 'Precio 3'}
+                </th>
                 <th className="px-4 py-3.5 text-center">Estado</th>
                 <th className="px-4 py-3.5 text-center">Acciones</th>
               </tr>
@@ -469,134 +606,188 @@ export function ItemsClient() {
               {loading ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
-                    Cargando catálogo...
+                    <div className="flex flex-col items-center justify-center gap-2.5" role="status" aria-live="polite">
+                      <Loader2
+                        size={28}
+                        className={`animate-spin ${activeTab === 'S' ? 'text-indigo-500' : activeTab === 'P' ? 'text-emerald-500' : 'text-slate-500 dark:text-slate-300'}`}
+                      />
+                      <span className="text-sm font-medium">
+                        {activeTab === 'S'
+                          ? 'Cargando servicios...'
+                          : activeTab === 'P'
+                            ? 'Cargando productos...'
+                            : 'Cargando catálogo...'}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               ) : filteredItems.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
-                    <p className="text-base font-medium">No se encontraron artículos</p>
+                    <p className="text-base font-medium">
+                      {activeTab === 'S'
+                        ? 'No se encontraron servicios'
+                        : activeTab === 'P'
+                          ? 'No se encontraron productos'
+                          : 'No se encontraron artículos'}
+                    </p>
                     <p className="text-xs text-muted-foreground/80 mt-1">
-                      {search ? 'Modifique el término de búsqueda o filtros' : 'Añada el primer artículo al catálogo'}
+                      {search
+                        ? 'Modifique el término de búsqueda o filtros'
+                        : activeTab === 'S'
+                          ? 'Haga clic en "+ Nuevo Servicio" para registrar el primero'
+                          : 'Haga clic en "+ Nuevo Producto" para registrar el primero'}
                     </p>
                   </td>
                 </tr>
               ) : (
-                filteredItems.map((item) => (
-                  <tr key={item.id_item} className="hover:bg-white/[0.02] transition-colors group">
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-3">
-                        {/* Product Thumbnail with quick carousel preview */}
-                        {item.item_images && item.item_images.length > 0 ? (
-                          <button
-                            type="button"
-                            onClick={() => setCarouselModalItem(item)}
-                            className="relative w-11 h-11 rounded-xl overflow-hidden border border-border/60 hover:border-emerald-500/80 transition-all shrink-0 group/img shadow-xs active:scale-95"
-                            title={`Ver ${item.item_images.length} fotos en carrusel`}
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={item.item_images[0].image_url || ''}
-                              alt={item.description || 'Producto'}
-                              className="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-300"
-                              loading="lazy"
-                            />
-                            {item.item_images.length > 1 && (
-                              <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded-tl-md bg-black/80 backdrop-blur-xs text-[9px] font-bold text-emerald-400">
-                                +{item.item_images.length - 1}
-                              </span>
-                            )}
-                          </button>
-                        ) : (
-                          <div
-                            onClick={() => handleOpenEdit(item)}
-                            className="w-11 h-11 rounded-xl bg-white/[0.03] border border-border/40 flex items-center justify-center text-muted-foreground/40 hover:text-emerald-400 hover:border-emerald-500/40 cursor-pointer transition-colors shrink-0"
-                            title="Haz clic para agregar fotografías"
-                          >
-                            <ImageIcon size={18} />
-                          </div>
-                        )}
+                filteredItems.map((item) => {
+                  const isService = item.type === 'S'
 
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-foreground group-hover:text-emerald-400 transition-colors">
-                            {item.description}
-                          </span>
-                          <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground font-mono">
-                            {item.code && <span>Cód: {item.code}</span>}
-                            {item.barcode && <span>CB: {item.barcode}</span>}
+                  return (
+                    <tr key={item.id_item} className="hover:bg-white/[0.02] transition-colors group">
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3">
+                          {/* Visual element: Product Thumbnail with carousel vs Service Icon without photo */}
+                          {isService ? (
+                            <div
+                              onClick={() => handleOpenEdit(item)}
+                              className="w-11 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 shadow-xs group-hover:border-indigo-500/60 transition-colors cursor-pointer"
+                              title="Servicio (sin fotografía)"
+                            >
+                              <Wrench size={18} />
+                            </div>
+                          ) : item.item_images && item.item_images.length > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => setCarouselModalItem(item)}
+                              className="relative w-11 h-11 rounded-xl overflow-hidden border border-border/60 hover:border-emerald-500/80 transition-all shrink-0 group/img shadow-xs active:scale-95 cursor-pointer"
+                              title={`Ver ${item.item_images.length} fotos en carrusel`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={item.item_images[0].image_url || ''}
+                                alt={item.description || 'Producto'}
+                                className="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-300"
+                                loading="lazy"
+                              />
+                              {item.item_images.length > 1 && (
+                                <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded-tl-md bg-black/80 backdrop-blur-xs text-[9px] font-bold text-emerald-400">
+                                  +{item.item_images.length - 1}
+                                </span>
+                              )}
+                            </button>
+                          ) : (
+                            <div
+                              onClick={() => handleOpenEdit(item)}
+                              className="w-11 h-11 rounded-xl bg-white/[0.03] border border-border/40 flex items-center justify-center text-muted-foreground/40 hover:text-emerald-400 hover:border-emerald-500/40 cursor-pointer transition-colors shrink-0"
+                              title="Haz clic para agregar fotografías al producto"
+                            >
+                              <ImageIcon size={18} />
+                            </div>
+                          )}
+
+                          <div className="flex flex-col">
+                            <span
+                              onClick={() => handleOpenEdit(item)}
+                              className={`font-semibold transition-colors cursor-pointer ${isService
+                                  ? 'text-foreground group-hover:text-indigo-400'
+                                  : 'text-foreground group-hover:text-emerald-400'
+                                }`}
+                            >
+                              {item.description}
+                            </span>
+                            <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground font-mono">
+                              {item.code && <span>Cód: {item.code}</span>}
+                              {item.barcode && <span>CB: {item.barcode}</span>}
+                              {isService && Number(item.comission) > 0 && (
+                                <span className="text-indigo-400 font-sans font-medium text-[11px]">
+                                  · Comis: {item.comission}%
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="px-4 py-3.5 text-xs text-muted-foreground">
-                      <div>{item.category?.description || 'Sin categoría'}</div>
-                      <div className="text-[11px] text-muted-foreground/60">{item.area?.description || '—'}</div>
-                    </td>
+                      <td className="px-4 py-3.5 text-xs text-muted-foreground">
+                        <div>{item.category?.description || 'Sin categoría'}</div>
+                        <div className="text-[11px] text-muted-foreground/60">{item.area?.description || '—'}</div>
+                      </td>
 
-                    <td className="px-4 py-3.5 text-center text-xs">
-                      <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-muted-foreground font-medium">
-                        {item.type === 'S' ? 'Servicio' : 'Producto'} · {item.unit || 'Pza'}
-                      </span>
-                    </td>
+                      <td className="px-4 py-3.5 text-center text-xs">
+                        {isService ? (
+                          <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 font-medium text-[11px] inline-flex items-center gap-1">
+                            <Wrench size={11} />
+                            Servicio · {item.unit || 'Servicio'}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 font-medium text-[11px] inline-flex items-center gap-1">
+                            <Package size={11} />
+                            Producto · {item.unit || 'Pza'}
+                          </span>
+                        )}
+                      </td>
 
-                    <td className="px-4 py-3.5 text-right font-mono text-xs text-muted-foreground">
-                      {formatCurrency(Number(item.cost))}
-                    </td>
+                      <td className="px-4 py-3.5 text-right font-mono text-xs text-muted-foreground">
+                        {formatCurrency(Number(item.cost))}
+                      </td>
 
-                    <td className="px-4 py-3.5 text-right font-mono text-xs font-bold text-emerald-400">
-                      {formatCurrency(Number(item.price1 || item.price))}
-                    </td>
+                      <td className="px-4 py-3.5 text-right font-mono text-xs font-bold text-emerald-400">
+                        {formatCurrency(Number(item.price1 || item.price))}
+                      </td>
 
-                    <td className="px-4 py-3.5 text-right font-mono text-xs text-foreground">
-                      {formatCurrency(Number(item.price2))}
-                    </td>
+                      <td className="px-4 py-3.5 text-right font-mono text-xs text-foreground">
+                        {formatCurrency(Number(item.price2))}
+                      </td>
 
-                    <td className="px-4 py-3.5 text-right font-mono text-xs text-foreground">
-                      {formatCurrency(Number(item.price3))}
-                    </td>
+                      <td className="px-4 py-3.5 text-right font-mono text-xs text-foreground">
+                        {formatCurrency(Number(item.price3))}
+                      </td>
 
-                    <td className="px-4 py-3.5 text-center">
-                      <StatusBadge status={item.status} />
-                    </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <StatusBadge status={item.status} />
+                      </td>
 
-                    <td className="px-4 py-3.5 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => handleOpenEdit(item)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                          title="Editar artículo"
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setItemToDelete(item)
-                            setDeleteConfirmOpen(true)
-                          }}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            item.status === 'A'
-                              ? 'text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10'
-                              : 'text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10'
-                          }`}
-                          title={item.status === 'A' ? 'Desactivar artículo' : 'Reactivar artículo'}
-                        >
-                          {item.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      <td className="px-4 py-3.5 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => handleOpenEdit(item)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                            title={`Editar ${isService ? 'servicio' : 'producto'}`}
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setItemToDelete(item)
+                              setDeleteConfirmOpen(true)
+                            }}
+                            className={`p-1.5 rounded-lg transition-colors ${item.status === 'A'
+                                ? 'text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10'
+                                : 'text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10'
+                              }`}
+                            title={item.status === 'A' ? 'Desactivar artículo' : 'Reactivar artículo'}
+                          >
+                            {item.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
         </div>
 
         <div className="px-4 py-3 border-t border-border/20 text-xs text-muted-foreground flex items-center justify-between">
-          <span>Mostrando {filteredItems.length} artículos</span>
+          <span>
+            Mostrando {filteredItems.length} {activeTab === 'S' ? 'servicios' : activeTab === 'P' ? 'productos' : 'artículos'}
+          </span>
           <span className="text-emerald-500 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Catálogo sincronizado
+            Catálogo sincronizado en tiempo real
           </span>
         </div>
       </GlassCard>
@@ -612,8 +803,22 @@ export function ItemsClient() {
               className="glass-card max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col"
             >
               <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-3">
-                <h3 className="text-base font-bold text-foreground">
-                  {editingItem ? 'Editar Artículo' : 'Nuevo Artículo'}
+                <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                  {formData.type === 'S' ? (
+                    <>
+                      <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400">
+                        <Wrench size={16} />
+                      </div>
+                      <span>{editingItem ? 'Editar Servicio' : 'Nuevo Servicio'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
+                        <Package size={16} />
+                      </div>
+                      <span>{editingItem ? 'Editar Producto' : 'Nuevo Producto'}</span>
+                    </>
+                  )}
                 </h3>
                 <div className="flex items-center gap-2">
                   <GlassButton
@@ -624,7 +829,15 @@ export function ItemsClient() {
                     disabled={saving}
                   >
                     <Check size={14} className="mr-1" />
-                    {saving ? 'Guardando...' : editingItem ? 'Actualizar' : 'Guardar Artículo'}
+                    {saving
+                      ? 'Guardando...'
+                      : editingItem
+                        ? formData.type === 'S'
+                          ? 'Actualizar Servicio'
+                          : 'Actualizar Producto'
+                        : formData.type === 'S'
+                          ? 'Guardar Servicio'
+                          : 'Guardar Producto'}
                   </GlassButton>
                   <button
                     type="button"
@@ -637,6 +850,46 @@ export function ItemsClient() {
               </div>
 
               <form id="item-form" onSubmit={handleSave} className="space-y-4 overflow-y-auto scroll-modern pr-1">
+                {/* Segmented Switch: Tipo de Artículo (Producto vs Servicio) */}
+                <div className="p-1 rounded-xl glass border border-white/10 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        type: 'P',
+                        unit: prev.unit === 'Servicio' ? 'Pza' : prev.unit,
+                        unit_sat: prev.unit_sat === 'E48' ? 'H87' : prev.unit_sat,
+                      }))
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${formData.type === 'P'
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                      }`}
+                  >
+                    <Package size={15} />
+                    <span>Producto (Físico con Inventario)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        type: 'S',
+                        unit: prev.unit === 'Pza' ? 'Servicio' : prev.unit,
+                        unit_sat: prev.unit_sat === 'H87' ? 'E48' : prev.unit_sat,
+                      }))
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${formData.type === 'S'
+                        ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                      }`}
+                  >
+                    <Wrench size={15} />
+                    <span>Servicio (Intangible / Mano de Obra)</span>
+                  </button>
+                </div>
+
                 {/* Basic Identification */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -644,17 +897,21 @@ export function ItemsClient() {
                       Código Interno
                     </label>
                     <GlassInput
-                      placeholder="Ej. ART-001"
+                      placeholder={formData.type === 'S' ? 'Ej. SRV-001' : 'Ej. ART-001'}
                       value={formData.code}
                       onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                     />
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Código de Barras
+                      {formData.type === 'S' ? 'Código de Barras (Opcional)' : 'Código de Barras'}
                     </label>
                     <GlassInput
-                      placeholder="Escanee o ingrese código"
+                      placeholder={
+                        formData.type === 'S'
+                          ? 'No requerido para servicios'
+                          : 'Escanee o ingrese código'
+                      }
                       value={formData.barcode}
                       onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
                     />
@@ -663,10 +920,14 @@ export function ItemsClient() {
 
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                    Descripción / Nombre *
+                    {formData.type === 'S' ? 'Nombre del Servicio *' : 'Descripción / Nombre *'}
                   </label>
                   <GlassInput
-                    placeholder="Nombre completo del producto..."
+                    placeholder={
+                      formData.type === 'S'
+                        ? 'Ej. Mantenimiento Preventivo, Cambio de Aceite, Asesoría...'
+                        : 'Nombre completo del producto...'
+                    }
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     required
@@ -681,7 +942,7 @@ export function ItemsClient() {
                     <select
                       value={formData.id_category}
                       onChange={(e) => setFormData({ ...formData, id_category: e.target.value })}
-                      className="w-full glass-input px-3 py-2 text-xs text-foreground bg-transparent focus:outline-none"
+                      className="w-full glass-input px-3 py-2 text-xs text-foreground bg-transparent focus:outline-none cursor-pointer"
                     >
                       <option value="" className="bg-zinc-900 text-white">Sin categoría</option>
                       {categories.map((c) => (
@@ -698,7 +959,7 @@ export function ItemsClient() {
                     <select
                       value={formData.id_area}
                       onChange={(e) => setFormData({ ...formData, id_area: e.target.value })}
-                      className="w-full glass-input px-3 py-2 text-xs text-foreground bg-transparent focus:outline-none"
+                      className="w-full glass-input px-3 py-2 text-xs text-foreground bg-transparent focus:outline-none cursor-pointer"
                     >
                       <option value="" className="bg-zinc-900 text-white">Sin área</option>
                       {areas.map((a) => (
@@ -715,7 +976,7 @@ export function ItemsClient() {
                     <select
                       value={formData.id_department}
                       onChange={(e) => setFormData({ ...formData, id_department: e.target.value })}
-                      className="w-full glass-input px-3 py-2 text-xs text-foreground bg-transparent focus:outline-none"
+                      className="w-full glass-input px-3 py-2 text-xs text-foreground bg-transparent focus:outline-none cursor-pointer"
                     >
                       <option value="" className="bg-zinc-900 text-white">Sin departamento</option>
                       {departments.map((d) => (
@@ -727,27 +988,41 @@ export function ItemsClient() {
                   </div>
                 </div>
 
-                {/* Product Images Manager (Mobile Camera + Drag & Drop + 720px resize + Carousel) */}
-                <div className="pt-2 border-t border-border/20">
-                  <ProductImageManager
-                    key={editingItem?.id_item || 'new-product-images'}
-                    initialImages={itemImages}
-                    onChange={(nextImgs, nextDels) => {
-                      setItemImages(nextImgs)
-                      setDeletedImageIds(nextDels)
-                    }}
-                  />
-                </div>
+                {/* Fotografías: Solo para Productos; los servicios no llevan fotos */}
+                {formData.type === 'P' ? (
+                  <div className="pt-2 border-t border-border/20">
+                    <ProductImageManager
+                      key={editingItem?.id_item || 'new-product-images'}
+                      initialImages={itemImages}
+                      onChange={(nextImgs, nextDels) => {
+                        setItemImages(nextImgs)
+                        setDeletedImageIds(nextDels)
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 flex items-start gap-3 text-xs">
+                    <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 shrink-0">
+                      <Wrench size={16} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">Servicio sin soporte fotográfico</p>
+                      <p className="text-muted-foreground text-[11px] mt-0.5 leading-relaxed">
+                        Los servicios profesionales no requieren galería de fotos ni control de inventario de existencias. La clave SAT recomendada para la mayoría de servicios es <strong className="text-indigo-300">E48 (Unidad de Servicio)</strong>.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-                {/* Costs and Prices */}
+                {/* Costs, Prices and Commission */}
                 <div className="pt-2 border-t border-border/20">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">
-                    Precios y Costos
+                    {formData.type === 'S' ? 'Tarifas, Costo y Comisión' : 'Precios y Costos'}
                   </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     <div>
                       <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                        Costo
+                        {formData.type === 'S' ? 'Costo Insumos' : 'Costo Compra'}
                       </label>
                       <GlassInput
                         type="number"
@@ -758,7 +1033,7 @@ export function ItemsClient() {
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-emerald-400 block mb-1">
-                        Precio 1 (General) *
+                        {formData.type === 'S' ? 'Tarifa 1 *' : 'Precio 1 *'}
                       </label>
                       <GlassInput
                         type="number"
@@ -770,7 +1045,7 @@ export function ItemsClient() {
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                        Precio 2 (Mayorista)
+                        {formData.type === 'S' ? 'Tarifa 2' : 'Precio 2'}
                       </label>
                       <GlassInput
                         type="number"
@@ -781,7 +1056,7 @@ export function ItemsClient() {
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                        Precio 3 (Especial)
+                        {formData.type === 'S' ? 'Tarifa 3' : 'Precio 3'}
                       </label>
                       <GlassInput
                         type="number"
@@ -790,13 +1065,25 @@ export function ItemsClient() {
                         onChange={(e) => setFormData({ ...formData, price3: Number(e.target.value) })}
                       />
                     </div>
+                    <div>
+                      <label className="text-xs font-semibold text-indigo-400 block mb-1">
+                        Comisión %
+                      </label>
+                      <GlassInput
+                        type="number"
+                        step="any"
+                        placeholder="0"
+                        value={formData.comission}
+                        onChange={(e) => setFormData({ ...formData, comission: Number(e.target.value) })}
+                      />
+                    </div>
                   </div>
                 </div>
 
                 {/* Fiscal & Tax */}
                 <div className="pt-2 border-t border-border/20">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                    Datos Fiscales (SAT) & Unidad
+                    Datos Fiscales (SAT) & Unidad de Medida
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
@@ -804,6 +1091,7 @@ export function ItemsClient() {
                         Unidad
                       </label>
                       <GlassInput
+                        placeholder={formData.type === 'S' ? 'Servicio / Hora' : 'Pza / Kg'}
                         value={formData.unit}
                         onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                       />
@@ -823,7 +1111,7 @@ export function ItemsClient() {
                         Clave SAT (id_sat)
                       </label>
                       <GlassInput
-                        placeholder="Ej. 01010101"
+                        placeholder={formData.type === 'S' ? 'Ej. 72101500' : 'Ej. 01010101'}
                         value={formData.id_sat}
                         onChange={(e) => setFormData({ ...formData, id_sat: e.target.value })}
                       />
@@ -833,7 +1121,7 @@ export function ItemsClient() {
                         Unidad SAT
                       </label>
                       <GlassInput
-                        placeholder="Ej. H87"
+                        placeholder={formData.type === 'S' ? 'E48 (Servicio)' : 'H87 (Pieza)'}
                         value={formData.unit_sat}
                         onChange={(e) => setFormData({ ...formData, unit_sat: e.target.value })}
                       />
@@ -852,7 +1140,15 @@ export function ItemsClient() {
                   </GlassButton>
                   <GlassButton type="submit" variant="primary" size="sm" disabled={saving}>
                     <Check size={14} className="mr-1" />
-                    {saving ? 'Guardando...' : editingItem ? 'Actualizar' : 'Guardar Artículo'}
+                    {saving
+                      ? 'Guardando...'
+                      : editingItem
+                        ? formData.type === 'S'
+                          ? 'Actualizar Servicio'
+                          : 'Actualizar Producto'
+                        : formData.type === 'S'
+                          ? 'Guardar Servicio'
+                          : 'Guardar Producto'}
                   </GlassButton>
                 </div>
               </form>
@@ -872,12 +1168,18 @@ export function ItemsClient() {
               className="glass-card max-w-md w-full p-6 space-y-4"
             >
               <h3 className="text-base font-bold text-foreground">
-                {itemToDelete.status === 'A' ? '¿Desactivar Artículo?' : '¿Reactivar Artículo?'}
+                {itemToDelete.status === 'A'
+                  ? itemToDelete.type === 'S'
+                    ? '¿Desactivar Servicio?'
+                    : '¿Desactivar Producto?'
+                  : itemToDelete.type === 'S'
+                    ? '¿Reactivar Servicio?'
+                    : '¿Reactivar Producto?'}
               </h3>
               <p className="text-sm text-muted-foreground">
                 {itemToDelete.status === 'A'
-                  ? `El artículo "${itemToDelete.description}" se marcará como inactivo (eliminación lógica). Podrá reactivarlo en cualquier momento.`
-                  : `El artículo "${itemToDelete.description}" volverá a estar activo en el catálogo y POS.`}
+                  ? `El ${itemToDelete.type === 'S' ? 'servicio' : 'producto'} "${itemToDelete.description}" se marcará como inactivo (eliminación lógica). Podrá reactivarlo en cualquier momento.`
+                  : `El ${itemToDelete.type === 'S' ? 'servicio' : 'producto'} "${itemToDelete.description}" volverá a estar activo en el catálogo y POS.`}
               </p>
               <div className="flex items-center justify-end gap-2.5 pt-2">
                 <GlassButton
