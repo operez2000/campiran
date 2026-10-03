@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/utils/supabase/client'
 import { GlassCard } from '@/components/glass-card'
@@ -77,6 +77,20 @@ export function ItemsClient() {
   const [categoryFilter, setCategoryFilter] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState<'A' | 'I' | 'ALL'>('A')
   const [activeTab, setActiveTab] = useState<'P' | 'S' | 'ALL'>('P')
+  const [tabLoading, setTabLoading] = useState<'P' | 'S' | 'ALL' | null>(null)
+  const [, startTransition] = useTransition()
+
+  // Manejo de cambio de tab con spinner en el botón correspondiente
+  const handleTabChange = useCallback((newTab: 'P' | 'S' | 'ALL') => {
+    if (tabLoading !== null) return
+    setTabLoading(newTab)
+    setTimeout(() => {
+      startTransition(() => {
+        setActiveTab(newTab)
+        setTabLoading(null)
+      })
+    }, 180)
+  }, [tabLoading])
 
   // Realtime counters for products & services
   const stats = useMemo(() => {
@@ -108,7 +122,7 @@ export function ItemsClient() {
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  // Fetch Master Data
+  // Fetch Master Data (Solo se ejecuta una única vez al montar el componente)
   const fetchData = useCallback(async () => {
     setLoading(true)
 
@@ -136,60 +150,158 @@ export function ItemsClient() {
     setLoading(false)
   }, [supabase])
 
+  // Carga inicial una sola vez
   useEffect(() => {
     fetchData()
   }, [fetchData])
 
-  // Tab switching: re-read catalog from DB and show spinner on the selected tab
-  const [switchingTab, setSwitchingTab] = useState<'P' | 'S' | 'ALL' | null>(null)
-  const handleTabChange = async (tab: 'P' | 'S' | 'ALL') => {
-    if (tab === activeTab || switchingTab) return
-    setSwitchingTab(tab)
-    setActiveTab(tab)
-    try {
-      await fetchData()
-    } finally {
-      setSwitchingTab(null)
-    }
-  }
+  // Consulta granular de un único ítem para sincronización en tiempo real sin recargar la tabla completa
+  const fetchSingleItem = useCallback(
+    async (idItem: string): Promise<Item | null> => {
+      const { data, error } = await supabase
+        .from('items')
+        .select(`
+          *,
+          category:categories(id_category, description),
+          area:areas(id_area, description),
+          department:departments(id_department, description),
+          item_images(*)
+        `)
+        .eq('id_item', idItem)
+        .single()
 
-  // 100% Realtime multi-table subscriptions (items, item_images, categories, areas, departments)
+      if (error || !data) return null
+      return data as unknown as Item
+    },
+    [supabase]
+  )
+
+  // 100% Realtime granular: actualiza ÚNICAMENTE el registro modificado en otra computadora
   useEffect(() => {
     const channel = supabase
       .channel('catalog-items-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
-        fetchData()
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'item_images' }, () => {
-        fetchData()
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
-        fetchData()
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'areas' }, () => {
-        fetchData()
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'departments' }, () => {
-        fetchData()
-      })
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'items' },
+        async (payload) => {
+          const newRec = payload.new as Record<string, unknown> | null
+          const oldRec = payload.old as Record<string, unknown> | null
+
+          if (payload.eventType === 'INSERT' && newRec?.id_item) {
+            const newItem = await fetchSingleItem(newRec.id_item as string)
+            if (newItem) {
+              setItems((prev) => {
+                if (prev.some((i) => i.id_item === newItem.id_item)) {
+                  return prev.map((i) => (i.id_item === newItem.id_item ? newItem : i))
+                }
+                return [newItem, ...prev]
+              })
+            }
+          } else if (payload.eventType === 'UPDATE' && newRec?.id_item) {
+            const updated = await fetchSingleItem(newRec.id_item as string)
+            if (updated) {
+              setItems((prev) =>
+                prev.map((i) => (i.id_item === updated.id_item ? updated : i))
+              )
+            }
+          } else if (payload.eventType === 'DELETE' && oldRec?.id_item) {
+            const deletedId = oldRec.id_item as string
+            setItems((prev) => prev.filter((i) => i.id_item !== deletedId))
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'item_images' },
+        async (payload) => {
+          const newRec = payload.new as Record<string, unknown> | null
+          const oldRec = payload.old as Record<string, unknown> | null
+          const targetItemId = (newRec?.id_item as string) || (oldRec?.id_item as string)
+          if (targetItemId) {
+            const updated = await fetchSingleItem(targetItemId)
+            if (updated) {
+              setItems((prev) =>
+                prev.map((i) => (i.id_item === updated.id_item ? updated : i))
+              )
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'categories' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setCategories((prev) => [...prev, payload.new as Category].sort((a, b) => (a.description || '').localeCompare(b.description || '')))
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as Category
+            setCategories((prev) =>
+              prev.map((c) => (c.id_category === updated.id_category ? updated : c))
+            )
+            setItems((prev) =>
+              prev.map((i) =>
+                i.id_category === updated.id_category
+                  ? { ...i, category: updated }
+                  : i
+              )
+            )
+          } else if (payload.eventType === 'DELETE' && payload.old?.id_category) {
+            setCategories((prev) => prev.filter((c) => c.id_category !== payload.old.id_category))
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'areas' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setAreas((prev) => [...prev, payload.new as Area].sort((a, b) => (a.description || '').localeCompare(b.description || '')))
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as Area
+            setAreas((prev) =>
+              prev.map((a) => (a.id_area === updated.id_area ? updated : a))
+            )
+            setItems((prev) =>
+              prev.map((i) =>
+                i.id_area === updated.id_area
+                  ? { ...i, area: updated }
+                  : i
+              )
+            )
+          } else if (payload.eventType === 'DELETE' && payload.old?.id_area) {
+            setAreas((prev) => prev.filter((a) => a.id_area !== payload.old.id_area))
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'departments' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setDepartments((prev) => [...prev, payload.new as Department].sort((a, b) => (a.description || '').localeCompare(b.description || '')))
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as Department
+            setDepartments((prev) =>
+              prev.map((d) => (d.id_department === updated.id_department ? updated : d))
+            )
+            setItems((prev) =>
+              prev.map((i) =>
+                i.id_department === updated.id_department
+                  ? { ...i, department: updated }
+                  : i
+              )
+            )
+          } else if (payload.eventType === 'DELETE' && payload.old?.id_department) {
+            setDepartments((prev) => prev.filter((d) => d.id_department !== payload.old.id_department))
+          }
+        }
+      )
       .subscribe()
-
-    // Immediate sync fallback on tab focus or visibility change
-    const handleVisibilityOrFocus = () => {
-      if (document.visibilityState === 'visible') {
-        fetchData()
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityOrFocus)
-    window.addEventListener('focus', handleVisibilityOrFocus)
 
     return () => {
       supabase.removeChannel(channel)
-      document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
-      window.removeEventListener('focus', handleVisibilityOrFocus)
     }
-  }, [supabase, fetchData])
+  }, [supabase, fetchSingleItem])
 
   // Filtered Items
   const filteredItems = useMemo(() => {
@@ -349,6 +461,10 @@ export function ItemsClient() {
       }
 
       await handleSyncImages(editingItem.id_item, formData.type)
+      const updated = await fetchSingleItem(editingItem.id_item)
+      if (updated) {
+        setItems((prev) => prev.map((i) => (i.id_item === updated.id_item ? updated : i)))
+      }
       setSaving(false)
       toast.success(
         formData.type === 'S'
@@ -356,7 +472,6 @@ export function ItemsClient() {
           : 'Producto actualizado correctamente'
       )
       setModalOpen(false)
-      fetchData()
     } else {
       const { data: createdItem, error } = await supabase
         .from('items')
@@ -371,6 +486,10 @@ export function ItemsClient() {
       }
 
       await handleSyncImages(createdItem.id_item, formData.type)
+      const created = await fetchSingleItem(createdItem.id_item)
+      if (created) {
+        setItems((prev) => [created, ...prev])
+      }
       setSaving(false)
       toast.success(
         formData.type === 'S'
@@ -378,7 +497,6 @@ export function ItemsClient() {
           : 'Producto creado exitosamente con sus imágenes'
       )
       setModalOpen(false)
-      fetchData()
     }
   }
 
@@ -399,10 +517,14 @@ export function ItemsClient() {
     if (error) {
       toast.error('Error al modificar estado del artículo')
     } else {
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id_item === itemToDelete.id_item ? { ...i, status: nextStatus } : i
+        )
+      )
       toast.success(
         nextStatus === 'I' ? 'Artículo desactivado (eliminación lógica)' : 'Artículo reactivado'
       )
-      fetchData()
     }
   }
 
@@ -436,18 +558,22 @@ export function ItemsClient() {
           <button
             type="button"
             onClick={() => handleTabChange('P')}
-            disabled={!!switchingTab}
-            aria-busy={switchingTab === 'P'}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer disabled:cursor-wait ${activeTab === 'P'
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer ${
+              activeTab === 'P'
                 ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25'
                 : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-              }`}
+            }`}
           >
-            {switchingTab === 'P' ? <Loader2 size={16} className="animate-spin" /> : <Package size={16} />}
+            {tabLoading === 'P' ? (
+              <Loader2 size={16} className="animate-spin text-white" />
+            ) : (
+              <Package size={16} />
+            )}
             <span>Productos</span>
             <span
-              className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${activeTab === 'P' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
-                }`}
+              className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                activeTab === 'P' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
+              }`}
             >
               {stats.products}
             </span>
@@ -456,18 +582,22 @@ export function ItemsClient() {
           <button
             type="button"
             onClick={() => handleTabChange('S')}
-            disabled={!!switchingTab}
-            aria-busy={switchingTab === 'S'}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer disabled:cursor-wait ${activeTab === 'S'
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer ${
+              activeTab === 'S'
                 ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/25'
                 : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-              }`}
+            }`}
           >
-            {switchingTab === 'S' ? <Loader2 size={16} className="animate-spin" /> : <Wrench size={16} />}
+            {tabLoading === 'S' ? (
+              <Loader2 size={16} className="animate-spin text-white" />
+            ) : (
+              <Wrench size={16} />
+            )}
             <span>Servicios</span>
             <span
-              className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${activeTab === 'S' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
-                }`}
+              className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                activeTab === 'S' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
+              }`}
             >
               {stats.services}
             </span>
@@ -476,16 +606,25 @@ export function ItemsClient() {
           <button
             type="button"
             onClick={() => handleTabChange('ALL')}
-            disabled={!!switchingTab}
-            aria-busy={switchingTab === 'ALL'}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer disabled:cursor-wait ${activeTab === 'ALL'
-                ? 'bg-gradient-to-r from-slate-600 to-slate-800 text-white shadow-md shadow-slate-500/25 dark:from-white/20 dark:to-white/10'
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer ${
+              activeTab === 'ALL'
+                ? 'bg-gradient-to-r from-slate-700 to-slate-900 text-white shadow-md shadow-slate-500/25 dark:from-white/20 dark:to-white/10 dark:text-white'
                 : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-              }`}
+            }`}
           >
-            {switchingTab === 'ALL' && <Loader2 size={14} className="animate-spin" />}
+            {tabLoading === 'ALL' ? (
+              <Loader2 size={16} className="animate-spin text-white" />
+            ) : (
+              <Layers size={16} />
+            )}
             <span>Todos</span>
-            <span className="text-[10px] opacity-75">({stats.total})</span>
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                activeTab === 'ALL' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
+              }`}
+            >
+              {stats.total}
+            </span>
           </button>
         </div>
 
@@ -577,7 +716,7 @@ export function ItemsClient() {
 
       {/* Items Table */}
       <GlassCard padding="none" className="overflow-hidden">
-        <div className="overflow-x-auto scroll-modern">
+        <div className={`overflow-x-auto scroll-modern transition-opacity duration-150 ${tabLoading !== null ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -605,19 +744,13 @@ export function ItemsClient() {
             <tbody className="divide-y divide-border/20">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={9} className="px-4 py-16 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-2.5" role="status" aria-live="polite">
                       <Loader2
                         size={28}
-                        className={`animate-spin ${activeTab === 'S' ? 'text-indigo-500' : activeTab === 'P' ? 'text-emerald-500' : 'text-slate-500 dark:text-slate-300'}`}
+                        className="animate-spin text-emerald-500"
                       />
-                      <span className="text-sm font-medium">
-                        {activeTab === 'S'
-                          ? 'Cargando servicios...'
-                          : activeTab === 'P'
-                            ? 'Cargando productos...'
-                            : 'Cargando catálogo...'}
-                      </span>
+                      <span className="text-sm font-medium">Cargando catálogo...</span>
                     </div>
                   </td>
                 </tr>
