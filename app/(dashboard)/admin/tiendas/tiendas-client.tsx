@@ -13,6 +13,7 @@ import {
   Store as StoreIcon, Search, Plus, Edit3, Trash2, RotateCcw,
   X, Check, MapPin, RefreshCw
 } from 'lucide-react'
+import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
 
 export function TiendasClient() {
   const supabase = createClient()
@@ -79,6 +80,64 @@ export function TiendasClient() {
       return true
     })
   }, [stores, statusFilter, search])
+
+  // Sorting state
+  const [sortKey, setSortKey] = useState<string>('description')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+  }
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, statusFilter])
+
+  const sortedStores = useMemo(() => {
+    const list = [...filteredStores]
+    if (!sortKey) return list
+
+    return list.sort((a, b) => {
+      let aVal = ''
+      let bVal = ''
+
+      switch (sortKey) {
+        case 'description':
+          aVal = (a.description || '').toLowerCase()
+          bVal = (b.description || '').toLowerCase()
+          break
+        case 'location':
+          aVal = (a.location || '').toLowerCase()
+          bVal = (b.location || '').toLowerCase()
+          break
+        case 'status':
+          aVal = a.status || ''
+          bVal = b.status || ''
+          break
+        default:
+          return 0
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [filteredStores, sortKey, sortDirection])
+
+  const totalPages = Math.ceil(sortedStores.length / pageSize) || 1
+  const paginatedStores = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedStores.slice(start, start + pageSize)
+  }, [sortedStores, currentPage, pageSize])
 
   const handleOpenCreate = () => {
     setEditingStore(null)
@@ -240,14 +299,35 @@ export function TiendasClient() {
 
       {/* Stores Table */}
       <GlassCard padding="none" className="overflow-hidden">
-        <div className="overflow-x-auto scroll-modern">
-          <table className="w-full text-left text-sm">
-            <thead>
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern">
+          <table className="w-full text-left text-sm border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-3.5">Sucursal</th>
-                <th className="px-4 py-3.5">Dirección / Ubicación</th>
-                <th className="px-4 py-3.5 text-center">Estado</th>
-                <th className="px-4 py-3.5 text-center">Acciones</th>
+                <TableColumnHeader
+                  title="Sucursal"
+                  sortKey="description"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Dirección / Ubicación"
+                  sortKey="location"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Estado"
+                  sortKey="status"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="center"
+                />
+                <th className="px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -257,14 +337,14 @@ export function TiendasClient() {
                     Cargando sucursales...
                   </td>
                 </tr>
-              ) : filteredStores.length === 0 ? (
+              ) : paginatedStores.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
                     <p className="text-base font-medium">No se encontraron sucursales</p>
                   </td>
                 </tr>
               ) : (
-                filteredStores.map((store) => (
+                paginatedStores.map((store) => (
                   <tr key={store.id_store} className="hover:bg-white/[0.02] transition-colors group">
                     <td className="px-4 py-3.5">
                       <span className="font-semibold text-foreground group-hover:text-emerald-400 transition-colors">
@@ -284,29 +364,26 @@ export function TiendasClient() {
                     </td>
 
                     <td className="px-4 py-3.5 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => handleOpenEdit(store)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                          title="Editar"
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setStoreToDelete(store)
-                            setDeleteConfirmOpen(true)
-                          }}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            store.status === 'A'
-                              ? 'text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10'
-                              : 'text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10'
-                          }`}
-                          title={store.status === 'A' ? 'Desactivar' : 'Reactivar'}
-                        >
-                          {store.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />}
-                        </button>
-                      </div>
+                      <TableActionMenu
+                        items={[
+                          {
+                            label: 'Editar Sucursal',
+                            icon: <Edit3 size={15} />,
+                            onClick: () => handleOpenEdit(store),
+                            variant: 'primary',
+                          },
+                          {
+                            label: store.status === 'A' ? 'Desactivar Sucursal' : 'Reactivar Sucursal',
+                            icon: store.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />,
+                            onClick: () => {
+                              setStoreToDelete(store)
+                              setDeleteConfirmOpen(true)
+                            },
+                            variant: store.status === 'A' ? 'danger' : 'primary',
+                            separatorBefore: true,
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))
@@ -315,13 +392,15 @@ export function TiendasClient() {
           </table>
         </div>
 
-        <div className="px-4 py-3 border-t border-border/20 text-xs text-muted-foreground flex items-center justify-between">
-          <span>Total: {filteredStores.length} sucursales</span>
-          <span className="text-emerald-500 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Sincronización multi-tienda activa
-          </span>
-        </div>
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={sortedStores.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          realtimeLabel="Sincronización multi-tienda activa"
+        />
       </GlassCard>
 
       {/* Modal: Create / Edit Store */}

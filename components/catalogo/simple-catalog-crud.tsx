@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import {
   Search, Plus, Edit3, Trash2, RotateCcw, X, Check, RefreshCw
 } from 'lucide-react'
+import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
 
 interface CatalogEntity {
   id: string
@@ -109,6 +110,54 @@ export function SimpleCatalogCrud({
       return true
     })
   }, [records, statusFilter, search])
+
+  // Sorting state
+  const [sortKey, setSortKey] = useState<string>('description')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+  }
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, statusFilter])
+
+  const sortedRecords = useMemo(() => {
+    const list = [...filteredRecords]
+    if (!sortKey) return list
+
+    return list.sort((a, b) => {
+      let aVal = ''
+      let bVal = ''
+      if (sortKey === 'description') {
+        aVal = (a.description || '').toLowerCase()
+        bVal = (b.description || '').toLowerCase()
+      } else if (sortKey === 'status') {
+        aVal = a.status
+        bVal = b.status
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [filteredRecords, sortKey, sortDirection])
+
+  const totalPages = Math.ceil(sortedRecords.length / pageSize) || 1
+  const paginatedRecords = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedRecords.slice(start, start + pageSize)
+  }, [sortedRecords, currentPage, pageSize])
 
   // Handle Save
   const handleSave = async (e: React.FormEvent) => {
@@ -262,13 +311,28 @@ export function SimpleCatalogCrud({
 
       {/* Records Table */}
       <GlassCard padding="none" className="overflow-hidden">
-        <div className="overflow-x-auto scroll-modern">
-          <table className="w-full text-left text-sm">
-            <thead>
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern">
+          <table className="w-full text-left text-sm border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-3.5">Descripción</th>
-                <th className="px-4 py-3.5 text-center">Estado</th>
-                <th className="px-4 py-3.5 text-center">Acciones</th>
+                <TableColumnHeader
+                  title="Descripción"
+                  sortKey="description"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Estado"
+                  sortKey="status"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="center"
+                />
+                <th className="px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -278,44 +342,41 @@ export function SimpleCatalogCrud({
                     Cargando datos...
                   </td>
                 </tr>
-              ) : filteredRecords.length === 0 ? (
+              ) : paginatedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="px-4 py-10 text-center text-muted-foreground">
                     No se encontraron registros
                   </td>
                 </tr>
               ) : (
-                filteredRecords.map((r) => (
+                paginatedRecords.map((r) => (
                   <tr key={r.id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-4 py-3 font-semibold text-foreground">{r.description}</td>
                     <td className="px-4 py-3 text-center">
                       <StatusBadge status={r.status} />
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => {
-                            setEditingRecord(r)
-                            setDescriptionInput(r.description || '')
-                            setModalOpen(true)
-                          }}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                          title="Editar"
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleToggleStatus(r)}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            r.status === 'A'
-                              ? 'text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10'
-                              : 'text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10'
-                          }`}
-                          title={r.status === 'A' ? 'Desactivar' : 'Reactivar'}
-                        >
-                          {r.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />}
-                        </button>
-                      </div>
+                      <TableActionMenu
+                        items={[
+                          {
+                            label: 'Editar',
+                            icon: <Edit3 size={15} />,
+                            onClick: () => {
+                              setEditingRecord(r)
+                              setDescriptionInput(r.description || '')
+                              setModalOpen(true)
+                            },
+                            variant: 'primary',
+                          },
+                          {
+                            label: r.status === 'A' ? 'Desactivar' : 'Reactivar',
+                            icon: r.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />,
+                            onClick: () => handleToggleStatus(r),
+                            variant: r.status === 'A' ? 'danger' : 'primary',
+                            separatorBefore: true,
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))
@@ -324,13 +385,15 @@ export function SimpleCatalogCrud({
           </table>
         </div>
 
-        <div className="px-4 py-3 border-t border-border/20 text-xs text-muted-foreground flex items-center justify-between">
-          <span>Total: {filteredRecords.length} registros</span>
-          <span className="text-emerald-500 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Tiempo real activo
-          </span>
-        </div>
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={sortedRecords.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          realtimeLabel="Tiempo real activo"
+        />
       </GlassCard>
 
       {/* Modal: Create / Edit */}

@@ -16,6 +16,7 @@ import {
   Boxes, AlertTriangle, TrendingDown, DollarSign,
   Search, Filter, MapPin, RefreshCw, Layers, Edit3, X, Check
 } from 'lucide-react'
+import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
 
 export function StockClient() {
   const supabase = createClient()
@@ -124,6 +125,92 @@ export function StockClient() {
       return true
     })
   }, [stocks, search, selectedLocation, onlyLowStock])
+
+  // Sorting state
+  const [sortKey, setSortKey] = useState<string>('description')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+  }
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, selectedLocation, onlyLowStock])
+
+  const sortedStocks = useMemo(() => {
+    const list = [...filteredStocks]
+    if (!sortKey) return list
+
+    return list.sort((a, b) => {
+      let aVal: string | number = ''
+      let bVal: string | number = ''
+
+      switch (sortKey) {
+        case 'description':
+          aVal = (a.item?.description || '').toLowerCase()
+          bVal = (b.item?.description || '').toLowerCase()
+          break
+        case 'category':
+          aVal = (a.item?.category?.description || '').toLowerCase()
+          bVal = (b.item?.category?.description || '').toLowerCase()
+          break
+        case 'location':
+          aVal = (a.location?.description || '').toLowerCase()
+          bVal = (b.location?.description || '').toLowerCase()
+          break
+        case 'min_max':
+          aVal = Number(a.minimum || 0)
+          bVal = Number(b.minimum || 0)
+          break
+        case 'current':
+          aVal = Number(a.current || 0)
+          bVal = Number(b.current || 0)
+          break
+        case 'cost':
+          aVal = Number(a.item?.cost || 0)
+          bVal = Number(b.item?.cost || 0)
+          break
+        case 'totalVal':
+          aVal = Number(a.current || 0) * Number(a.item?.cost || 0)
+          bVal = Number(b.current || 0) * Number(b.item?.cost || 0)
+          break
+        case 'status': {
+          const getStatusVal = (s: Stock) => {
+            const cur = s.current ?? 0
+            const min = s.minimum ?? 0
+            if (cur === 0) return 0
+            if (cur < min) return 1
+            return 2
+          }
+          aVal = getStatusVal(a)
+          bVal = getStatusVal(b)
+          break
+        }
+        default:
+          return 0
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [filteredStocks, sortKey, sortDirection])
+
+  const totalPages = Math.ceil(sortedStocks.length / pageSize) || 1
+  const paginatedStocks = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedStocks.slice(start, start + pageSize)
+  }, [sortedStocks, currentPage, pageSize])
 
   // KPI calculations
   const stats = useMemo(() => {
@@ -328,19 +415,74 @@ export function StockClient() {
 
       {/* Stock Table */}
       <GlassCard padding="none" className="overflow-hidden">
-        <div className="overflow-x-auto scroll-modern">
-          <table className="w-full text-left text-sm">
-            <thead>
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern">
+          <table className="w-full text-left text-sm border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-3.5">Artículo</th>
-                <th className="px-4 py-3.5">Categoría</th>
-                <th className="px-4 py-3.5">Ubicación</th>
-                <th className="px-4 py-3.5 text-center">Mín / Máx</th>
-                <th className="px-4 py-3.5 text-right">Existencia</th>
-                <th className="px-4 py-3.5 text-right">Costo</th>
-                <th className="px-4 py-3.5 text-right">Valor Total</th>
-                <th className="px-4 py-3.5 text-center">Estado</th>
-                <th className="px-4 py-3.5 text-center">Acción</th>
+                <TableColumnHeader
+                  title="Artículo"
+                  sortKey="description"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Categoría"
+                  sortKey="category"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Ubicación"
+                  sortKey="location"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Mín / Máx"
+                  sortKey="min_max"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="center"
+                />
+                <TableColumnHeader
+                  title="Existencia"
+                  sortKey="current"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <TableColumnHeader
+                  title="Costo"
+                  sortKey="cost"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <TableColumnHeader
+                  title="Valor Total"
+                  sortKey="totalVal"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <TableColumnHeader
+                  title="Estado"
+                  sortKey="status"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="center"
+                />
+                <th className="px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                  Acción
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -353,7 +495,7 @@ export function StockClient() {
                     </div>
                   </td>
                 </tr>
-              ) : filteredStocks.length === 0 ? (
+              ) : paginatedStocks.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
                     <p className="text-base font-medium">No se encontraron artículos</p>
@@ -363,7 +505,7 @@ export function StockClient() {
                   </td>
                 </tr>
               ) : (
-                filteredStocks.map((stock) => {
+                paginatedStocks.map((stock) => {
                   const item = stock.item!
                   const current = stock.current ?? 0
                   const min = stock.minimum ?? 0
@@ -433,13 +575,16 @@ export function StockClient() {
                       </td>
 
                       <td className="px-4 py-3.5 text-center">
-                        <button
-                          onClick={() => handleOpenEdit(stock)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                          title="Editar límites de stock"
-                        >
-                          <Edit3 size={15} />
-                        </button>
+                        <TableActionMenu
+                          items={[
+                            {
+                              label: 'Editar Límites de Stock',
+                              icon: <Edit3 size={15} />,
+                              onClick: () => handleOpenEdit(stock),
+                              variant: 'primary',
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   )
@@ -449,14 +594,16 @@ export function StockClient() {
           </table>
         </div>
 
-        {/* Footer info */}
-        <div className="px-4 py-3 border-t border-border/20 text-xs text-muted-foreground flex items-center justify-between">
-          <span>Mostrando {filteredStocks.length} de {stocks.length} artículos</span>
-          <span className="text-emerald-500 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Sincronización en tiempo real activa
-          </span>
-        </div>
+        {/* Footer pagination */}
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={sortedStocks.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          realtimeLabel="Sincronización en tiempo real activa"
+        />
       </GlassCard>
 
       {/* Modal: Edit Min/Max limits */}

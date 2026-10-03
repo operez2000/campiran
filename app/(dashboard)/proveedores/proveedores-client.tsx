@@ -15,6 +15,7 @@ import {
   X, Check, Phone, Mail, Globe, MapPin, DollarSign,
   Clock, RefreshCw
 } from 'lucide-react'
+import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
 
 interface SupplierFormData {
   supplier_name: string
@@ -119,6 +120,80 @@ export function ProveedoresClient() {
       return true
     })
   }, [suppliers, statusFilter, search])
+
+  // Sorting state
+  const [sortKey, setSortKey] = useState<string>('supplier_name')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+  }
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, statusFilter])
+
+  const sortedSuppliers = useMemo(() => {
+    const list = [...filteredSuppliers]
+    if (!sortKey) return list
+
+    return list.sort((a, b) => {
+      let aVal: string | number = ''
+      let bVal: string | number = ''
+
+      switch (sortKey) {
+        case 'supplier_name':
+          aVal = (a.supplier_name || '').toLowerCase()
+          bVal = (b.supplier_name || '').toLowerCase()
+          break
+        case 'rfc':
+          aVal = (a.rfc || '').toLowerCase()
+          bVal = (b.rfc || '').toLowerCase()
+          break
+        case 'contact':
+          aVal = (a.contact || '').toLowerCase()
+          bVal = (b.contact || '').toLowerCase()
+          break
+        case 'city':
+          aVal = `${a.city || ''} ${a.state || ''}`.toLowerCase()
+          bVal = `${b.city || ''} ${b.state || ''}`.toLowerCase()
+          break
+        case 'credit_days':
+          aVal = Number(a.credit_days || 0)
+          bVal = Number(b.credit_days || 0)
+          break
+        case 'credit_limit':
+          aVal = Number(a.credit_limit || 0)
+          bVal = Number(b.credit_limit || 0)
+          break
+        case 'status':
+          aVal = a.status || ''
+          bVal = b.status || ''
+          break
+        default:
+          return 0
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [filteredSuppliers, sortKey, sortDirection])
+
+  const totalPages = Math.ceil(sortedSuppliers.length / pageSize) || 1
+  const paginatedSuppliers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedSuppliers.slice(start, start + pageSize)
+  }, [sortedSuppliers, currentPage, pageSize])
 
   // Open Create Modal
   const handleOpenCreate = () => {
@@ -308,18 +383,65 @@ export function ProveedoresClient() {
 
       {/* Suppliers Table */}
       <GlassCard padding="none" className="overflow-hidden">
-        <div className="overflow-x-auto scroll-modern">
-          <table className="w-full text-left text-sm">
-            <thead>
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern">
+          <table className="w-full text-left text-sm border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-3.5">Proveedor</th>
-                <th className="px-4 py-3.5">RFC</th>
-                <th className="px-4 py-3.5">Contacto</th>
-                <th className="px-4 py-3.5">Ubicación</th>
-                <th className="px-4 py-3.5 text-center">Días Crédito</th>
-                <th className="px-4 py-3.5 text-right">Límite Crédito</th>
-                <th className="px-4 py-3.5 text-center">Estado</th>
-                <th className="px-4 py-3.5 text-center">Acciones</th>
+                <TableColumnHeader
+                  title="Proveedor"
+                  sortKey="supplier_name"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="RFC"
+                  sortKey="rfc"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Contacto"
+                  sortKey="contact"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Ubicación"
+                  sortKey="city"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Días Crédito"
+                  sortKey="credit_days"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="center"
+                />
+                <TableColumnHeader
+                  title="Límite Crédito"
+                  sortKey="credit_limit"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <TableColumnHeader
+                  title="Estado"
+                  sortKey="status"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="center"
+                />
+                <th className="px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -329,7 +451,7 @@ export function ProveedoresClient() {
                     Cargando directorio de proveedores...
                   </td>
                 </tr>
-              ) : filteredSuppliers.length === 0 ? (
+              ) : paginatedSuppliers.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
                     <p className="text-base font-medium">No se encontraron proveedores</p>
@@ -339,7 +461,7 @@ export function ProveedoresClient() {
                   </td>
                 </tr>
               ) : (
-                filteredSuppliers.map((supplier) => (
+                paginatedSuppliers.map((supplier) => (
                   <tr key={supplier.id_supplier} className="hover:bg-white/[0.02] transition-colors group">
                     <td className="px-4 py-3.5">
                       <span className="font-semibold text-foreground group-hover:text-emerald-400 transition-colors">
@@ -388,29 +510,26 @@ export function ProveedoresClient() {
                     </td>
 
                     <td className="px-4 py-3.5 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => handleOpenEdit(supplier)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                          title="Editar proveedor"
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSupplierToDelete(supplier)
-                            setDeleteConfirmOpen(true)
-                          }}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            supplier.status === 'A'
-                              ? 'text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10'
-                              : 'text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10'
-                          }`}
-                          title={supplier.status === 'A' ? 'Desactivar proveedor' : 'Reactivar proveedor'}
-                        >
-                          {supplier.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />}
-                        </button>
-                      </div>
+                      <TableActionMenu
+                        items={[
+                          {
+                            label: 'Editar Proveedor',
+                            icon: <Edit3 size={15} />,
+                            onClick: () => handleOpenEdit(supplier),
+                            variant: 'primary',
+                          },
+                          {
+                            label: supplier.status === 'A' ? 'Desactivar Proveedor' : 'Reactivar Proveedor',
+                            icon: supplier.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />,
+                            onClick: () => {
+                              setSupplierToDelete(supplier)
+                              setDeleteConfirmOpen(true)
+                            },
+                            variant: supplier.status === 'A' ? 'danger' : 'primary',
+                            separatorBefore: true,
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))
@@ -419,13 +538,15 @@ export function ProveedoresClient() {
           </table>
         </div>
 
-        <div className="px-4 py-3 border-t border-border/20 text-xs text-muted-foreground flex items-center justify-between">
-          <span>Mostrando {filteredSuppliers.length} proveedores</span>
-          <span className="text-emerald-500 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Sincronización en tiempo real
-          </span>
-        </div>
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={sortedSuppliers.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          realtimeLabel="Sincronización en tiempo real"
+        />
       </GlassCard>
 
       {/* Modal: Create / Edit Supplier */}

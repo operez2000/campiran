@@ -14,6 +14,7 @@ import {
   ArrowLeftRight, Search, RefreshCw,
   ArrowDownLeft, ArrowUpRight, ShoppingCart, ScanLine, Wrench
 } from 'lucide-react'
+import { TableColumnHeader, TablePagination } from '@/components/tables'
 
 const MOVIM_CONFIG: Record<MovimType, { label: string; icon: typeof ArrowDownLeft; color: string; badge: string }> = {
   E: { label: 'Entrada', icon: ArrowDownLeft, color: 'text-emerald-400', badge: 'badge-active' },
@@ -135,6 +136,84 @@ export function MovimientosClient() {
     })
   }, [transactions, typeFilter, search])
 
+  // Sorting state
+  const [sortKey, setSortKey] = useState<string>('date_transaction')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+  }
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, typeFilter])
+
+  const sortedTransactions = useMemo(() => {
+    const list = [...filtered]
+    if (!sortKey) return list
+
+    return list.sort((a, b) => {
+      let aVal: string | number = ''
+      let bVal: string | number = ''
+
+      switch (sortKey) {
+        case 'date_transaction':
+          aVal = a.date_transaction || ''
+          bVal = b.date_transaction || ''
+          break
+        case 'movim_type':
+          aVal = a.movim_type || ''
+          bVal = b.movim_type || ''
+          break
+        case 'description':
+          aVal = (a.item?.description || '').toLowerCase()
+          bVal = (b.item?.description || '').toLowerCase()
+          break
+        case 'location':
+          aVal = (a.location?.description || '').toLowerCase()
+          bVal = (b.location?.description || '').toLowerCase()
+          break
+        case 'entry':
+          aVal = Number(a.amount_enrty || 0)
+          bVal = Number(b.amount_enrty || 0)
+          break
+        case 'exit':
+          aVal = Number(a.amount_exit || 0)
+          bVal = Number(b.amount_exit || 0)
+          break
+        case 'cost':
+          aVal = Number(a.cost || 0)
+          bVal = Number(b.cost || 0)
+          break
+        case 'reference':
+          aVal = `${a.concept || ''} ${a.reference || ''}`.toLowerCase()
+          bVal = `${b.concept || ''} ${b.reference || ''}`.toLowerCase()
+          break
+        default:
+          return 0
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [filtered, sortKey, sortDirection])
+
+  const totalPages = Math.ceil(sortedTransactions.length / pageSize) || 1
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedTransactions.slice(start, start + pageSize)
+  }, [sortedTransactions, currentPage, pageSize])
+
   return (
     <div className="space-y-6">
       <div className="dashboard-bg" />
@@ -213,18 +292,69 @@ export function MovimientosClient() {
 
       {/* Transactions Table */}
       <GlassCard padding="none" className="overflow-hidden">
-        <div className="overflow-x-auto scroll-modern">
-          <table className="w-full text-left text-sm">
-            <thead>
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern">
+          <table className="w-full text-left text-sm border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-3.5">Fecha y Hora</th>
-                <th className="px-4 py-3.5">Tipo</th>
-                <th className="px-4 py-3.5">Artículo</th>
-                <th className="px-4 py-3.5">Ubicación</th>
-                <th className="px-4 py-3.5 text-right">Entrada</th>
-                <th className="px-4 py-3.5 text-right">Salida</th>
-                <th className="px-4 py-3.5 text-right">Costo</th>
-                <th className="px-4 py-3.5">Referencia / Concepto</th>
+                <TableColumnHeader
+                  title="Fecha y Hora"
+                  sortKey="date_transaction"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Tipo"
+                  sortKey="movim_type"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Artículo"
+                  sortKey="description"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Ubicación"
+                  sortKey="location"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Entrada"
+                  sortKey="entry"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <TableColumnHeader
+                  title="Salida"
+                  sortKey="exit"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <TableColumnHeader
+                  title="Costo"
+                  sortKey="cost"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <TableColumnHeader
+                  title="Referencia / Concepto"
+                  sortKey="reference"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -235,7 +365,7 @@ export function MovimientosClient() {
                     Cargando movimientos...
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : paginatedTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
                     <p className="text-base font-medium">No se encontraron movimientos</p>
@@ -245,7 +375,7 @@ export function MovimientosClient() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((t) => {
+                paginatedTransactions.map((t) => {
                   const mType = t.movim_type as MovimType
                   const config = MOVIM_CONFIG[mType] ?? {
                     label: t.movim_type ?? 'N/A',
@@ -310,13 +440,15 @@ export function MovimientosClient() {
           </table>
         </div>
 
-        <div className="px-4 py-3 border-t border-border/20 text-xs text-muted-foreground flex items-center justify-between">
-          <span>Mostrando {filtered.length} movimientos</span>
-          <span className="text-emerald-500 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Monitoreo en tiempo real
-          </span>
-        </div>
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={sortedTransactions.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          realtimeLabel="Monitoreo en tiempo real"
+        />
       </GlassCard>
     </div>
   )

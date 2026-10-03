@@ -16,6 +16,7 @@ import {
   X, Check, ShoppingBag, Phone, Mail, MapPin, RefreshCw,
   FileText, CheckCircle2, UserX, Copy, Building2
 } from 'lucide-react'
+import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
 
 interface ClientFormData {
   first_name: string
@@ -149,6 +150,76 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
       return true
     })
   }, [clients, statusFilter, search])
+
+  // Sorting state
+  const [sortKey, setSortKey] = useState<string>('name')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+  }
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, statusFilter])
+
+  const sortedClients = useMemo(() => {
+    const list = [...filteredClients]
+    if (!sortKey) return list
+
+    return list.sort((a, b) => {
+      let aVal: string | number = ''
+      let bVal: string | number = ''
+
+      switch (sortKey) {
+        case 'name':
+          aVal = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase()
+          bVal = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase()
+          break
+        case 'rfc':
+          aVal = (a.rfc || '').toLowerCase()
+          bVal = (b.rfc || '').toLowerCase()
+          break
+        case 'contact':
+          aVal = `${a.phone || ''} ${a.email || ''}`.toLowerCase()
+          bVal = `${b.phone || ''} ${b.email || ''}`.toLowerCase()
+          break
+        case 'location':
+          aVal = `${a.city || ''} ${a.state || ''}`.toLowerCase()
+          bVal = `${b.city || ''} ${b.state || ''}`.toLowerCase()
+          break
+        case 'price_number':
+          aVal = Number(a.price_number || 1)
+          bVal = Number(b.price_number || 1)
+          break
+        case 'status':
+          aVal = a.status || ''
+          bVal = b.status || ''
+          break
+        default:
+          return 0
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [filteredClients, sortKey, sortDirection])
+
+  const totalPages = Math.ceil(sortedClients.length / pageSize) || 1
+  const paginatedClients = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedClients.slice(start, start + pageSize)
+  }, [sortedClients, currentPage, pageSize])
 
   // Open Create Modal
   const handleOpenCreate = () => {
@@ -420,17 +491,57 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
 
       {/* ── Clients Table Card ──────────────────────────────────── */}
       <GlassCard padding="none" className="overflow-hidden shadow-xl">
-        <div className="overflow-x-auto scroll-modern">
-          <table className="w-full text-left text-sm">
-            <thead>
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern">
+          <table className="w-full text-left text-sm border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                <th className="px-5 py-3.5">Cliente</th>
-                <th className="px-4 py-3.5">RFC Fiscal</th>
-                <th className="px-4 py-3.5">Contacto</th>
-                <th className="px-4 py-3.5">Ubicación / Sucursal</th>
-                <th className="px-4 py-3.5 text-center">Lista de Precios</th>
-                <th className="px-4 py-3.5 text-center">Estado</th>
-                <th className="px-5 py-3.5 text-center">Acciones</th>
+                <TableColumnHeader
+                  title="Cliente"
+                  sortKey="name"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="RFC Fiscal"
+                  sortKey="rfc"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Contacto"
+                  sortKey="contact"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Ubicación / Sucursal"
+                  sortKey="location"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Lista de Precios"
+                  sortKey="price_number"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="center"
+                />
+                <TableColumnHeader
+                  title="Estado"
+                  sortKey="status"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="center"
+                />
+                <th className="px-5 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -443,7 +554,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                     </div>
                   </td>
                 </tr>
-              ) : filteredClients.length === 0 ? (
+              ) : paginatedClients.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-16 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
@@ -466,7 +577,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                   </td>
                 </tr>
               ) : (
-                filteredClients.map((client) => {
+                paginatedClients.map((client) => {
                   const fullName = `${client.first_name ?? ''} ${client.last_name ?? ''}`.trim() || 'Sin Nombre'
                   const initials = getInitials(client.first_name, client.last_name)
                   const hasRfc = !!client.rfc && client.rfc.trim() !== ''
@@ -584,36 +695,45 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
 
                       {/* Acciones */}
                       <td className="px-5 py-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={() => handleOpenHistory(client)}
-                            className="p-2 rounded-xl text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors"
-                            title="Historial de compras"
-                          >
-                            <ShoppingBag size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleOpenEdit(client)}
-                            className="p-2 rounded-xl text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                            title="Editar cliente"
-                          >
-                            <Edit3 size={16} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setClientToDelete(client)
-                              setDeleteConfirmOpen(true)
-                            }}
-                            className={`p-2 rounded-xl transition-colors ${
-                              client.status === 'A'
-                                ? 'text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10'
-                                : 'text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10'
-                            }`}
-                            title={client.status === 'A' ? 'Desactivar cliente' : 'Reactivar cliente'}
-                          >
-                            {client.status === 'A' ? <Trash2 size={16} /> : <RotateCcw size={16} />}
-                          </button>
-                        </div>
+                        <TableActionMenu
+                          items={[
+                            {
+                              label: 'Historial de Compras',
+                              icon: <ShoppingBag size={15} />,
+                              onClick: () => handleOpenHistory(client),
+                              variant: 'indigo',
+                            },
+                            {
+                              label: 'Editar Cliente',
+                              icon: <Edit3 size={15} />,
+                              onClick: () => handleOpenEdit(client),
+                              variant: 'primary',
+                            },
+                            ...(hasRfc
+                              ? [
+                                  {
+                                    label: 'Copiar RFC',
+                                    icon: <Copy size={15} />,
+                                    onClick: () => {
+                                      navigator.clipboard.writeText(client.rfc!)
+                                      toast.success('RFC copiado al portapapeles')
+                                    },
+                                    variant: 'default' as const,
+                                  },
+                                ]
+                              : []),
+                            {
+                              label: client.status === 'A' ? 'Desactivar Cliente' : 'Reactivar Cliente',
+                              icon: client.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />,
+                              onClick: () => {
+                                setClientToDelete(client)
+                                setDeleteConfirmOpen(true)
+                              },
+                              variant: client.status === 'A' ? 'danger' : 'primary',
+                              separatorBefore: true,
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   )
@@ -623,16 +743,16 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
           </table>
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-3.5 border-t border-border/20 text-xs text-muted-foreground flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>
-            Mostrando <strong className="text-foreground">{filteredClients.length}</strong> de <strong className="text-foreground">{clients.length}</strong> clientes registrados
-          </span>
-          <span className="text-emerald-500 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Sincronización en tiempo real activa
-          </span>
-        </div>
+        {/* Footer with Pagination */}
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={sortedClients.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          realtimeLabel="Sincronización en tiempo real activa"
+        />
       </GlassCard>
 
       {/* ── Modal: Create / Edit Client ─────────────────────────── */}

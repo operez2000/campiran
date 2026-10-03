@@ -134,6 +134,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 | **Clientes** | `clients`, `shipping_addresses` |
 | **Proveedores** | `suppliers` |
 
+
+
+-- PARA TABLAS CONSULTAS:
+-- Todas las tablas deben ser sticky en el header
+-- Todas las tablas deben tener un paginador
+-- Todas las tablas deben tener un buscador
+Todas las tablas de consulta deben ser con encabezado sticky y cada columna deberá ser clickable para ordenar en forma ascendente y descendente cuando aplica. La columna de acciones debe ser con el ícono de 3 puntos verticales y abrirse un menú para mostrar las acciones correspondientes.
+
 ### Tabla `profiles` (nueva — reemplaza a `users`)
 
 ```sql

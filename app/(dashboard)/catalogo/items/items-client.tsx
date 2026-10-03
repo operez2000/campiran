@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { ProductImageManager, type ManagedImageItem } from '@/components/catalogo/product-image-manager'
 import { ProductImageCarouselModal } from '@/components/catalogo/product-image-carousel-modal'
+import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
 
 interface ItemFormData {
   code: string
@@ -324,6 +325,86 @@ export function ItemsClient() {
       return true
     })
   }, [items, search, categoryFilter, statusFilter, activeTab])
+
+  // Sorting state
+  const [sortKey, setSortKey] = useState<string>('description')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+  }
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, categoryFilter, statusFilter, activeTab])
+
+  // Sorted items
+  const sortedItems = useMemo(() => {
+    const list = [...filteredItems]
+    if (!sortKey) return list
+
+    return list.sort((a, b) => {
+      let aVal: string | number = ''
+      let bVal: string | number = ''
+
+      switch (sortKey) {
+        case 'description':
+          aVal = (a.description || '').toLowerCase()
+          bVal = (b.description || '').toLowerCase()
+          break
+        case 'category':
+          aVal = (a.category?.description || '').toLowerCase()
+          bVal = (b.category?.description || '').toLowerCase()
+          break
+        case 'type':
+          aVal = `${a.type || ''}-${a.unit || ''}`.toLowerCase()
+          bVal = `${b.type || ''}-${b.unit || ''}`.toLowerCase()
+          break
+        case 'cost':
+          aVal = Number(a.cost || 0)
+          bVal = Number(b.cost || 0)
+          break
+        case 'price1':
+          aVal = Number(a.price1 || a.price || 0)
+          bVal = Number(b.price1 || b.price || 0)
+          break
+        case 'price2':
+          aVal = Number(a.price2 || 0)
+          bVal = Number(b.price2 || 0)
+          break
+        case 'price3':
+          aVal = Number(a.price3 || 0)
+          bVal = Number(b.price3 || 0)
+          break
+        case 'status':
+          aVal = a.status || ''
+          bVal = b.status || ''
+          break
+        default:
+          return 0
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [filteredItems, sortKey, sortDirection])
+
+  const totalPages = Math.ceil(sortedItems.length / pageSize) || 1
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedItems.slice(start, start + pageSize)
+  }, [sortedItems, currentPage, pageSize])
 
   // Open Create Modal
   const handleOpenCreate = (targetType?: 'P' | 'S') => {
@@ -716,29 +797,75 @@ export function ItemsClient() {
 
       {/* Items Table */}
       <GlassCard padding="none" className="overflow-hidden">
-        <div className={`overflow-x-auto scroll-modern transition-opacity duration-150 ${tabLoading !== null ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
-          <table className="w-full text-left text-sm">
-            <thead>
+        <div className={`overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern transition-opacity duration-150 ${tabLoading !== null ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+          <table className="w-full text-left text-sm border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-3.5">
-                  {activeTab === 'S' ? 'Servicio' : activeTab === 'P' ? 'Producto' : 'Artículo'}
+                <TableColumnHeader
+                  title={activeTab === 'S' ? 'Servicio' : activeTab === 'P' ? 'Producto' : 'Artículo'}
+                  sortKey="description"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Categoría / Área"
+                  sortKey="category"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Tipo / Unidad"
+                  sortKey="type"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="center"
+                />
+                <TableColumnHeader
+                  title={activeTab === 'S' ? 'Costo Base' : 'Costo'}
+                  sortKey="cost"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <TableColumnHeader
+                  title={activeTab === 'S' ? 'Tarifa 1' : 'Precio 1'}
+                  sortKey="price1"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <TableColumnHeader
+                  title={activeTab === 'S' ? 'Tarifa 2' : 'Precio 2'}
+                  sortKey="price2"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <TableColumnHeader
+                  title={activeTab === 'S' ? 'Tarifa 3' : 'Precio 3'}
+                  sortKey="price3"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <TableColumnHeader
+                  title="Estado"
+                  sortKey="status"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="center"
+                />
+                <th className="px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                  Acciones
                 </th>
-                <th className="px-4 py-3.5">Categoría / Área</th>
-                <th className="px-4 py-3.5 text-center">Tipo / Unidad</th>
-                <th className="px-4 py-3.5 text-right">
-                  {activeTab === 'S' ? 'Costo Base' : 'Costo'}
-                </th>
-                <th className="px-4 py-3.5 text-right">
-                  {activeTab === 'S' ? 'Tarifa 1' : 'Precio 1'}
-                </th>
-                <th className="px-4 py-3.5 text-right">
-                  {activeTab === 'S' ? 'Tarifa 2' : 'Precio 2'}
-                </th>
-                <th className="px-4 py-3.5 text-right">
-                  {activeTab === 'S' ? 'Tarifa 3' : 'Precio 3'}
-                </th>
-                <th className="px-4 py-3.5 text-center">Estado</th>
-                <th className="px-4 py-3.5 text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -754,7 +881,7 @@ export function ItemsClient() {
                     </div>
                   </td>
                 </tr>
-              ) : filteredItems.length === 0 ? (
+              ) : paginatedItems.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
                     <p className="text-base font-medium">
@@ -774,8 +901,9 @@ export function ItemsClient() {
                   </td>
                 </tr>
               ) : (
-                filteredItems.map((item) => {
+                paginatedItems.map((item) => {
                   const isService = item.type === 'S'
+                  const hasImages = !isService && item.item_images && item.item_images.length > 0
 
                   return (
                     <tr key={item.id_item} className="hover:bg-white/[0.02] transition-colors group">
@@ -883,28 +1011,44 @@ export function ItemsClient() {
                       </td>
 
                       <td className="px-4 py-3.5 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={() => handleOpenEdit(item)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                            title={`Editar ${isService ? 'servicio' : 'producto'}`}
-                          >
-                            <Edit3 size={15} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setItemToDelete(item)
-                              setDeleteConfirmOpen(true)
-                            }}
-                            className={`p-1.5 rounded-lg transition-colors ${item.status === 'A'
-                                ? 'text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10'
-                                : 'text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10'
-                              }`}
-                            title={item.status === 'A' ? 'Desactivar artículo' : 'Reactivar artículo'}
-                          >
-                            {item.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />}
-                          </button>
-                        </div>
+                        <TableActionMenu
+                          items={[
+                            {
+                              label: isService ? 'Editar Servicio' : 'Editar Producto',
+                              icon: <Edit3 size={15} />,
+                              onClick: () => handleOpenEdit(item),
+                              variant: isService ? 'indigo' : 'primary',
+                            },
+                            ...(hasImages
+                              ? [
+                                  {
+                                    label: `Ver fotos (${item.item_images!.length})`,
+                                    icon: <ImageIcon size={15} />,
+                                    onClick: () => setCarouselModalItem(item),
+                                    variant: 'default' as const,
+                                  },
+                                ]
+                              : []),
+                            {
+                              label:
+                                item.status === 'A'
+                                  ? `Desactivar ${isService ? 'servicio' : 'producto'}`
+                                  : `Reactivar ${isService ? 'servicio' : 'producto'}`,
+                              icon:
+                                item.status === 'A' ? (
+                                  <Trash2 size={15} />
+                                ) : (
+                                  <RotateCcw size={15} />
+                                ),
+                              onClick: () => {
+                                setItemToDelete(item)
+                                setDeleteConfirmOpen(true)
+                              },
+                              variant: item.status === 'A' ? 'danger' : 'primary',
+                              separatorBefore: true,
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   )
@@ -914,15 +1058,15 @@ export function ItemsClient() {
           </table>
         </div>
 
-        <div className="px-4 py-3 border-t border-border/20 text-xs text-muted-foreground flex items-center justify-between">
-          <span>
-            Mostrando {filteredItems.length} {activeTab === 'S' ? 'servicios' : activeTab === 'P' ? 'productos' : 'artículos'}
-          </span>
-          <span className="text-emerald-500 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Catálogo sincronizado en tiempo real
-          </span>
-        </div>
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={sortedItems.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          realtimeLabel="Catálogo sincronizado en tiempo real"
+        />
       </GlassCard>
 
       {/* Modal: Create / Edit Item */}

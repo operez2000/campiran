@@ -247,31 +247,39 @@ body {
 
 /* ── Table Utilities ─────────────────────────────────────── */
 .glass-table-header {
-  background: linear-gradient(90deg,
-    oklch(0.52 0.18 160 / 0.08) 0%,
-    oklch(0.52 0.22 264 / 0.06) 100%
-  );
-  backdrop-filter: blur(8px);
+  background: var(--card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.glass-table-header th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: var(--card);
 }
 .dark .glass-table-header {
-  background: linear-gradient(90deg,
-    oklch(0.52 0.18 160 / 0.15) 0%,
-    oklch(0.52 0.22 264 / 0.12) 100%
-  );
+  background: var(--card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.dark .glass-table-header th {
+  background-color: var(--card);
 }
 
 .scrollable-table {
   overflow: auto;
   position: relative;
+  max-height: calc(100vh - 280px);
 }
 .scrollable-table table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 .scrollable-table thead {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
 }
 
 /* ── Modern Scrollbar ────────────────────────────────────── */

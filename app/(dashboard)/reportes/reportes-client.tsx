@@ -20,8 +20,9 @@ import {
 import {
   BarChart3, TrendingUp, DollarSign, ShoppingCart,
   AlertTriangle, Download, FileSpreadsheet, FileText,
-  Calendar, RefreshCw, Trophy, ArrowUpRight
+  Calendar, RefreshCw, Trophy, ArrowUpRight, Search
 } from 'lucide-react'
+import { TableColumnHeader, TablePagination } from '@/components/tables'
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'year'
 
@@ -126,6 +127,97 @@ export function ReportesClient() {
   useEffect(() => {
     fetchReportData()
   }, [fetchReportData])
+
+  // Sorting state for Orders Table
+  const [sortKey, setSortKey] = useState<string>('created_at')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [orderSearch, setOrderSearch] = useState('')
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+  }
+
+  // Pagination state for Orders Table
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [orderSearch, period, storeId])
+
+  const filteredOrders = useMemo(() => {
+    if (!orderSearch.trim()) return orders
+
+    const q = orderSearch.toLowerCase()
+    return orders.filter((o) => {
+      const num = String(o.order_number || '')
+      const client = `${o.client?.first_name || ''} ${o.client?.last_name || ''}`.toLowerCase()
+      const method = (o.payment_method || '').toLowerCase()
+      return num.includes(q) || client.includes(q) || method.includes(q)
+    })
+  }, [orders, orderSearch])
+
+  const sortedOrders = useMemo(() => {
+    const list = [...filteredOrders]
+    if (!sortKey) return list
+
+    return list.sort((a, b) => {
+      let aVal: string | number = ''
+      let bVal: string | number = ''
+
+      switch (sortKey) {
+        case 'order_number':
+          aVal = Number(a.order_number || 0)
+          bVal = Number(b.order_number || 0)
+          break
+        case 'created_at':
+          aVal = a.created_at || ''
+          bVal = b.created_at || ''
+          break
+        case 'client': {
+          const clientA = `${a.client?.first_name || ''} ${a.client?.last_name || ''}`.trim() || 'Público en General'
+          const clientB = `${b.client?.first_name || ''} ${b.client?.last_name || ''}`.trim() || 'Público en General'
+          aVal = clientA.toLowerCase()
+          bVal = clientB.toLowerCase()
+          break
+        }
+        case 'payment_method':
+          aVal = (a.payment_method || '').toLowerCase()
+          bVal = (b.payment_method || '').toLowerCase()
+          break
+        case 'subtotal':
+          aVal = Number(a.total_amount || 0) - Number(a.tax_amount || 0)
+          bVal = Number(b.total_amount || 0) - Number(b.tax_amount || 0)
+          break
+        case 'tax_amount':
+          aVal = Number(a.tax_amount || 0)
+          bVal = Number(b.tax_amount || 0)
+          break
+        case 'total_amount':
+          aVal = Number(a.total_amount || 0)
+          bVal = Number(b.total_amount || 0)
+          break
+        default:
+          return 0
+      }
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [filteredOrders, sortKey, sortDirection])
+
+  const totalPages = Math.ceil(sortedOrders.length / pageSize) || 1
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedOrders.slice(start, start + pageSize)
+  }, [sortedOrders, currentPage, pageSize])
+
 
   // KPIs
   const metrics = useMemo(() => {
@@ -489,24 +581,79 @@ export function ReportesClient() {
 
       {/* Orders Table */}
       <GlassCard padding="none" className="overflow-hidden">
-        <div className="p-4 border-b border-border/40 flex items-center justify-between">
-          <h3 className="font-bold text-foreground text-sm sm:text-base">
-            Detalle de Ventas Registradas ({orders.length})
-          </h3>
-          <span className="text-xs text-muted-foreground">Ordenadas por fecha reciente</span>
+        <div className="p-4 border-b border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-bold text-foreground text-sm sm:text-base">
+              Detalle de Ventas Registradas ({filteredOrders.length})
+            </h3>
+            <span className="text-xs text-muted-foreground">Haz clic en cualquier columna para ordenar</span>
+          </div>
+          <div className="w-full sm:w-72">
+            <GlassInput
+              placeholder="Buscar por folio, cliente o pago..."
+              value={orderSearch}
+              onChange={(e) => setOrderSearch(e.target.value)}
+              icon={<Search size={15} />}
+            />
+          </div>
         </div>
 
-        <div className="overflow-x-auto scroll-modern">
-          <table className="w-full text-left text-sm">
-            <thead>
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern">
+          <table className="w-full text-left text-sm border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-3.5">Folio</th>
-                <th className="px-4 py-3.5">Fecha y Hora</th>
-                <th className="px-4 py-3.5">Cliente</th>
-                <th className="px-4 py-3.5">Método de Pago</th>
-                <th className="px-4 py-3.5 text-right">Subtotal</th>
-                <th className="px-4 py-3.5 text-right">IVA</th>
-                <th className="px-4 py-3.5 text-right">Total</th>
+                <TableColumnHeader
+                  title="Folio"
+                  sortKey="order_number"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Fecha y Hora"
+                  sortKey="created_at"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Cliente"
+                  sortKey="client"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Método de Pago"
+                  sortKey="payment_method"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
+                  title="Subtotal"
+                  sortKey="subtotal"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <TableColumnHeader
+                  title="IVA"
+                  sortKey="tax_amount"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
+                <TableColumnHeader
+                  title="Total"
+                  sortKey="total_amount"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="right"
+                />
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -516,14 +663,14 @@ export function ReportesClient() {
                     Cargando ventas...
                   </td>
                 </tr>
-              ) : orders.length === 0 ? (
+              ) : paginatedOrders.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
-                    No hay ventas registradas en este período
+                    No hay ventas registradas para los filtros seleccionados
                   </td>
                 </tr>
               ) : (
-                orders.map((o) => {
+                paginatedOrders.map((o) => {
                   const clientName = o.client
                     ? `${o.client.first_name ?? ''} ${o.client.last_name ?? ''}`.trim()
                     : 'Público en General'
@@ -558,6 +705,16 @@ export function ReportesClient() {
             </tbody>
           </table>
         </div>
+
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={sortedOrders.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          realtimeLabel="Ventas consolidadas"
+        />
       </GlassCard>
     </div>
   )

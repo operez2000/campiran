@@ -1,12 +1,7 @@
-# Catalogo items
-## Distinguir entre producto y servicio
-## Agregar opción para tomar foto del producto con el celular y guardarlo en el Bucket de Supabase. Compactar imagen si excede de 720px
-
 # NavBar 
 ## Agregar logo de Campiran
-## Agregar menú para esconder o mostrar el menú superior
 
-# Tablas
+# Tablas de consultas
 ## Todas las tablas deben ser sticky en el header
 ## Todas las tablas deben tener un paginador
 ## Todas las tablas deben tener un buscador
