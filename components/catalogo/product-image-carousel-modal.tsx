@@ -49,7 +49,7 @@ function CarouselContent({
             <span className="px-2.5 py-0.5 rounded-full bg-white/10 text-xs font-semibold">
               Foto {currentIndex + 1} de {images.length}
             </span>
-            {currentIndex === 0 && (
+            {(images[currentIndex]?.is_cover || currentIndex === 0) && (
               <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-black text-[10px] font-bold flex items-center gap-1 shadow-md">
                 <Star size={10} className="fill-black" /> Portada
               </span>

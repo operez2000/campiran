@@ -17,6 +17,7 @@ export interface ManagedImageItem {
   blob?: Blob
   isNew?: boolean
   isExisting?: boolean
+  isCover?: boolean
   width?: number
   height?: number
   fileSize?: number
@@ -32,10 +33,30 @@ export function ProductImageManager({
   initialImages = [],
   onChange,
 }: ProductImageManagerProps) {
-  const [images, setImages] = useState<ManagedImageItem[]>(initialImages)
+  // Asegura que si hay imágenes, al menos una tenga isCover = true
+  const normalizeImages = (imgs: ManagedImageItem[]): ManagedImageItem[] => {
+    if (!imgs || imgs.length === 0) return []
+    const hasCover = imgs.some((img) => img.isCover)
+    if (!hasCover) {
+      return imgs.map((img, idx) => ({
+        ...img,
+        isCover: idx === 0,
+      }))
+    }
+    return imgs
+  }
+
+  const [images, setImages] = useState<ManagedImageItem[]>(() => normalizeImages(initialImages))
   const [deletedIds, setDeletedIds] = useState<string[]>([])
   const [processing, setProcessing] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [hasPendingChanges, setHasPendingChanges] = useState(false)
+
+  // Sincronizar estado cuando las imágenes iniciales cambian desde el componente padre
+  useEffect(() => {
+    setImages(normalizeImages(initialImages))
+    setHasPendingChanges(false)
+  }, [initialImages])
 
   // Lightbox / Carousel State
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
@@ -76,6 +97,7 @@ export function ProductImageManager({
             url: processed.dataUrl,
             blob: processed.blob,
             isNew: true,
+            isCover: false,
             width: processed.width,
             height: processed.height,
             fileSize: processed.optimizedSize,
@@ -88,7 +110,17 @@ export function ProductImageManager({
       }
 
       if (newItems.length > 0) {
-        const updated = [...images, ...newItems]
+        // Si no había imágenes previas, la primera imagen nueva es la portada
+        const willBeFirst = images.length === 0
+        const formattedNew = newItems.map((item, idx) => ({
+          ...item,
+          isCover: willBeFirst && idx === 0,
+        }))
+        const updated = [...images, ...formattedNew]
+        if (!updated.some((img) => img.isCover)) {
+          updated[0] = { ...updated[0], isCover: true }
+        }
+        setHasPendingChanges(true)
         notifyChange(updated, deletedIds)
         const totalSaved = newItems.reduce((acc, curr) => acc + ((curr.originalSize || 0) - (curr.fileSize || 0)), 0)
         if (totalSaved > 0) {
@@ -148,14 +180,33 @@ export function ProductImageManager({
     return () => window.removeEventListener('paste', handlePaste)
   }, [processFiles])
 
-  // Set as primary/cover image (moves image to index 0)
+  // Set as primary/cover image (moves image to index 0 and sets isCover: true)
   const handleSetPrimary = (index: number) => {
-    if (index === 0) return
-    const updated = [...images]
+    const target = images[index]
+    if (!target) return
+    if (target.isCover && index === 0) return
+
+    // Marcamos isCover: true en la seleccionada y false en las demás
+    const updated = images.map((img, i) => ({
+      ...img,
+      isCover: i === index,
+    }))
+
+    // La movemos al índice 0 para mantener consistencia visual
     const [selected] = updated.splice(index, 1)
     updated.unshift(selected)
+
+    setHasPendingChanges(true)
     notifyChange(updated, deletedIds)
-    toast.info('Se estableció como foto de portada principal')
+
+    // Si el carrusel (lightbox) está abierto, nos mantenemos en la foto seleccionada (ahora índice 0)
+    if (lightboxIndex !== null) {
+      setLightboxIndex(0)
+    }
+
+    toast.info('Foto seleccionada como portada. Haga clic en "Actualizar Producto" para guardar los cambios en la Base de Datos.', {
+      duration: 5500,
+    })
   }
 
   // Remove image
@@ -168,8 +219,14 @@ export function ProductImageManager({
       nextDeleted.push(target.id)
     }
 
+    // Si la imagen eliminada era la portada y quedan otras imágenes, la primera pasa a ser portada
+    if (target.isCover && updated.length > 0) {
+      updated[0] = { ...updated[0], isCover: true }
+    }
+
+    setHasPendingChanges(true)
     notifyChange(updated, nextDeleted)
-    toast.message('Imagen removida', { description: 'Los cambios se aplicarán al guardar.' })
+    toast.message('Imagen removida', { description: 'Recuerde hacer clic en "Actualizar Producto" para guardar los cambios.' })
   }
 
   // In-app Camera functions (WebRTC)
@@ -327,6 +384,30 @@ export function ProductImageManager({
         </div>
       </div>
 
+      {/* Banner de aviso de cambios pendientes en portada o imágenes */}
+      {hasPendingChanges && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between gap-3 shadow-sm"
+        >
+          <div className="flex items-start sm:items-center gap-2.5">
+            <span className="text-base shrink-0 animate-pulse">⚠️</span>
+            <div>
+              <p className="font-semibold text-amber-200">
+                Cambios pendientes en imágenes o portada
+              </p>
+              <p className="text-amber-300/85 text-[11px] mt-0.5 leading-relaxed">
+                Para que la nueva foto de portada tenga efecto en la base de datos y se refleje en tiempo real, proceda a hacer clic en <strong>&quot;Actualizar Producto&quot;</strong> al final del formulario.
+              </p>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold uppercase tracking-wide border border-amber-500/30 shrink-0 hidden sm:inline-block">
+            Pendiente Guardar
+          </span>
+        </motion.div>
+      )}
+
       {/* Drag & Drop Area / Dropzone */}
       <div
         onDragOver={handleDragOver}
@@ -365,7 +446,7 @@ export function ProductImageManager({
         <div className="space-y-2.5">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {images.map((img, index) => {
-              const isPrimary = index === 0
+              const isPrimary = Boolean(img.isCover || index === 0)
               return (
                 <motion.div
                   key={img.id}
@@ -389,12 +470,25 @@ export function ProductImageManager({
                       loading="lazy"
                     />
 
-                    {/* Primary Badge */}
-                    {isPrimary && (
-                      <div className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-emerald-500 text-black text-[10px] font-bold tracking-wide flex items-center gap-1 shadow-lg shadow-emerald-500/30">
-                        <Star size={10} className="fill-black" />
+                    {/* Primary Badge (Chip "* PORTADA") */}
+                    {isPrimary ? (
+                      <div className="absolute top-2 left-2 z-10 px-2.5 py-1 rounded-full bg-emerald-500 text-black text-[10px] font-bold tracking-wide flex items-center gap-1 shadow-lg shadow-emerald-500/40 border border-emerald-400">
+                        <Star size={11} className="fill-black" />
                         PORTADA
                       </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleSetPrimary(index)
+                        }}
+                        className="absolute top-2 left-2 z-10 px-2.5 py-1 rounded-full bg-black/70 hover:bg-emerald-500 hover:text-black text-white text-[10px] font-semibold tracking-wide flex items-center gap-1 backdrop-blur-xs border border-white/20 transition-all opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 shadow-md cursor-pointer"
+                        title="Hacer foto de portada"
+                      >
+                        <Star size={10} />
+                        Hacer Portada
+                      </button>
                     )}
 
                     {/* Dimension / Size pill */}
@@ -428,10 +522,11 @@ export function ProductImageManager({
                             e.stopPropagation()
                             handleSetPrimary(index)
                           }}
-                          className="p-1.5 rounded-lg bg-emerald-500/80 text-black hover:bg-emerald-400 transition-colors"
+                          className="px-2.5 py-1.5 rounded-lg bg-emerald-500 text-black hover:bg-emerald-400 font-semibold text-xs transition-colors flex items-center gap-1 shadow-md cursor-pointer"
                           title="Hacer foto de portada"
                         >
-                          <Star size={15} />
+                          <Star size={13} className="fill-black" />
+                          <span>Portada</span>
                         </button>
                       )}
 
@@ -442,7 +537,7 @@ export function ProductImageManager({
                           e.stopPropagation()
                           handleRemoveImage(index)
                         }}
-                        className="p-1.5 rounded-lg bg-rose-500/80 text-white hover:bg-rose-600 transition-colors"
+                        className="p-1.5 rounded-lg bg-rose-500/80 text-white hover:bg-rose-600 transition-colors cursor-pointer"
                         title="Eliminar fotografía"
                       >
                         <Trash2 size={15} />
@@ -554,7 +649,7 @@ export function ProductImageManager({
                 <span className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold border border-white/15">
                   Foto {lightboxIndex + 1} de {images.length}
                 </span>
-                {lightboxIndex === 0 && (
+                {(images[lightboxIndex]?.isCover || lightboxIndex === 0) && (
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-black text-xs font-bold flex items-center gap-1 shadow-md">
                     <Star size={11} className="fill-black" />
                     Portada
@@ -563,11 +658,11 @@ export function ProductImageManager({
               </div>
 
               <div className="flex items-center gap-2">
-                {lightboxIndex !== 0 && (
+                {!(images[lightboxIndex]?.isCover || lightboxIndex === 0) && (
                   <button
                     type="button"
                     onClick={() => handleSetPrimary(lightboxIndex)}
-                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-emerald-500 hover:text-black transition-colors text-xs font-medium flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-black border border-emerald-500/30 transition-colors text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                   >
                     <Star size={13} />
                     Hacer Portada

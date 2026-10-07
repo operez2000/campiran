@@ -8,7 +8,7 @@ import { GlassButton } from '@/components/glass-button'
 import { GlassInput } from '@/components/glass-input'
 import { StatusBadge } from '@/components/status-badge'
 import { CatalogoTabs } from '@/components/catalogo/catalogo-tabs'
-import { type Item, type Category, type Area, type Department } from '@/lib/types'
+import { type Item, type ItemImage, type Category, type Area, type Department } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
@@ -62,6 +62,16 @@ const INITIAL_FORM: ItemFormData = {
   id_department: '',
   id_sat: '',
   unit_sat: 'H87',
+}
+
+// Ordena las imágenes de un producto colocando la portada (is_cover = true) en primer lugar
+function sortItemImages(images?: ItemImage[]): ItemImage[] {
+  if (!images || images.length === 0) return []
+  return [...images].sort((a, b) => {
+    if (a.is_cover && !b.is_cover) return -1
+    if (!a.is_cover && b.is_cover) return 1
+    return (a.created_at || '').localeCompare(b.created_at || '')
+  })
 }
 
 export function ItemsClient() {
@@ -143,7 +153,13 @@ export function ItemsClient() {
       supabase.from('departments').select('*').eq('status', 'A').order('description'),
     ])
 
-    if (itemsRes.data) setItems(itemsRes.data as unknown as Item[])
+    if (itemsRes.data) {
+      const formattedItems = (itemsRes.data as unknown as Item[]).map((it) => ({
+        ...it,
+        item_images: sortItemImages(it.item_images),
+      }))
+      setItems(formattedItems)
+    }
     if (catsRes.data) setCategories(catsRes.data as Category[])
     if (areasRes.data) setAreas(areasRes.data as Area[])
     if (depsRes.data) setDepartments(depsRes.data as Department[])
@@ -172,7 +188,11 @@ export function ItemsClient() {
         .single()
 
       if (error || !data) return null
-      return data as unknown as Item
+      const it = data as unknown as Item
+      return {
+        ...it,
+        item_images: sortItemImages(it.item_images),
+      }
     },
     [supabase]
   )
@@ -217,7 +237,21 @@ export function ItemsClient() {
         async (payload) => {
           const newRec = payload.new as Record<string, unknown> | null
           const oldRec = payload.old as Record<string, unknown> | null
-          const targetItemId = (newRec?.id_item as string) || (oldRec?.id_item as string)
+          let targetItemId = (newRec?.id_item as string) || (oldRec?.id_item as string)
+
+          // Fallback para DELETE cuando Postgres solo envía la primary key
+          if (!targetItemId && oldRec?.id_item_image) {
+            setItems((prev) => {
+              const found = prev.find((it) =>
+                it.item_images?.some((img) => img.id_item_image === oldRec.id_item_image)
+              )
+              if (found) {
+                targetItemId = found.id_item
+              }
+              return prev
+            })
+          }
+
           if (targetItemId) {
             const updated = await fetchSingleItem(targetItemId)
             if (updated) {
@@ -446,12 +480,15 @@ export function ItemsClient() {
       unit_sat: item.unit_sat || 'H87',
     })
 
-    // Map existing images to image manager state
-    const mappedImages: ManagedImageItem[] = (item.item_images || []).map((img) => ({
+    // Map existing images to image manager state, placing cover image first
+    const sortedImages = sortItemImages(item.item_images)
+    const hasAnyCover = sortedImages.some((img) => img.is_cover)
+    const mappedImages: ManagedImageItem[] = sortedImages.map((img, idx) => ({
       id: img.id_item_image,
       url: img.image_url || '',
       storagePath: img.image_path || undefined,
       isExisting: true,
+      isCover: hasAnyCover ? Boolean(img.is_cover) : idx === 0,
     }))
     setItemImages(mappedImages)
     setDeletedImageIds([])
@@ -468,10 +505,17 @@ export function ItemsClient() {
       await supabase.from('item_images').delete().in('id_item_image', deletedImageIds)
     }
 
-    // 2. Upload any newly added images
+    // 2. Base timestamp para ordenar secuencialmente las imágenes en la base de datos
+    // La imagen en índice 0 (portada) tendrá la fecha más antigua garantizada
+    const baseTimestamp = new Date('2024-01-01T00:00:00.000Z').getTime()
+
+    // 3. Subir e insertar imágenes nuevas
     const newItems = itemImages.filter((img) => img.isNew && img.blob)
     for (let i = 0; i < newItems.length; i++) {
       const imgItem = newItems[i]
+      const overallIndex = itemImages.indexOf(imgItem)
+      const isThisCover = overallIndex === 0
+      const sequentialDate = new Date(baseTimestamp + (overallIndex * 1000)).toISOString()
       const filePath = `items/${targetItemId}/${Date.now()}_${i}_${Math.random().toString(36).substring(2, 7)}.webp`
 
       const { error: uploadError } = await supabase.storage
@@ -486,13 +530,58 @@ export function ItemsClient() {
           .from('item_images')
           .getPublicUrl(filePath)
 
-        await supabase.from('item_images').insert({
+        const insertPayload: Record<string, unknown> = {
           id_item: targetItemId,
           image_url: publicUrlData.publicUrl,
           image_path: filePath,
-        })
+          created_at: sequentialDate,
+          is_cover: isThisCover,
+        }
+
+        const { error: insertError } = await supabase.from('item_images').insert(insertPayload)
+        if (insertError) {
+          // Si la columna is_cover aún no está disponible en cache de PostgREST, reintentar sin ella
+          if (insertError.message?.includes('is_cover')) {
+            delete insertPayload.is_cover
+            await supabase.from('item_images').insert(insertPayload)
+          } else {
+            console.error('Error al insertar imagen en base de datos:', insertError)
+          }
+        }
       } else {
         console.error('Error al subir imagen al bucket item_images:', uploadError)
+      }
+    }
+
+    // 4. Actualizar el orden secuencial y portada de las imágenes existentes en Postgres
+    const existingItems = itemImages.filter((img) => img.isExisting && img.id)
+    for (let idx = 0; idx < existingItems.length; idx++) {
+      const existing = existingItems[idx]
+      const overallIndex = itemImages.indexOf(existing)
+      const isThisCover = overallIndex === 0
+      const sequentialDate = new Date(baseTimestamp + (overallIndex * 1000)).toISOString()
+
+      const updatePayload: Record<string, unknown> = {
+        created_at: sequentialDate,
+        is_cover: isThisCover,
+      }
+
+      const { error: updateError } = await supabase
+        .from('item_images')
+        .update(updatePayload)
+        .eq('id_item_image', existing.id)
+
+      if (updateError) {
+        // Fallback: si is_cover no existe en BD, actualizar created_at para fijar el orden de portada
+        if (updateError.message?.includes('is_cover')) {
+          delete updatePayload.is_cover
+          await supabase
+            .from('item_images')
+            .update(updatePayload)
+            .eq('id_item_image', existing.id)
+        } else {
+          console.error('Error al actualizar created_at/is_cover en item_images:', updateError)
+        }
       }
     }
   }
@@ -530,6 +619,10 @@ export function ItemsClient() {
     }
 
     if (editingItem) {
+      // 1. Sincronizar imágenes y orden/portada en BD primero
+      await handleSyncImages(editingItem.id_item, formData.type)
+
+      // 2. Actualizar el registro en items (dispara Realtime en items con imágenes ya listas)
       const { error } = await supabase
         .from('items')
         .update(payload)
@@ -541,7 +634,6 @@ export function ItemsClient() {
         return
       }
 
-      await handleSyncImages(editingItem.id_item, formData.type)
       const updated = await fetchSingleItem(editingItem.id_item)
       if (updated) {
         setItems((prev) => prev.map((i) => (i.id_item === updated.id_item ? updated : i)))
@@ -550,7 +642,7 @@ export function ItemsClient() {
       toast.success(
         formData.type === 'S'
           ? 'Servicio actualizado correctamente'
-          : 'Producto actualizado correctamente'
+          : 'Producto e imagen de portada actualizados correctamente en tiempo real'
       )
       setModalOpen(false)
     } else {
@@ -919,25 +1011,30 @@ export function ItemsClient() {
                               <Wrench size={18} />
                             </div>
                           ) : item.item_images && item.item_images.length > 0 ? (
-                            <button
-                              type="button"
-                              onClick={() => setCarouselModalItem(item)}
-                              className="relative w-11 h-11 rounded-xl overflow-hidden border border-border/60 hover:border-emerald-500/80 transition-all shrink-0 group/img shadow-xs active:scale-95 cursor-pointer"
-                              title={`Ver ${item.item_images.length} fotos en carrusel`}
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={item.item_images[0].image_url || ''}
-                                alt={item.description || 'Producto'}
-                                className="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-300"
-                                loading="lazy"
-                              />
-                              {item.item_images.length > 1 && (
-                                <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded-tl-md bg-black/80 backdrop-blur-xs text-[9px] font-bold text-emerald-400">
-                                  +{item.item_images.length - 1}
-                                </span>
-                              )}
-                            </button>
+                            (() => {
+                              const coverImg = item.item_images.find((img) => img.is_cover) || item.item_images[0]
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => setCarouselModalItem(item)}
+                                  className="relative w-11 h-11 rounded-xl overflow-hidden border border-border/60 hover:border-emerald-500/80 transition-all shrink-0 group/img shadow-xs active:scale-95 cursor-pointer"
+                                  title={`Ver ${item.item_images.length} fotos en carrusel`}
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={coverImg.image_url || ''}
+                                    alt={item.description || 'Producto'}
+                                    className="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-300"
+                                    loading="lazy"
+                                  />
+                                  {item.item_images.length > 1 && (
+                                    <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded-tl-md bg-black/80 backdrop-blur-xs text-[9px] font-bold text-emerald-400">
+                                      +{item.item_images.length - 1}
+                                    </span>
+                                  )}
+                                </button>
+                              )
+                            })()
                           ) : (
                             <div
                               onClick={() => handleOpenEdit(item)}
@@ -1406,27 +1503,34 @@ export function ItemsClient() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border/40">
-                  <GlassButton
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setModalOpen(false)}
-                  >
-                    Cancelar
-                  </GlassButton>
-                  <GlassButton type="submit" variant="primary" size="sm" disabled={saving}>
-                    <Check size={14} className="mr-1" />
-                    {saving
-                      ? 'Guardando...'
-                      : editingItem
-                        ? formData.type === 'S'
-                          ? 'Actualizar Servicio'
-                          : 'Actualizar Producto'
-                        : formData.type === 'S'
-                          ? 'Guardar Servicio'
-                          : 'Guardar Producto'}
-                  </GlassButton>
+                <div className="pt-4 border-t border-border/40 space-y-2">
+                  <div className="flex items-center justify-end gap-2.5">
+                    <GlassButton
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setModalOpen(false)}
+                    >
+                      Cancelar
+                    </GlassButton>
+                    <GlassButton type="submit" variant="primary" size="sm" disabled={saving}>
+                      <Check size={14} className="mr-1" />
+                      {saving
+                        ? 'Guardando...'
+                        : editingItem
+                          ? formData.type === 'S'
+                            ? 'Actualizar Servicio'
+                            : 'Actualizar Producto'
+                          : formData.type === 'S'
+                            ? 'Guardar Servicio'
+                            : 'Guardar Producto'}
+                    </GlassButton>
+                  </div>
+                  {editingItem && (
+                    <p className="text-[11px] text-muted-foreground/75 text-right">
+                      💡 Cualquier cambio en datos, fotografías o portada se guardará y transmitirá en tiempo real al hacer clic en &quot;Actualizar Producto&quot;.
+                    </p>
+                  )}
                 </div>
               </form>
             </motion.div>

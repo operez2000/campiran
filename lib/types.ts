@@ -126,6 +126,7 @@ export interface ItemImage {
   created_at: string
   image_url: string | null
   image_path: string | null
+  is_cover?: boolean
 }
 
 export interface PriceHistory {
