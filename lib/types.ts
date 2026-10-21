@@ -225,22 +225,84 @@ export interface InventoryReading {
 export type OrderStatus = 'pending' | 'completed' | 'cancelled'
 export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'mixed'
 
+export type SatPaymentCode = '01' | '02' | '03' | '04' | '28' | '99'
+
+export interface SatPaymentMethodInfo {
+  code: SatPaymentCode
+  label: string
+  description: string
+  isCredit?: boolean
+}
+
+export interface PaymentBreakdownItem {
+  method: SatPaymentCode
+  amountMxn: number
+  amountUsd?: number
+  currency: 'MXN' | 'USD'
+  reference?: string
+}
+
+export interface CashShift {
+  id_shift: string
+  id_store: string
+  id_user: string
+  opened_at: string
+  closed_at: string | null
+  initial_cash_mxn: number
+  initial_cash_usd: number
+  exchange_rate: number
+  final_cash_mxn: number | null
+  final_cash_usd: number | null
+  status: 'open' | 'closed'
+  notes: string | null
+  auth_method?: 'webauthn' | 'face' | 'pin' | 'biometric'
+  created_at: string
+  updated_at: string
+  // Relations
+  user?: Profile
+  store?: Store
+}
+
+export interface UserBiometric {
+  id_biometric: string
+  id_user: string
+  cashier_number: string | null
+  cashier_pin: string | null
+  has_webauthn: boolean
+  webauthn_credential: Record<string, unknown> | null
+  has_face: boolean
+  face_photo_url: string | null
+  face_descriptor: number[] | Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Order {
   id_order: string
   order_number: number
   id_client: string | null
   id_store: string | null
+  id_shift?: string | null
   total_amount: number
   tax_amount: number
   shipping_cost: number
   status: OrderStatus
   payment_method: PaymentMethod | null
+  payment_sat_code?: SatPaymentCode | null
+  payment_breakdown?: PaymentBreakdownItem[] | null
+  exchange_rate?: number
+  cash_received_mxn?: number
+  cash_received_usd?: number
+  change_mxn?: number
+  change_usd?: number
   payment_reference: string | null
+  notes?: string | null
   shipping_address: Record<string, unknown> | null
   created_at: string
   // Relations
   client?: Client
   store?: Store
+  shift?: CashShift
   order_items?: OrderItem[]
 }
 

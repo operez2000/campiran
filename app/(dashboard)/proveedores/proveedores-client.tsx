@@ -387,6 +387,9 @@ export function ProveedoresClient() {
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <th className="w-20 px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                  Acciones
+                </th>
                 <TableColumnHeader
                   title="Proveedor"
                   sortKey="supplier_name"
@@ -439,9 +442,6 @@ export function ProveedoresClient() {
                   onSort={handleSort}
                   align="center"
                 />
-                <th className="px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
-                  Acciones
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -463,6 +463,29 @@ export function ProveedoresClient() {
               ) : (
                 paginatedSuppliers.map((supplier) => (
                   <tr key={supplier.id_supplier} className="hover:bg-white/[0.02] transition-colors group">
+                    <td className="w-20 px-4 py-3.5 text-center">
+                      <TableActionMenu
+                        items={[
+                          {
+                            label: 'Editar Proveedor',
+                            icon: <Edit3 size={15} />,
+                            onClick: () => handleOpenEdit(supplier),
+                            variant: 'primary',
+                          },
+                          {
+                            label: supplier.status === 'A' ? 'Desactivar Proveedor' : 'Reactivar Proveedor',
+                            icon: supplier.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />,
+                            onClick: () => {
+                              setSupplierToDelete(supplier)
+                              setDeleteConfirmOpen(true)
+                            },
+                            variant: supplier.status === 'A' ? 'danger' : 'primary',
+                            separatorBefore: true,
+                          },
+                        ]}
+                      />
+                    </td>
+
                     <td className="px-4 py-3.5">
                       <span className="font-semibold text-foreground group-hover:text-emerald-400 transition-colors">
                         {supplier.supplier_name}
@@ -508,29 +531,6 @@ export function ProveedoresClient() {
                     <td className="px-4 py-3.5 text-center">
                       <StatusBadge status={supplier.status} />
                     </td>
-
-                    <td className="px-4 py-3.5 text-center">
-                      <TableActionMenu
-                        items={[
-                          {
-                            label: 'Editar Proveedor',
-                            icon: <Edit3 size={15} />,
-                            onClick: () => handleOpenEdit(supplier),
-                            variant: 'primary',
-                          },
-                          {
-                            label: supplier.status === 'A' ? 'Desactivar Proveedor' : 'Reactivar Proveedor',
-                            icon: supplier.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />,
-                            onClick: () => {
-                              setSupplierToDelete(supplier)
-                              setDeleteConfirmOpen(true)
-                            },
-                            variant: supplier.status === 'A' ? 'danger' : 'primary',
-                            separatorBefore: true,
-                          },
-                        ]}
-                      />
-                    </td>
                   </tr>
                 ))
               )}
@@ -559,19 +559,32 @@ export function ProveedoresClient() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card max-w-xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2">
                 <h3 className="text-base font-bold text-foreground">
                   {editingSupplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}
                 </h3>
-                <button
-                  onClick={() => setModalOpen(false)}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
-                >
-                  <X size={18} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <GlassButton
+                    type="submit"
+                    form="supplier-form"
+                    variant="primary"
+                    size="sm"
+                    disabled={saving}
+                  >
+                    <Check size={14} className="mr-1" />
+                    {saving ? 'Guardando...' : editingSupplier ? 'Actualizar' : 'Guardar Proveedor'}
+                  </GlassButton>
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
-              <form onSubmit={handleSave} className="space-y-4 overflow-y-auto scroll-modern pr-1">
+              <form id="supplier-form" onSubmit={handleSave} className="space-y-4 overflow-y-auto scroll-modern pr-1">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground block mb-1">

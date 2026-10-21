@@ -303,6 +303,9 @@ export function TiendasClient() {
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <th className="w-20 px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                  Acciones
+                </th>
                 <TableColumnHeader
                   title="Sucursal"
                   sortKey="description"
@@ -325,9 +328,6 @@ export function TiendasClient() {
                   onSort={handleSort}
                   align="center"
                 />
-                <th className="px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
-                  Acciones
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -346,24 +346,7 @@ export function TiendasClient() {
               ) : (
                 paginatedStores.map((store) => (
                   <tr key={store.id_store} className="hover:bg-white/[0.02] transition-colors group">
-                    <td className="px-4 py-3.5">
-                      <span className="font-semibold text-foreground group-hover:text-emerald-400 transition-colors">
-                        {store.description}
-                      </span>
-                    </td>
-
-                    <td className="px-4 py-3.5 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1.5">
-                        <MapPin size={13} className="text-muted-foreground/60" />
-                        {store.location || 'Sin dirección registrada'}
-                      </span>
-                    </td>
-
-                    <td className="px-4 py-3.5 text-center">
-                      <StatusBadge status={store.status} />
-                    </td>
-
-                    <td className="px-4 py-3.5 text-center">
+                    <td className="w-20 px-4 py-3.5 text-center">
                       <TableActionMenu
                         items={[
                           {
@@ -384,6 +367,23 @@ export function TiendasClient() {
                           },
                         ]}
                       />
+                    </td>
+
+                    <td className="px-4 py-3.5">
+                      <span className="font-semibold text-foreground group-hover:text-emerald-400 transition-colors">
+                        {store.description}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3.5 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <MapPin size={13} className="text-muted-foreground/60" />
+                        {store.location || 'Sin dirección registrada'}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3.5 text-center">
+                      <StatusBadge status={store.status} />
                     </td>
                   </tr>
                 ))
@@ -413,19 +413,32 @@ export function TiendasClient() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card max-w-md w-full p-6 space-y-4"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2">
                 <h3 className="text-base font-bold text-foreground">
                   {editingStore ? 'Editar Sucursal' : 'Nueva Sucursal'}
                 </h3>
-                <button
-                  onClick={() => setModalOpen(false)}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
-                >
-                  <X size={18} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <GlassButton
+                    type="submit"
+                    form="store-form"
+                    variant="primary"
+                    size="sm"
+                    disabled={saving}
+                  >
+                    <Check size={14} className="mr-1" />
+                    {saving ? 'Guardando...' : editingStore ? 'Actualizar' : 'Guardar'}
+                  </GlassButton>
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
-              <form onSubmit={handleSave} className="space-y-4">
+              <form id="store-form" onSubmit={handleSave} className="space-y-4">
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground block mb-1">
                     Nombre / Descripción *

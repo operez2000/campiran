@@ -14,7 +14,7 @@ import { toast } from 'sonner'
 import {
   Users, Search, Plus, Edit3, Trash2, RotateCcw,
   X, Check, ShoppingBag, Phone, Mail, MapPin, RefreshCw,
-  FileText, CheckCircle2, UserX, Copy, Building2
+  FileText, CheckCircle2, UserX, Copy, Building2, Tag
 } from 'lucide-react'
 import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
 
@@ -57,6 +57,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
   const [loading, setLoading] = useState(initialData.length === 0)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'A' | 'I' | 'ALL'>('A')
+  const [typeFilter, setTypeFilter] = useState<'ALL' | '1' | '2'>('ALL')
 
   // Create / Edit Modal
   const [modalOpen, setModalOpen] = useState(false)
@@ -121,13 +122,17 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
     const active = clients.filter((c) => c.status === 'A').length
     const inactive = clients.filter((c) => c.status === 'I').length
     const withRfc = clients.filter((c) => !!c.rfc && c.rfc.trim() !== '').length
-    return { total, active, inactive, withRfc }
+    const menudeo = clients.filter((c) => Number(c.price_number || 1) !== 2).length
+    const mayoreo = clients.filter((c) => Number(c.price_number) === 2).length
+    return { total, active, inactive, withRfc, menudeo, mayoreo }
   }, [clients])
 
   // Filtered clients
   const filteredClients = useMemo(() => {
     return clients.filter((c) => {
       if (statusFilter !== 'ALL' && c.status !== statusFilter) return false
+      if (typeFilter === '1' && Number(c.price_number || 1) === 2) return false
+      if (typeFilter === '2' && Number(c.price_number) !== 2) return false
       if (search.trim()) {
         const q = search.toLowerCase()
         const fullName = `${c.first_name ?? ''} ${c.last_name ?? ''}`.toLowerCase()
@@ -136,20 +141,22 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
         const phone = (c.phone ?? '').toLowerCase()
         const city = (c.city ?? '').toLowerCase()
         const branch = (c.branch ?? '').toLowerCase()
+        const tipoText = Number(c.price_number) === 2 ? 'mayoreo' : 'menudeo'
         if (
           !fullName.includes(q) &&
           !rfc.includes(q) &&
           !email.includes(q) &&
           !phone.includes(q) &&
           !city.includes(q) &&
-          !branch.includes(q)
+          !branch.includes(q) &&
+          !tipoText.includes(q)
         ) {
           return false
         }
       }
       return true
     })
-  }, [clients, statusFilter, search])
+  }, [clients, statusFilter, typeFilter, search])
 
   // Sorting state
   const [sortKey, setSortKey] = useState<string>('name')
@@ -170,7 +177,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, statusFilter])
+  }, [search, statusFilter, typeFilter])
 
   const sortedClients = useMemo(() => {
     const list = [...filteredClients]
@@ -270,7 +277,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
       state: formData.state.trim() || null,
       postal_code: formData.postal_code.trim() || null,
       country: formData.country.trim() || 'México',
-      price_number: Number(formData.price_number) || 1,
+      price_number: Number(formData.price_number) === 2 ? 2 : 1,
       branch: formData.branch.trim() || null,
       comments: formData.comments.trim() || null,
     }
@@ -355,7 +362,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
       </div>
 
       {/* ── KPI Summary Cards ───────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <GlassCard padding="sm" className="relative overflow-hidden group hover:border-emerald-500/30 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">Total Registrados</span>
@@ -371,50 +378,63 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
 
         <GlassCard padding="sm" className="relative overflow-hidden group hover:border-emerald-500/30 transition-all">
           <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Menudeo</span>
+            <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+              <Tag size={15} />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-emerald-400">{metrics.menudeo}</span>
+            <span className="text-[11px] text-emerald-500/80 font-medium">Precio 1</span>
+          </div>
+        </GlassCard>
+
+        <GlassCard padding="sm" className="relative overflow-hidden group hover:border-blue-500/30 transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Mayoreo</span>
+            <div className="w-7 h-7 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+              <Building2 size={15} />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-blue-400">{metrics.mayoreo}</span>
+            <span className="text-[11px] text-blue-400/80 font-medium">Precio 2</span>
+          </div>
+        </GlassCard>
+
+        <GlassCard padding="sm" className="relative overflow-hidden group hover:border-teal-500/30 transition-all">
+          <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">Clientes Activos</span>
             <div className="w-7 h-7 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center">
               <CheckCircle2 size={15} />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-emerald-400">{metrics.active}</span>
-            <span className="text-[11px] text-emerald-500/80 font-medium">operativos</span>
+            <span className="text-2xl font-bold text-teal-400">{metrics.active}</span>
+            <span className="text-[11px] text-teal-500/80 font-medium">operativos</span>
           </div>
         </GlassCard>
 
-        <GlassCard padding="sm" className="relative overflow-hidden group hover:border-amber-500/30 transition-all">
+        <GlassCard padding="sm" className="relative overflow-hidden group hover:border-indigo-500/30 transition-all col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Inactivos</span>
-            <div className="w-7 h-7 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
-              <UserX size={15} />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-amber-400">{metrics.inactive}</span>
-            <span className="text-[11px] text-muted-foreground">en pausa</span>
-          </div>
-        </GlassCard>
-
-        <GlassCard padding="sm" className="relative overflow-hidden group hover:border-indigo-500/30 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Con Datos Fiscales (RFC)</span>
+            <span className="text-xs font-medium text-muted-foreground">Con RFC</span>
             <div className="w-7 h-7 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
               <FileText size={15} />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-indigo-400">{metrics.withRfc}</span>
-            <span className="text-[11px] text-muted-foreground">para CFDI</span>
+            <span className="text-[11px] text-muted-foreground">fiscales</span>
           </div>
         </GlassCard>
       </div>
 
       {/* ── Filters & Search Toolbar ────────────────────────────── */}
       <GlassCard padding="sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="flex-1 max-w-md relative">
             <GlassInput
-              placeholder="Buscar por nombre, RFC, correo, teléfono o sucursal..."
+              placeholder="Buscar por nombre, RFC, correo, teléfono o tipo (menudeo/mayoreo)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               icon={<Search size={16} />}
@@ -431,7 +451,54 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Segmented Filter Control */}
+            {/* Filter by Client Type (Menudeo / Mayoreo) */}
+            <div className="flex items-center gap-1 p-1 rounded-xl glass border border-border/40">
+              <button
+                type="button"
+                onClick={() => setTypeFilter('ALL')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                  typeFilter === 'ALL'
+                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20 font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>Todos</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTypeFilter('1')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                  typeFilter === '1'
+                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20 font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Clientes con tarifa de Menudeo (Precio 1)"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>Menudeo</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${typeFilter === '1' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'}`}>
+                  {metrics.menudeo}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTypeFilter('2')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                  typeFilter === '2'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Clientes con tarifa de Mayoreo (Precio 2)"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                <span>Mayoreo</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${typeFilter === '2' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'}`}>
+                  {metrics.mayoreo}
+                </span>
+              </button>
+            </div>
+
+            {/* Segmented Filter Control by Status */}
             <div className="flex items-center gap-1 p-1 rounded-xl glass border border-border/40">
               <button
                 onClick={() => setStatusFilter('A')}
@@ -495,6 +562,9 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <th className="w-20 px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                  Acciones
+                </th>
                 <TableColumnHeader
                   title="Cliente"
                   sortKey="name"
@@ -524,7 +594,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                   onSort={handleSort}
                 />
                 <TableColumnHeader
-                  title="Lista de Precios"
+                  title="Tipo de Cliente"
                   sortKey="price_number"
                   currentSortKey={sortKey}
                   sortDirection={sortDirection}
@@ -539,9 +609,6 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                   onSort={handleSort}
                   align="center"
                 />
-                <th className="px-5 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
-                  Acciones
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -584,6 +651,49 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
 
                   return (
                     <tr key={client.id_client} className="hover:bg-white/[0.03] transition-colors group">
+                      {/* Acciones */}
+                      <td className="w-20 px-4 py-4 text-center">
+                        <TableActionMenu
+                          items={[
+                            {
+                              label: 'Historial de Compras',
+                              icon: <ShoppingBag size={15} />,
+                              onClick: () => handleOpenHistory(client),
+                              variant: 'indigo',
+                            },
+                            {
+                              label: 'Editar Cliente',
+                              icon: <Edit3 size={15} />,
+                              onClick: () => handleOpenEdit(client),
+                              variant: 'primary',
+                            },
+                            ...(hasRfc
+                              ? [
+                                  {
+                                    label: 'Copiar RFC',
+                                    icon: <Copy size={15} />,
+                                    onClick: () => {
+                                      navigator.clipboard.writeText(client.rfc!)
+                                      toast.success('RFC copiado al portapapeles')
+                                    },
+                                    variant: 'default' as const,
+                                  },
+                                ]
+                              : []),
+                            {
+                              label: client.status === 'A' ? 'Desactivar Cliente' : 'Reactivar Cliente',
+                              icon: client.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />,
+                              onClick: () => {
+                                setClientToDelete(client)
+                                setDeleteConfirmOpen(true)
+                              },
+                              variant: client.status === 'A' ? 'danger' : 'primary',
+                              separatorBefore: true,
+                            },
+                          ]}
+                        />
+                      </td>
+
                       {/* Cliente info with initials badge */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
@@ -671,19 +781,17 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                         )}
                       </td>
 
-                      {/* Lista de Precios */}
+                      {/* Tipo de Cliente */}
                       <td className="px-4 py-4 text-center">
-                        {client.price_number === 2 ? (
-                          <span className="px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">
-                            Lista 2 · Mayoreo
-                          </span>
-                        ) : client.price_number === 3 ? (
-                          <span className="px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-semibold">
-                            Lista 3 · Especial
+                        {Number(client.price_number) === 2 ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 text-xs font-semibold shadow-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                            Mayoreo · P2
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-                            Lista 1 · General
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold shadow-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            Menudeo · P1
                           </span>
                         )}
                       </td>
@@ -691,49 +799,6 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                       {/* Estado */}
                       <td className="px-4 py-4 text-center">
                         <StatusBadge status={client.status === 'A' ? 'active' : 'inactive'} />
-                      </td>
-
-                      {/* Acciones */}
-                      <td className="px-5 py-4 text-center">
-                        <TableActionMenu
-                          items={[
-                            {
-                              label: 'Historial de Compras',
-                              icon: <ShoppingBag size={15} />,
-                              onClick: () => handleOpenHistory(client),
-                              variant: 'indigo',
-                            },
-                            {
-                              label: 'Editar Cliente',
-                              icon: <Edit3 size={15} />,
-                              onClick: () => handleOpenEdit(client),
-                              variant: 'primary',
-                            },
-                            ...(hasRfc
-                              ? [
-                                  {
-                                    label: 'Copiar RFC',
-                                    icon: <Copy size={15} />,
-                                    onClick: () => {
-                                      navigator.clipboard.writeText(client.rfc!)
-                                      toast.success('RFC copiado al portapapeles')
-                                    },
-                                    variant: 'default' as const,
-                                  },
-                                ]
-                              : []),
-                            {
-                              label: client.status === 'A' ? 'Desactivar Cliente' : 'Reactivar Cliente',
-                              icon: client.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />,
-                              onClick: () => {
-                                setClientToDelete(client)
-                                setDeleteConfirmOpen(true)
-                              },
-                              variant: client.status === 'A' ? 'danger' : 'primary',
-                              separatorBefore: true,
-                            },
-                          ]}
-                        />
                       </td>
                     </tr>
                   )
@@ -765,7 +830,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
                     <Users size={18} />
@@ -774,15 +839,28 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                     {editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}
                   </h3>
                 </div>
-                <button
-                  onClick={() => setModalOpen(false)}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
-                >
-                  <X size={18} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <GlassButton
+                    type="submit"
+                    form="client-form"
+                    variant="primary"
+                    size="sm"
+                    disabled={saving}
+                  >
+                    <Check size={14} className="mr-1" />
+                    {saving ? 'Guardando...' : editingClient ? 'Actualizar Cliente' : 'Guardar Cliente'}
+                  </GlassButton>
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
-              <form onSubmit={handleSave} className="space-y-4 overflow-y-auto scroll-modern pr-1">
+              <form id="client-form" onSubmit={handleSave} className="space-y-4 overflow-y-auto scroll-modern pr-1">
                 {/* Bloque: Identificación */}
                 <div>
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-2">
@@ -916,26 +994,97 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                   </div>
                 </div>
 
-                {/* Bloque: Condiciones Comerciales */}
+                {/* Bloque: Tipo de Cliente y Condiciones Comerciales */}
                 <div className="pt-2 border-t border-border/20">
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-2">
-                    4. Condiciones Comerciales
+                    4. Tipo de Cliente y Condiciones Comerciales
                   </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-3">
                     <div>
-                      <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                        Tarifa de Precios Aplicable
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
+                        Tipo de Cliente *
                       </label>
-                      <select
-                        value={formData.price_number}
-                        onChange={(e) => setFormData({ ...formData, price_number: Number(e.target.value) })}
-                        className="w-full glass-input px-3.5 py-2.5 text-xs text-foreground bg-zinc-900/90 rounded-xl border border-border/50 focus:outline-none focus:border-emerald-500"
-                      >
-                        <option value={1}>Lista 1 — Precio General al Público</option>
-                        <option value={2}>Lista 2 — Precio Mayorista</option>
-                        <option value={3}>Lista 3 — Precio Especial / Preferencial</option>
-                      </select>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Option 1: Menudeo */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setFormData({ ...formData, price_number: 1 })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              setFormData({ ...formData, price_number: 1 })
+                            }
+                          }}
+                          className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 select-none ${
+                            Number(formData.price_number || 1) !== 2
+                              ? 'border-emerald-500 bg-emerald-500/15 shadow-md shadow-emerald-500/10'
+                              : 'border-border/40 hover:border-border hover:bg-white/[0.02]'
+                          }`}
+                        >
+                          <div
+                            className={`w-5 h-5 rounded-full border flex items-center justify-center mt-0.5 shrink-0 transition-colors ${
+                              Number(formData.price_number || 1) !== 2
+                                ? 'border-emerald-500 bg-emerald-500 text-white'
+                                : 'border-muted-foreground/40'
+                            }`}
+                          >
+                            {Number(formData.price_number || 1) !== 2 && <Check size={12} strokeWidth={3} />}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-foreground">Menudeo</span>
+                              <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                                Precio 1 General
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                              Tarifa general de menudeo. Aplica el Precio 1 de los artículos al cobrar en POS.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Option 2: Mayoreo */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setFormData({ ...formData, price_number: 2 })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              setFormData({ ...formData, price_number: 2 })
+                            }
+                          }}
+                          className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-start gap-3 select-none ${
+                            Number(formData.price_number) === 2
+                              ? 'border-blue-500 bg-blue-500/15 shadow-md shadow-blue-500/10'
+                              : 'border-border/40 hover:border-border hover:bg-white/[0.02]'
+                          }`}
+                        >
+                          <div
+                            className={`w-5 h-5 rounded-full border flex items-center justify-center mt-0.5 shrink-0 transition-colors ${
+                              Number(formData.price_number) === 2
+                                ? 'border-blue-500 bg-blue-500 text-white'
+                                : 'border-muted-foreground/40'
+                            }`}
+                          >
+                            {Number(formData.price_number) === 2 && <Check size={12} strokeWidth={3} />}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-foreground">Mayoreo</span>
+                              <span className="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-400 text-[10px] font-bold">
+                                Precio 2 Mayorista
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                              Tarifa para compras por volumen. Aplica el Precio 2 de los artículos al cobrar en POS.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
+
                     <div>
                       <label className="text-xs font-semibold text-muted-foreground block mb-1">
                         Notas / Comentarios

@@ -419,6 +419,9 @@ export function StockClient() {
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <th className="w-20 px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                  Acciones
+                </th>
                 <TableColumnHeader
                   title="Artículo"
                   sortKey="description"
@@ -480,9 +483,6 @@ export function StockClient() {
                   onSort={handleSort}
                   align="center"
                 />
-                <th className="px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
-                  Acción
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -522,6 +522,19 @@ export function StockClient() {
                       key={stock.id_stock}
                       className="hover:bg-white/[0.03] transition-colors group"
                     >
+                      <td className="w-20 px-4 py-3.5 text-center">
+                        <TableActionMenu
+                          items={[
+                            {
+                              label: 'Editar Límites de Stock',
+                              icon: <Edit3 size={15} />,
+                              onClick: () => handleOpenEdit(stock),
+                              variant: 'primary',
+                            },
+                          ]}
+                        />
+                      </td>
+
                       <td className="px-4 py-3.5">
                         <div className="flex flex-col">
                           <span className="font-semibold text-foreground group-hover:text-emerald-400 transition-colors">
@@ -573,19 +586,6 @@ export function StockClient() {
                           }
                         />
                       </td>
-
-                      <td className="px-4 py-3.5 text-center">
-                        <TableActionMenu
-                          items={[
-                            {
-                              label: 'Editar Límites de Stock',
-                              icon: <Edit3 size={15} />,
-                              onClick: () => handleOpenEdit(stock),
-                              variant: 'primary',
-                            },
-                          ]}
-                        />
-                      </td>
                     </tr>
                   )
                 })
@@ -616,16 +616,29 @@ export function StockClient() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card max-w-md w-full p-6 space-y-4"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2">
                 <h3 className="text-base font-bold text-foreground">
                   Ajustar Niveles de Stock
                 </h3>
-                <button
-                  onClick={() => setEditingStock(null)}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
-                >
-                  <X size={16} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <GlassButton
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={handleSaveEdit}
+                    disabled={savingEdit}
+                  >
+                    <Check size={14} className="mr-1.5" />
+                    {savingEdit ? 'Guardando...' : 'Guardar Cambios'}
+                  </GlassButton>
+                  <button
+                    type="button"
+                    onClick={() => setEditingStock(null)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1">

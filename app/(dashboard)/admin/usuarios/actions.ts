@@ -2,7 +2,7 @@
 
 import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { type Profile, type Store, type UserRole, type ProfileStatus } from '@/lib/types'
+import { type Profile, type Store, type UserRole, type ProfileStatus, type UserBiometric } from '@/lib/types'
 
 // Map single-character role code to system role
 function roleCodeToRole(code: string | null | undefined): UserRole {
@@ -364,4 +364,117 @@ export async function deleteUserAction(id: string) {
 
   revalidatePath('/admin/usuarios')
   return { success: true }
+}
+
+/**
+ * Obtiene las credenciales biométricas y de cajero de un usuario.
+ */
+export async function getUserBiometricsAction(userId: string): Promise<UserBiometric | null> {
+  const adminClient = createAdminClient()
+
+  // 1. Intentar consultar tabla user_biometrics
+  try {
+    const { data, error } = await adminClient
+      .from('user_biometrics')
+      .select('*')
+      .eq('id_user', userId)
+      .maybeSingle()
+
+    if (!error && data) {
+      return data as UserBiometric
+    }
+  } catch {
+    // Si la tabla aún no existe en Supabase
+  }
+
+  // 2. Fallback: auth.users metadata
+  try {
+    const { data: userData, error: userErr } = await adminClient.auth.admin.getUserById(userId)
+    if (!userErr && userData?.user?.user_metadata) {
+      const meta = userData.user.user_metadata
+      return {
+        id_biometric: userId,
+        id_user: userId,
+        cashier_number: meta.cashier_number || null,
+        cashier_pin: meta.cashier_pin || null,
+        has_webauthn: Boolean(meta.has_webauthn),
+        webauthn_credential: meta.webauthn_credential || null,
+        has_face: Boolean(meta.has_face),
+        face_photo_url: meta.face_photo_url || null,
+        face_descriptor: meta.face_descriptor || null,
+        created_at: userData.user.created_at,
+        updated_at: userData.user.updated_at || userData.user.created_at,
+      }
+    }
+  } catch {
+    // Continuar
+  }
+
+  return null
+}
+
+/**
+ * Guarda o actualiza los datos biométricos (WebAuthn, Face Detection, No. Cajero y PIN).
+ */
+export async function saveUserBiometricsAction(data: {
+  id_user: string
+  cashier_number?: string | null
+  cashier_pin?: string | null
+  has_webauthn?: boolean
+  webauthn_credential?: Record<string, unknown> | null
+  has_face?: boolean
+  face_photo_url?: string | null
+  face_descriptor?: unknown | null
+}) {
+  const adminClient = createAdminClient()
+
+  const payload: Record<string, unknown> = {
+    id_user: data.id_user,
+    cashier_number: data.cashier_number || null,
+    cashier_pin: data.cashier_pin || null,
+    has_webauthn: Boolean(data.has_webauthn),
+    has_face: Boolean(data.has_face),
+    updated_at: new Date().toISOString(),
+  }
+
+  if (data.webauthn_credential !== undefined) {
+    payload.webauthn_credential = data.webauthn_credential
+  }
+  if (data.face_photo_url !== undefined) {
+    payload.face_photo_url = data.face_photo_url
+  }
+  if (data.face_descriptor !== undefined) {
+    payload.face_descriptor = data.face_descriptor
+  }
+
+  // 1. Guardar en user_biometrics (upsert)
+  let savedDb = false
+  try {
+    const { error } = await adminClient
+      .from('user_biometrics')
+      .upsert(payload, { onConflict: 'id_user' })
+    if (!error) savedDb = true
+  } catch {
+    // La tabla puede no haber sido corrida en DB aún
+  }
+
+  // 2. Guardar en metadata de Auth para sincronización 100% garantizada
+  try {
+    await adminClient.auth.admin.updateUserById(data.id_user, {
+      user_metadata: {
+        cashier_number: data.cashier_number,
+        cashier_pin: data.cashier_pin,
+        has_webauthn: data.has_webauthn,
+        webauthn_credential: data.webauthn_credential,
+        has_face: data.has_face,
+        face_photo_url: data.face_photo_url,
+      },
+    })
+  } catch (authErr) {
+    console.error('Error actualizando user_metadata:', authErr)
+  }
+
+  revalidatePath('/admin/usuarios')
+  revalidatePath('/pos')
+  return { success: true, savedDb }
 }

@@ -13,9 +13,11 @@ import { getInitials, getRoleLabel } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
   UserCog, Search, Edit3, Check, X, Shield, Store as StoreIcon,
-  RefreshCw, Power, CheckCircle2, UserPlus, Phone, Mail, Lock, Trash2, Users
+  RefreshCw, Power, CheckCircle2, UserPlus, Phone, Mail, Lock, Trash2, Users,
+  Fingerprint, ScanFace
 } from 'lucide-react'
 import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
+import { BiometricsEnrollmentModal } from '@/components/biometrics/biometrics-enrollment-modal'
 import {
   getUsersAndStoresAction,
   updateUserAction,
@@ -55,6 +57,10 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
   const [selectedStoreId, setSelectedStoreId] = useState<string>('')
   const [selectedStatus, setSelectedStatus] = useState<ProfileStatus>('pending')
   const [saving, setSaving] = useState(false)
+
+  // Biometrics Enrollment Modal state
+  const [biometricsModalUser, setBiometricsModalUser] = useState<Profile | null>(null)
+  const [biometricsModalOpen, setBiometricsModalOpen] = useState(false)
 
   // Create User Modal state
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -428,6 +434,9 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <th className="w-20 px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                  Acciones
+                </th>
                 <TableColumnHeader
                   title="Usuario"
                   sortKey="name"
@@ -457,9 +466,6 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                   onSort={handleSort}
                   align="center"
                 />
-                <th className="px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
-                  Acciones
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -487,6 +493,41 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
 
                   return (
                     <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group">
+                      <td className="w-20 px-4 py-3.5 text-center">
+                        <TableActionMenu
+                          items={[
+                            {
+                              label: 'Editar Usuario y Rol',
+                              icon: <Edit3 size={15} />,
+                              onClick: () => handleOpenEdit(p),
+                              variant: 'primary',
+                            },
+                            {
+                              label: 'Biometría y Cajero (Face ID / WebAuthn)',
+                              icon: <Fingerprint size={15} />,
+                              onClick: () => {
+                                setBiometricsModalUser(p)
+                                setBiometricsModalOpen(true)
+                              },
+                              variant: 'primary',
+                            },
+                            {
+                              label: p.status === 'active' ? 'Suspender Acceso' : 'Reactivar Acceso',
+                              icon: <Power size={15} />,
+                              onClick: () => handleToggleStatus(p),
+                              variant: p.status === 'active' ? 'danger' : 'primary',
+                              separatorBefore: true,
+                            },
+                            {
+                              label: 'Desactivar Usuario',
+                              icon: <Trash2 size={15} />,
+                              onClick: () => setUserToDelete(p),
+                              variant: 'danger',
+                            },
+                          ]}
+                        />
+                      </td>
+
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
                           {p.avatar_url ? (
@@ -536,32 +577,6 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                       <td className="px-4 py-3.5 text-center">
                         <StatusBadge status={p.status} />
                       </td>
-
-                      <td className="px-4 py-3.5 text-center">
-                        <TableActionMenu
-                          items={[
-                            {
-                              label: 'Editar Usuario y Rol',
-                              icon: <Edit3 size={15} />,
-                              onClick: () => handleOpenEdit(p),
-                              variant: 'primary',
-                            },
-                            {
-                              label: p.status === 'active' ? 'Suspender Acceso' : 'Reactivar Acceso',
-                              icon: <Power size={15} />,
-                              onClick: () => handleToggleStatus(p),
-                              variant: p.status === 'active' ? 'danger' : 'primary',
-                              separatorBefore: true,
-                            },
-                            {
-                              label: 'Desactivar Usuario',
-                              icon: <Trash2 size={15} />,
-                              onClick: () => setUserToDelete(p),
-                              variant: 'danger',
-                            },
-                          ]}
-                        />
-                      </td>
                     </tr>
                   )
                 })
@@ -591,14 +606,27 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card max-w-md w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto scroll-modern"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2">
                 <h3 className="text-base font-bold text-foreground">Gestionar Usuario y Permisos</h3>
-                <button
-                  onClick={() => setEditingProfile(null)}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
-                >
-                  <X size={18} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <GlassButton
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    <Check size={14} className="mr-1" />
+                    {saving ? 'Guardando...' : 'Aplicar Cambios'}
+                  </GlassButton>
+                  <button
+                    type="button"
+                    onClick={() => setEditingProfile(null)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
               {/* User Email & Basic Info */}
@@ -711,6 +739,26 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                 </div>
               </div>
 
+              {/* Biometrics Config Button inside Edit */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (editingProfile) {
+                      setBiometricsModalUser(editingProfile)
+                      setBiometricsModalOpen(true)
+                    }
+                  }}
+                  className="w-full p-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-between transition-colors text-xs font-semibold"
+                >
+                  <div className="flex items-center gap-2">
+                    <Fingerprint size={16} />
+                    <span>Configurar Biometría, Face ID y PIN de Cajero</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-300 underline">Gestionar</span>
+                </button>
+              </div>
+
               <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border/40">
                 <GlassButton
                   type="button"
@@ -746,20 +794,33 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto scroll-modern"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2">
                 <div className="flex items-center gap-2">
                   <UserPlus className="text-emerald-500" size={20} />
                   <h3 className="text-base font-bold text-foreground">Crear Nuevo Usuario</h3>
                 </div>
-                <button
-                  onClick={() => setIsCreateOpen(false)}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
-                >
-                  <X size={18} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <GlassButton
+                    type="submit"
+                    form="create-user-form"
+                    variant="primary"
+                    size="sm"
+                    disabled={creating}
+                  >
+                    <Check size={14} className="mr-1" />
+                    {creating ? 'Creando...' : 'Registrar Usuario'}
+                  </GlassButton>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateOpen(false)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
-              <form onSubmit={handleCreateUser} className="space-y-4">
+              <form id="create-user-form" onSubmit={handleCreateUser} className="space-y-4">
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground block mb-1">
                     Nombre Completo *
@@ -931,6 +992,14 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
         variant="destructive"
         loading={deleting}
         onConfirm={handleConfirmDelete}
+      />
+
+      {/* Biometrics Enrollment Modal */}
+      <BiometricsEnrollmentModal
+        open={biometricsModalOpen}
+        onOpenChange={setBiometricsModalOpen}
+        user={biometricsModalUser}
+        onSuccess={fetchData}
       />
     </div>
   )

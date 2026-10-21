@@ -893,6 +893,9 @@ export function ItemsClient() {
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <th className="w-20 px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                  Acciones
+                </th>
                 <TableColumnHeader
                   title={activeTab === 'S' ? 'Servicio' : activeTab === 'P' ? 'Producto' : 'Artículo'}
                   sortKey="description"
@@ -924,7 +927,7 @@ export function ItemsClient() {
                   align="right"
                 />
                 <TableColumnHeader
-                  title={activeTab === 'S' ? 'Tarifa 1' : 'Precio 1'}
+                  title={activeTab === 'S' ? 'Tarifa 1 (Menudeo)' : 'P1 (Menudeo)'}
                   sortKey="price1"
                   currentSortKey={sortKey}
                   sortDirection={sortDirection}
@@ -932,7 +935,7 @@ export function ItemsClient() {
                   align="right"
                 />
                 <TableColumnHeader
-                  title={activeTab === 'S' ? 'Tarifa 2' : 'Precio 2'}
+                  title={activeTab === 'S' ? 'Tarifa 2 (Mayoreo)' : 'P2 (Mayoreo)'}
                   sortKey="price2"
                   currentSortKey={sortKey}
                   sortDirection={sortDirection}
@@ -955,9 +958,6 @@ export function ItemsClient() {
                   onSort={handleSort}
                   align="center"
                 />
-                <th className="px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
-                  Acciones
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -999,6 +999,47 @@ export function ItemsClient() {
 
                   return (
                     <tr key={item.id_item} className="hover:bg-white/[0.02] transition-colors group">
+                      <td className="w-20 px-4 py-3.5 text-center">
+                        <TableActionMenu
+                          items={[
+                            {
+                              label: isService ? 'Editar Servicio' : 'Editar Producto',
+                              icon: <Edit3 size={15} />,
+                              onClick: () => handleOpenEdit(item),
+                              variant: isService ? 'indigo' : 'primary',
+                            },
+                            ...(hasImages
+                              ? [
+                                  {
+                                    label: `Ver fotos (${item.item_images!.length})`,
+                                    icon: <ImageIcon size={15} />,
+                                    onClick: () => setCarouselModalItem(item),
+                                    variant: 'default' as const,
+                                  },
+                                ]
+                              : []),
+                            {
+                              label:
+                                item.status === 'A'
+                                  ? `Desactivar ${isService ? 'servicio' : 'producto'}`
+                                  : `Reactivar ${isService ? 'servicio' : 'producto'}`,
+                              icon:
+                                item.status === 'A' ? (
+                                  <Trash2 size={15} />
+                                ) : (
+                                  <RotateCcw size={15} />
+                                ),
+                              onClick: () => {
+                                setItemToDelete(item)
+                                setDeleteConfirmOpen(true)
+                              },
+                              variant: item.status === 'A' ? 'danger' : 'primary',
+                              separatorBefore: true,
+                            },
+                          ]}
+                        />
+                      </td>
+
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
                           {/* Visual element: Product Thumbnail with carousel vs Service Icon without photo */}
@@ -1105,47 +1146,6 @@ export function ItemsClient() {
 
                       <td className="px-4 py-3.5 text-center">
                         <StatusBadge status={item.status} />
-                      </td>
-
-                      <td className="px-4 py-3.5 text-center">
-                        <TableActionMenu
-                          items={[
-                            {
-                              label: isService ? 'Editar Servicio' : 'Editar Producto',
-                              icon: <Edit3 size={15} />,
-                              onClick: () => handleOpenEdit(item),
-                              variant: isService ? 'indigo' : 'primary',
-                            },
-                            ...(hasImages
-                              ? [
-                                  {
-                                    label: `Ver fotos (${item.item_images!.length})`,
-                                    icon: <ImageIcon size={15} />,
-                                    onClick: () => setCarouselModalItem(item),
-                                    variant: 'default' as const,
-                                  },
-                                ]
-                              : []),
-                            {
-                              label:
-                                item.status === 'A'
-                                  ? `Desactivar ${isService ? 'servicio' : 'producto'}`
-                                  : `Reactivar ${isService ? 'servicio' : 'producto'}`,
-                              icon:
-                                item.status === 'A' ? (
-                                  <Trash2 size={15} />
-                                ) : (
-                                  <RotateCcw size={15} />
-                                ),
-                              onClick: () => {
-                                setItemToDelete(item)
-                                setDeleteConfirmOpen(true)
-                              },
-                              variant: item.status === 'A' ? 'danger' : 'primary',
-                              separatorBefore: true,
-                            },
-                          ]}
-                        />
                       </td>
                     </tr>
                   )
@@ -1407,7 +1407,7 @@ export function ItemsClient() {
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-emerald-400 block mb-1">
-                        {formData.type === 'S' ? 'Tarifa 1 *' : 'Precio 1 *'}
+                        {formData.type === 'S' ? 'Tarifa 1 * (Menudeo)' : 'Precio 1 * (Menudeo)'}
                       </label>
                       <GlassInput
                         type="number"
@@ -1418,8 +1418,8 @@ export function ItemsClient() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                        {formData.type === 'S' ? 'Tarifa 2' : 'Precio 2'}
+                      <label className="text-xs font-semibold text-blue-400 block mb-1">
+                        {formData.type === 'S' ? 'Tarifa 2 (Mayoreo)' : 'Precio 2 (Mayoreo)'}
                       </label>
                       <GlassInput
                         type="number"

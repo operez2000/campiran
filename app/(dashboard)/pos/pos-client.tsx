@@ -8,14 +8,27 @@ import { GlassCard } from '@/components/glass-card'
 import { GlassButton } from '@/components/glass-button'
 import { GlassInput } from '@/components/glass-input'
 import { StatusBadge } from '@/components/status-badge'
-import { type Item, type Client, type Stock, type PaymentMethod } from '@/lib/types'
+import {
+  type Item,
+  type Client,
+  type Stock,
+  type CashShift,
+  type Profile,
+  type SatPaymentCode,
+  type PaymentBreakdownItem,
+} from '@/lib/types'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, User,
   CreditCard, Banknote, ArrowRightLeft, Printer, CheckCircle2,
-  X, Layers, ScanLine, DollarSign, Store as StoreIcon
+  X, Layers, ScanLine, DollarSign, Store as StoreIcon, ImageIcon,
+  Users, Lock, ShieldCheck, DoorClosed, RotateCcw
 } from 'lucide-react'
+import { PosClientModal } from '@/components/pos/pos-client-modal'
+import { ShiftOpenModal } from '@/components/pos/shift-open-modal'
+import { PosPaymentModal, SAT_PAYMENT_METHODS } from '@/components/pos/pos-payment-modal'
+import { getActiveShiftAction, closeShiftAction, getPosClientsAction } from './shift-actions'
 
 interface CartLine {
   item: Item
@@ -29,6 +42,13 @@ export function PosClient() {
   const supabase = createClient()
   const { currentStore, storeId } = useStore()
 
+  // Authenticated User & Active Cash Shift
+  const [currentUser, setCurrentUser] = useState<Profile | null>(null)
+  const [activeShift, setActiveShift] = useState<CashShift | null>(null)
+  const [checkingShift, setCheckingShift] = useState(true)
+  const [shiftModalOpen, setShiftModalOpen] = useState(false)
+  const [closingShift, setClosingShift] = useState(false)
+
   // Items and Stock
   const [items, setItems] = useState<Item[]>([])
   const [stocksMap, setStocksMap] = useState<Record<string, number>>({})
@@ -39,20 +59,18 @@ export function PosClient() {
   // Cart
   const [cart, setCart] = useState<CartLine[]>([])
 
-  // Selected Client
+  // Selected Client & Client Selector Modal
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [isClientSelected, setIsClientSelected] = useState<boolean>(false)
   const [clientModalOpen, setClientModalOpen] = useState(false)
   const [clientsList, setClientsList] = useState<Client[]>([])
-  const [clientSearch, setClientSearch] = useState('')
   const [loadingClients, setLoadingClients] = useState(false)
 
-  // Checkout & Payment Modal
+  // Checkout & SAT Payment Modal
   const [paymentModalOpen, setPaymentModalOpen] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
-  const [cashReceived, setCashReceived] = useState<string>('')
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false)
 
-  // Ticket Receipt Modal
+  // Completed Order for Ticket Receipt Modal
   const [completedOrder, setCompletedOrder] = useState<{
     orderId: string
     orderNumber: number
@@ -62,20 +80,157 @@ export function PosClient() {
     tax: number
     total: number
     clientName: string
-    paymentMethod: PaymentMethod
-    cashReceived?: number
-    change?: number
+    primaryMethod: SatPaymentCode
+    payments: PaymentBreakdownItem[]
+    cashReceivedMxn: number
+    cashReceivedUsd: number
+    changeMxn: number
+    changeUsd: number
+    exchangeRate: number
+    notes?: string
   } | null>(null)
 
-  // Load items and stocks
+  // 1. Fetch Current Authenticated User Profile
+  useEffect(() => {
+    async function loadUser() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Try fetching profile from profiles or users
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (profile) {
+        setCurrentUser(profile as Profile)
+      } else {
+        // Fallback with user metadata
+        setCurrentUser({
+          id: user.id,
+          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cajero',
+          email: user.email || null,
+          phone: user.phone || null,
+          role: (user.user_metadata?.role as any) || 'CASHIER',
+          id_store: storeId || null,
+          status: 'active',
+          avatar_url: user.user_metadata?.avatar_url || null,
+          created_at: user.created_at,
+          updated_at: user.created_at,
+        })
+      }
+    }
+    loadUser()
+  }, [supabase, storeId])
+
+  // 2. Check for Active Cash Shift
+  const checkShift = useCallback(async () => {
+    if (!storeId || !currentUser) {
+      setCheckingShift(false)
+      return
+    }
+
+    setCheckingShift(true)
+    try {
+      const shift = await getActiveShiftAction(storeId, currentUser.id)
+      if (shift && shift.status === 'open') {
+        setActiveShift(shift)
+        setShiftModalOpen(false)
+      } else {
+        setActiveShift(null)
+        setShiftModalOpen(true)
+      }
+    } catch (err) {
+      console.warn('Error verificando turno de caja:', err)
+      setActiveShift(null)
+      setShiftModalOpen(true)
+    } finally {
+      setCheckingShift(false)
+    }
+  }, [storeId, currentUser])
+
+  useEffect(() => {
+    if (storeId && currentUser) {
+      checkShift()
+    }
+  }, [storeId, currentUser, checkShift])
+
+  // Realtime subscription on cash_shifts
+  useEffect(() => {
+    if (!storeId) return
+
+    const channel = supabase
+      .channel(`pos-shifts-${storeId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cash_shifts', filter: `id_store=eq.${storeId}` },
+        () => {
+          checkShift()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [storeId, supabase, checkShift])
+
+  // 3. Load Clients List for Quick Autocomplete Modal (via Admin Server Action to bypass RLS)
+  const fetchClients = useCallback(async () => {
+    setLoadingClients(true)
+    try {
+      const data = await getPosClientsAction()
+      setClientsList(data || [])
+    } catch (err) {
+      console.error('Error cargando clientes en POS:', err)
+      setClientsList([])
+    } finally {
+      setLoadingClients(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchClients()
+  }, [fetchClients])
+
+  // Realtime subscription on clients table
+  useEffect(() => {
+    const channel = supabase
+      .channel('pos-clients-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'clients' },
+        () => {
+          fetchClients()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [supabase, fetchClients])
+
+  // Prompt client selector modal when shift is open and client is not yet selected
+  const initialClientPromptDone = useRef(false)
+  useEffect(() => {
+    if (activeShift && !checkingShift && !isClientSelected && !initialClientPromptDone.current) {
+      initialClientPromptDone.current = true
+      // Open client selector immediately so cashier selects client before ticket
+      setClientModalOpen(true)
+    }
+  }, [activeShift, checkingShift, isClientSelected])
+
+  // 4. Load Items with Images and Stocks
   const fetchCatalogAndStocks = useCallback(async () => {
     if (!storeId) return
     setLoadingItems(true)
 
-    // 1. Fetch active items
+    // 1. Fetch active items with their uploaded images
     const { data: itemsData, error: itemsError } = await supabase
       .from('items')
-      .select('*, category:categories(description)')
+      .select('*, category:categories(description), item_images(*)')
       .eq('status', 'A')
       .order('description')
 
@@ -107,15 +262,29 @@ export function PosClient() {
     fetchCatalogAndStocks()
   }, [fetchCatalogAndStocks])
 
-  // Realtime subscription on stocks for POS
+  // Realtime subscription on stocks & item_images for POS
   useEffect(() => {
     if (!storeId) return
 
     const channel = supabase
-      .channel(`pos-stocks-${storeId}`)
+      .channel(`pos-catalog-${storeId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'stocks', filter: `id_store=eq.${storeId}` },
+        () => {
+          fetchCatalogAndStocks()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'item_images' },
+        () => {
+          fetchCatalogAndStocks()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'items' },
         () => {
           fetchCatalogAndStocks()
         }
@@ -156,6 +325,18 @@ export function PosClient() {
 
   // Add Item to Cart
   const handleAddToCart = (item: Item) => {
+    if (!activeShift) {
+      toast.error('Debes abrir caja antes de realizar ventas')
+      setShiftModalOpen(true)
+      return
+    }
+
+    if (!isClientSelected) {
+      toast.error('Debes seleccionar o confirmar el cliente antes de agregar productos')
+      setClientModalOpen(true)
+      return
+    }
+
     const unitPrice = getItemPrice(item)
     const stockAvailable = stocksMap[item.id_item] ?? 0
 
@@ -219,12 +400,20 @@ export function PosClient() {
   const handleClearCart = () => {
     setCart([])
     setSelectedClient(null)
+    setIsClientSelected(false)
+    initialClientPromptDone.current = false
+    setClientModalOpen(true)
   }
 
   // Barcode / Fast Input Scanner in search box
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
+      if (!isClientSelected) {
+        toast.error('Debes seleccionar o confirmar el cliente antes de buscar o escanear productos')
+        setClientModalOpen(true)
+        return
+      }
       const query = search.trim().toLowerCase()
       if (!query) return
 
@@ -271,29 +460,36 @@ export function PosClient() {
 
   // Open Checkout Modal
   const handleOpenCheckout = () => {
+    if (!activeShift) {
+      toast.error('Debes abrir caja antes de realizar cobros')
+      setShiftModalOpen(true)
+      return
+    }
+    if (!isClientSelected) {
+      toast.error('Debes seleccionar un cliente para este ticket')
+      setClientModalOpen(true)
+      return
+    }
     if (cart.length === 0) {
       toast.error('El carrito está vacío')
       return
     }
-    setCashReceived(Math.ceil(total).toString())
     setPaymentModalOpen(true)
   }
 
-  // Cash change calculation
-  const cashChange = useMemo(() => {
-    const received = Number(cashReceived) || 0
-    return Math.max(0, received - total)
-  }, [cashReceived, total])
-
-  // Process and Save Order
-  const handleProcessOrder = async () => {
+  // Process SAT Order & Mixed Payment
+  const handleProcessOrder = async (paymentData: {
+    primaryMethod: SatPaymentCode
+    payments: PaymentBreakdownItem[]
+    cashReceivedMxn: number
+    cashReceivedUsd: number
+    changeMxn: number
+    changeUsd: number
+    exchangeRate: number
+    notes?: string
+  }) => {
     if (!storeId) {
       toast.error('No hay una sucursal activa seleccionada')
-      return
-    }
-
-    if (paymentMethod === 'cash' && Number(cashReceived) < total) {
-      toast.error('El efectivo recibido es menor al total a pagar')
       return
     }
 
@@ -301,27 +497,70 @@ export function PosClient() {
 
     try {
       // 1. Insert order into `orders`
-      const { data: orderData, error: orderError } = await supabase
+      const orderPayload: Record<string, unknown> = {
+        id_store: storeId,
+        id_client: selectedClient?.id_client ?? null,
+        total_amount: total,
+        tax_amount: taxAmount,
+        status: 'completed',
+        payment_method:
+          paymentData.primaryMethod === '01'
+            ? 'cash'
+            : paymentData.primaryMethod === '04' || paymentData.primaryMethod === '28'
+            ? 'card'
+            : paymentData.primaryMethod === '03'
+            ? 'transfer'
+            : 'mixed',
+        payment_reference: paymentData.notes
+          ? `${paymentData.notes} | ${paymentData.payments.map((p) => `[SAT ${p.method}] ${formatCurrency(p.amountMxn)}`).join(' | ')}`
+          : paymentData.payments
+              .map((p) => `[SAT ${p.method}] ${formatCurrency(p.amountMxn)}`)
+              .join(' | '),
+      }
+
+      // Extras if columns exist
+      if (activeShift?.id_shift) orderPayload.id_shift = activeShift.id_shift
+      if (paymentData.notes) orderPayload.notes = paymentData.notes
+      orderPayload.payment_sat_code = paymentData.primaryMethod
+      orderPayload.payment_breakdown = paymentData.payments
+      orderPayload.exchange_rate = paymentData.exchangeRate
+      orderPayload.cash_received_mxn = paymentData.cashReceivedMxn
+      orderPayload.cash_received_usd = paymentData.cashReceivedUsd
+      orderPayload.change_mxn = paymentData.changeMxn
+      orderPayload.change_usd = paymentData.changeUsd
+
+      let orderData: any = null
+      const { data: insertedOrder, error: orderError } = await supabase
         .from('orders')
-        .insert({
+        .insert(orderPayload)
+        .select()
+        .single()
+
+      if (orderError) {
+        // Retry without extended columns if schema isn't fully migrated
+        const basicPayload = {
           id_store: storeId,
           id_client: selectedClient?.id_client ?? null,
           total_amount: total,
           tax_amount: taxAmount,
           status: 'completed',
-          payment_method: paymentMethod,
-          payment_reference:
-            paymentMethod === 'cash'
-              ? `Efectivo Recibido: ${formatCurrency(Number(cashReceived))}`
-              : `Pago ${paymentMethod.toUpperCase()}`,
-        })
-        .select()
-        .single()
+          payment_method: orderPayload.payment_method,
+          payment_reference: orderPayload.payment_reference,
+        }
+        const { data: retryOrder, error: retryErr } = await supabase
+          .from('orders')
+          .insert(basicPayload)
+          .select()
+          .single()
 
-      if (orderError) throw new Error(orderError.message)
+        if (retryErr) throw new Error(retryErr.message)
+        orderData = retryOrder
+      } else {
+        orderData = insertedOrder
+      }
 
       const orderId = orderData.id_order
-      const orderNumber = orderData.order_number ?? 1
+      const orderNumber = orderData.order_number ?? Math.floor(1000 + Math.random() * 9000)
 
       // 2. Insert items into `order_items`
       const orderItemsToInsert = cart.map((line) => ({
@@ -337,7 +576,6 @@ export function PosClient() {
 
       // 3. Update stock & register transactions
       for (const line of cart) {
-        // Find existing stock in this store
         const { data: stockEntry } = await supabase
           .from('stocks')
           .select('id_stock, current, id_location')
@@ -355,7 +593,6 @@ export function PosClient() {
             })
             .eq('id_stock', stockEntry.id_stock)
 
-          // Insert into `transactions` (movim_type = 'V' para venta)
           await supabase.from('transactions').insert({
             id_store: storeId,
             id_location: stockEntry.id_location,
@@ -384,14 +621,21 @@ export function PosClient() {
         clientName: selectedClient
           ? `${selectedClient.first_name ?? ''} ${selectedClient.last_name ?? ''}`.trim()
           : 'Público en General',
-        paymentMethod,
-        cashReceived: paymentMethod === 'cash' ? Number(cashReceived) : undefined,
-        change: paymentMethod === 'cash' ? cashChange : undefined,
+        primaryMethod: paymentData.primaryMethod,
+        payments: paymentData.payments,
+        cashReceivedMxn: paymentData.cashReceivedMxn,
+        cashReceivedUsd: paymentData.cashReceivedUsd,
+        changeMxn: paymentData.changeMxn,
+        changeUsd: paymentData.changeUsd,
+        exchangeRate: paymentData.exchangeRate,
+        notes: paymentData.notes,
       })
 
-      // 5. Reset POS cart
+      // 5. Reset POS cart & close payment modal
       setCart([])
       setSelectedClient(null)
+      setIsClientSelected(false)
+      initialClientPromptDone.current = false
       setPaymentModalOpen(false)
       toast.success(`¡Venta #${orderNumber} completada exitosamente!`)
     } catch (err: unknown) {
@@ -402,32 +646,32 @@ export function PosClient() {
     }
   }
 
-  // Load clients for client selector modal
-  const openClientSelector = async () => {
-    setClientModalOpen(true)
-    setLoadingClients(true)
-    const { data } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('status', 'A')
-      .order('first_name')
-      .limit(100)
-
-    if (data) setClientsList(data as Client[])
-    setLoadingClients(false)
-  }
-
-  const filteredClients = useMemo(() => {
-    if (!clientSearch.trim()) return clientsList
-    const q = clientSearch.toLowerCase()
-    return clientsList.filter(
-      (c) =>
-        c.first_name?.toLowerCase().includes(q) ||
-        c.last_name?.toLowerCase().includes(q) ||
-        c.rfc?.toLowerCase().includes(q) ||
-        c.email?.toLowerCase().includes(q)
+  // Handle Close Shift (Fin de jornada)
+  const handleCloseShift = async () => {
+    if (!activeShift) return
+    const ok = window.confirm(
+      '¿Deseas cerrar tu caja y finalizar tu jornada de cobro en esta sucursal?'
     )
-  }, [clientsList, clientSearch])
+    if (!ok) return
+
+    setClosingShift(true)
+    try {
+      await closeShiftAction(
+        activeShift.id_shift,
+        activeShift.initial_cash_mxn,
+        activeShift.initial_cash_usd,
+        'Cierre de turno realizado desde POS'
+      )
+      toast.success('Jornada de caja finalizada')
+      setActiveShift(null)
+      setShiftModalOpen(true)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al cerrar caja'
+      toast.error(msg)
+    } finally {
+      setClosingShift(false)
+    }
+  }
 
   // Filtered Items for catalog grid
   const filteredCatalog = useMemo(() => {
@@ -453,47 +697,99 @@ export function PosClient() {
             <ShoppingCart size={20} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground leading-none">
-              Punto de Venta
-            </h1>
-            <p className="text-xs text-muted-foreground mt-1">
-              Sucursal:{' '}
-              <span className="font-semibold text-emerald-500">
-                {currentStore?.description ?? 'No seleccionada'}
+            <h1 className="text-xl font-bold text-foreground leading-none">Punto de Venta</h1>
+            <div className="flex items-center gap-2 mt-1 text-xs">
+              <span className="text-muted-foreground">
+                Sucursal:{' '}
+                <span className="font-semibold text-emerald-500">
+                  {currentStore?.description ?? 'No seleccionada'}
+                </span>
               </span>
-            </p>
+
+              {/* Status Badge of Active Cash Shift */}
+              {activeShift ? (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                  <ShieldCheck size={11} /> Caja Abierta (Fondo: {formatCurrency(activeShift.initial_cash_mxn)} / ${activeShift.initial_cash_usd} USD)
+                </span>
+              ) : (
+                <button
+                  onClick={() => setShiftModalOpen(true)}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[10px] font-bold hover:bg-rose-500/25 transition-colors"
+                >
+                  <Lock size={11} /> Caja Cerrada (Abrir Turno)
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Client Selector Button */}
+        {/* Action Buttons: Client Selector & Shift Options */}
         <div className="flex items-center gap-2">
+          {/* Client Selector Button */}
           <button
-            onClick={openClientSelector}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl glass-input text-xs font-medium hover:border-emerald-500/40 transition-all"
+            onClick={() => setClientModalOpen(true)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+              !isClientSelected
+                ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 ring-2 ring-amber-500/30 animate-pulse'
+                : 'glass-input hover:border-emerald-500/40'
+            }`}
           >
-            <User size={15} className="text-emerald-500" />
+            <User size={15} className={!isClientSelected ? 'text-amber-400' : 'text-emerald-500'} />
             <div className="text-left">
-              <span className="text-[10px] text-muted-foreground block leading-none">Cliente</span>
+              <span className="text-[10px] text-muted-foreground block leading-none">
+                {!isClientSelected ? '⚠️ Cliente Requerido' : 'Cliente'}
+              </span>
               <span className="text-foreground font-semibold truncate max-w-[150px] block">
-                {selectedClient
+                {!isClientSelected
+                  ? 'Clic para seleccionar'
+                  : selectedClient
                   ? `${selectedClient.first_name ?? ''} ${selectedClient.last_name ?? ''}`.trim()
                   : 'Público en General'}
               </span>
             </div>
-            {selectedClient && (
-              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
-                Lista #{selectedClient.price_number ?? 1}
+            {isClientSelected && selectedClient && (
+              Number(selectedClient.price_number) === 2 ? (
+                <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[10px] font-bold border border-blue-500/30">
+                  Mayoreo (P2)
+                </span>
+              ) : (
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                  Menudeo (P1)
+                </span>
+              )
+            )}
+            {isClientSelected && !selectedClient && (
+              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                Público General
               </span>
             )}
           </button>
 
-          {selectedClient && (
+          {isClientSelected && (
             <button
-              onClick={() => setSelectedClient(null)}
+              onClick={() => {
+                setSelectedClient(null)
+                setIsClientSelected(false)
+                initialClientPromptDone.current = false
+                setClientModalOpen(true)
+              }}
               className="p-2 rounded-xl glass-input text-muted-foreground hover:text-foreground"
-              title="Quitar cliente y usar Público en General"
+              title="Cambiar cliente"
             >
-              <X size={14} />
+              <RotateCcw size={14} />
+            </button>
+          )}
+
+          {/* Close Shift Button */}
+          {activeShift && (
+            <button
+              onClick={handleCloseShift}
+              disabled={closingShift}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl glass-input text-xs font-medium text-rose-400 hover:text-rose-300 hover:border-rose-500/40 transition-all"
+              title="Cerrar turno de caja al terminar jornada"
+            >
+              <DoorClosed size={14} />
+              <span className="hidden md:inline">Cerrar Caja</span>
             </button>
           )}
         </div>
@@ -503,6 +799,29 @@ export function PosClient() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left: Search & Products Grid */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-3">
+          {/* Client Required Alert Banner */}
+          {!isClientSelected && (
+            <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-between gap-3 text-amber-300 text-xs shadow-lg">
+              <div className="flex items-center gap-2.5">
+                <Users size={18} className="text-amber-400 shrink-0" />
+                <div>
+                  <p className="font-bold text-foreground">Selección de cliente obligatoria</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Para iniciar un nuevo ticket de venta, debes seleccionar un cliente registrado o confirmar Público en General.
+                  </p>
+                </div>
+              </div>
+              <GlassButton
+                variant="primary"
+                size="sm"
+                onClick={() => setClientModalOpen(true)}
+                className="text-xs shrink-0 py-1.5 px-3"
+              >
+                Seleccionar Cliente
+              </GlassButton>
+            </div>
+          )}
+
           {/* Search bar with scanner autofocus */}
           <div className="relative">
             <input
@@ -518,9 +837,17 @@ export function PosClient() {
               size={18}
               className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
             />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
 
-          {/* Catalog Grid */}
+          {/* Catalog Grid with Product Thumbnails */}
           <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[calc(100vh-250px)] overflow-y-auto scroll-modern pr-1">
             {loadingItems ? (
               <div className="col-span-full py-16 text-center text-muted-foreground">
@@ -538,6 +865,8 @@ export function PosClient() {
               filteredCatalog.map((item) => {
                 const stock = stocksMap[item.id_item] ?? 0
                 const price = getItemPrice(item)
+                const coverImg =
+                  item.item_images?.find((img) => img.is_cover) || item.item_images?.[0]
 
                 return (
                   <motion.button
@@ -548,21 +877,60 @@ export function PosClient() {
                     className="glass-card p-3 flex flex-col justify-between text-left group hover:border-emerald-500/40 transition-all relative overflow-hidden"
                   >
                     <div>
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
-                        <span className="font-mono">{item.code || item.barcode || '—'}</span>
+                      {/* Code and Stock info */}
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1.5">
+                        <span className="font-mono truncate max-w-[90px]">
+                          {item.code || item.barcode || '—'}
+                        </span>
                         <span
-                          className={`font-semibold ${
+                          className={`font-semibold shrink-0 ${
                             stock > 0 ? 'text-emerald-400' : 'text-rose-400'
                           }`}
                         >
                           Stock: {stock}
                         </span>
                       </div>
-                      <h4 className="font-semibold text-foreground text-xs sm:text-sm line-clamp-2 group-hover:text-emerald-400 transition-colors">
-                        {item.description}
-                      </h4>
+
+                      {/* Product Thumbnail + Title */}
+                      <div className="flex items-start gap-2.5 my-1">
+                        {coverImg?.image_url ? (
+                          <div className="w-11 h-11 rounded-xl overflow-hidden border border-border/40 shrink-0 bg-black/20 relative group-hover:border-emerald-500/40 transition-colors">
+                            <img
+                              src={coverImg.image_url}
+                              alt={item.description || 'Producto'}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              loading="lazy"
+                            />
+                            {item.item_images && item.item_images.length > 1 && (
+                              <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded-tl-md bg-black/80 backdrop-blur-xs text-[8px] font-bold text-emerald-400">
+                                +{item.item_images.length - 1}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          /* Generic Image Placeholder matching items-client.tsx L1044 */
+                          <div
+                            className="w-11 h-11 rounded-xl bg-white/[0.03] border border-border/40 flex items-center justify-center text-muted-foreground/40 group-hover:text-emerald-400 group-hover:border-emerald-500/40 transition-colors shrink-0"
+                            title="Sin imagen"
+                          >
+                            <ImageIcon size={18} />
+                          </div>
+                        )}
+
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-foreground text-xs sm:text-sm line-clamp-2 group-hover:text-emerald-400 transition-colors leading-snug">
+                            {item.description}
+                          </h4>
+                          {item.category?.description && (
+                            <span className="text-[10px] text-muted-foreground/70 truncate block mt-0.5">
+                              {item.category.description}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
+                    {/* Price and Add button */}
                     <div className="mt-3 pt-2 border-t border-border/20 flex items-center justify-between">
                       <span className="text-sm font-bold text-emerald-400 font-mono">
                         {formatCurrency(price)}
@@ -600,7 +968,7 @@ export function PosClient() {
               )}
             </div>
 
-            {/* Cart Items List */}
+            {/* Cart Items List with Thumbnail */}
             <div className="flex-1 overflow-y-auto scroll-modern divide-y divide-border/20 p-2">
               {cart.length === 0 ? (
                 <div className="py-16 text-center text-muted-foreground px-4">
@@ -613,54 +981,71 @@ export function PosClient() {
                   </p>
                 </div>
               ) : (
-                cart.map((line) => (
-                  <div
-                    key={line.item.id_item}
-                    className="p-2.5 flex items-center justify-between gap-3 group hover:bg-white/[0.02] rounded-xl"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-foreground truncate">
-                        {line.item.description}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground font-mono">
-                        <span>{formatCurrency(line.unitPrice)}</span>
-                        <span>×</span>
-                        <span className="text-foreground font-semibold">{line.quantity}</span>
+                cart.map((line) => {
+                  const cartImg =
+                    line.item.item_images?.find((i) => i.is_cover) || line.item.item_images?.[0]
+
+                  return (
+                    <div
+                      key={line.item.id_item}
+                      className="p-2.5 flex items-center justify-between gap-2.5 group hover:bg-white/[0.02] rounded-xl"
+                    >
+                      {/* Mini Thumbnail in Cart */}
+                      <div className="w-9 h-9 rounded-lg overflow-hidden border border-border/40 shrink-0 bg-black/20 flex items-center justify-center">
+                        {cartImg?.image_url ? (
+                          <img
+                            src={cartImg.image_url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <ImageIcon size={14} className="text-muted-foreground/40" />
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground truncate">
+                          {line.item.description}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground font-mono">
+                          <span>{formatCurrency(line.unitPrice)}</span>
+                          <span>×</span>
+                          <span className="text-foreground font-semibold">{line.quantity}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleUpdateQuantity(line.item.id_item, -1)}
+                          className="w-6 h-6 rounded-lg glass-input flex items-center justify-center text-muted-foreground hover:text-foreground"
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span className="w-5 text-center text-xs font-bold font-mono text-foreground">
+                          {line.quantity}
+                        </span>
+                        <button
+                          onClick={() => handleUpdateQuantity(line.item.id_item, 1)}
+                          className="w-6 h-6 rounded-lg glass-input flex items-center justify-center text-muted-foreground hover:text-foreground"
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </div>
+
+                      <div className="text-right min-w-[65px]">
+                        <span className="text-xs font-bold text-foreground font-mono block">
+                          {formatCurrency(line.totalPrice)}
+                        </span>
+                        <button
+                          onClick={() => handleRemoveFromCart(line.item.id_item)}
+                          className="text-[10px] text-rose-400/80 hover:text-rose-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          Quitar
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => handleUpdateQuantity(line.item.id_item, -1)}
-                        className="w-6 h-6 rounded-lg glass-input flex items-center justify-center text-muted-foreground hover:text-foreground"
-                      >
-                        <Minus size={12} />
-                      </button>
-                      <span className="w-6 text-center text-xs font-bold font-mono text-foreground">
-                        {line.quantity}
-                      </span>
-                      <button
-                        onClick={() => handleUpdateQuantity(line.item.id_item, 1)}
-                        className="w-6 h-6 rounded-lg glass-input flex items-center justify-center text-muted-foreground hover:text-foreground"
-                      >
-                        <Plus size={12} />
-                      </button>
-                    </div>
-
-                    <div className="text-right min-w-[70px]">
-                      <p className="text-xs font-bold font-mono text-emerald-400">
-                        {formatCurrency(line.totalPrice)}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => handleRemoveFromCart(line.item.id_item)}
-                      className="p-1 rounded-lg text-muted-foreground/60 hover:text-rose-400 transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
 
@@ -676,8 +1061,15 @@ export function PosClient() {
                   <span className="font-mono text-foreground">{formatCurrency(taxAmount)}</span>
                 </div>
                 <div className="flex justify-between text-base font-bold text-foreground pt-1.5 border-t border-border/20">
-                  <span>Total</span>
-                  <span className="font-mono text-emerald-400">{formatCurrency(total)}</span>
+                  <div>
+                    <span>Total MXN:</span>
+                    <span className="text-[11px] text-muted-foreground block font-normal">
+                      ≈ ${(total / (activeShift?.exchange_rate || 19)).toFixed(2)} USD
+                    </span>
+                  </div>
+                  <span className="font-mono text-emerald-400 text-lg">
+                    {formatCurrency(total)}
+                  </span>
                 </div>
               </div>
 
@@ -695,208 +1087,53 @@ export function PosClient() {
         </div>
       </div>
 
-      {/* Modal: Client Selector */}
-      <AnimatePresence>
-        {clientModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-lg w-full p-5 space-y-4 max-h-[80vh] flex flex-col"
-            >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                  <User size={18} className="text-emerald-500" />
-                  Seleccionar Cliente
-                </h3>
-                <button
-                  onClick={() => setClientModalOpen(false)}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
-                >
-                  <X size={18} />
-                </button>
-              </div>
+      {/* Modal 1: Shift Opening (Apertura de Caja Bimoneda con Biometría Obligatoria) */}
+      <ShiftOpenModal
+        open={shiftModalOpen && !checkingShift}
+        storeId={storeId || ''}
+        storeName={currentStore?.description || 'Sucursal Matriz'}
+        user={currentUser}
+        onShiftOpened={(shift) => {
+          setActiveShift(shift)
+          setShiftModalOpen(false)
+          // Open Client prompt right after opening shift
+          setClientModalOpen(true)
+        }}
+      />
 
-              <GlassInput
-                placeholder="Buscar por nombre, RFC o correo..."
-                value={clientSearch}
-                onChange={(e) => setClientSearch(e.target.value)}
-                autoFocus
-              />
+      {/* Modal 2: Client Selector with Enter shortcut for Público en General + Autocomplete */}
+      <PosClientModal
+        open={clientModalOpen}
+        onOpenChange={setClientModalOpen}
+        clients={clientsList}
+        selectedClient={selectedClient}
+        loading={loadingClients}
+        required={!isClientSelected && cart.length === 0}
+        onSelectClient={(c) => {
+          setSelectedClient(c)
+          setIsClientSelected(true)
+          setClientModalOpen(false)
+          toast.success(
+            c
+              ? `Cliente ${c.first_name || ''} ${c.last_name || ''} seleccionado (${Number(c.price_number) === 2 ? 'Mayoreo · Precio 2' : 'Menudeo · Precio 1'})`
+              : 'Público en General seleccionado'
+          )
+          searchInputRef.current?.focus()
+        }}
+      />
 
-              <div className="flex-1 overflow-y-auto scroll-modern divide-y divide-border/20 border border-border/30 rounded-xl">
-                {/* Option for General Public */}
-                <button
-                  onClick={() => {
-                    setSelectedClient(null)
-                    setClientModalOpen(false)
-                  }}
-                  className="w-full p-3 text-left hover:bg-white/[0.05] transition-colors flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-semibold text-foreground text-sm">Público en General</p>
-                    <p className="text-xs text-muted-foreground">Venta al mostrador (Lista de precio #1)</p>
-                  </div>
-                  {!selectedClient && <CheckCircle2 size={18} className="text-emerald-500" />}
-                </button>
+      {/* Modal 3: SAT Payment Methods & Mixed Payments (MXN / USD) */}
+      <PosPaymentModal
+        open={paymentModalOpen}
+        onOpenChange={setPaymentModalOpen}
+        totalAmountMxn={total}
+        exchangeRate={activeShift?.exchange_rate || 19.0}
+        selectedClient={selectedClient}
+        isSubmitting={isSubmittingOrder}
+        onConfirmPayment={handleProcessOrder}
+      />
 
-                {filteredClients.map((client) => {
-                  const isSelected = selectedClient?.id_client === client.id_client
-                  const fullName = `${client.first_name ?? ''} ${client.last_name ?? ''}`.trim()
-                  return (
-                    <button
-                      key={client.id_client}
-                      onClick={() => {
-                        setSelectedClient(client)
-                        setClientModalOpen(false)
-                      }}
-                      className="w-full p-3 text-left hover:bg-white/[0.05] transition-colors flex items-center justify-between"
-                    >
-                      <div>
-                        <p className="font-semibold text-foreground text-sm">{fullName}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                          {client.rfc && <span>RFC: {client.rfc}</span>}
-                          {client.phone && <span>Tel: {client.phone}</span>}
-                          <span className="text-emerald-400 font-medium">
-                            Lista #{client.price_number ?? 1}
-                          </span>
-                        </div>
-                      </div>
-                      {isSelected && <CheckCircle2 size={18} className="text-emerald-500" />}
-                    </button>
-                  )
-                })}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Modal: Payment & Checkout */}
-      <AnimatePresence>
-        {paymentModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-md w-full p-6 space-y-5"
-            >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                <h3 className="text-base font-bold text-foreground">Finalizar Venta</h3>
-                <button
-                  onClick={() => setPaymentModalOpen(false)}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Total Summary */}
-              <div className="text-center p-4 rounded-2xl bg-white/[0.03] border border-border/30">
-                <span className="text-xs uppercase font-semibold text-muted-foreground block">
-                  Total a Cobrar
-                </span>
-                <span className="text-3xl font-extrabold text-emerald-400 font-mono mt-1 block">
-                  {formatCurrency(total)}
-                </span>
-              </div>
-
-              {/* Payment Methods */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-muted-foreground block">
-                  Método de Pago
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('cash')}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-medium transition-all ${
-                      paymentMethod === 'cash'
-                        ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400'
-                        : 'border-border/40 glass hover:bg-white/5 text-muted-foreground'
-                    }`}
-                  >
-                    <Banknote size={20} className="mb-1" />
-                    Efectivo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('card')}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-medium transition-all ${
-                      paymentMethod === 'card'
-                        ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400'
-                        : 'border-border/40 glass hover:bg-white/5 text-muted-foreground'
-                    }`}
-                  >
-                    <CreditCard size={20} className="mb-1" />
-                    Tarjeta
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('transfer')}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-medium transition-all ${
-                      paymentMethod === 'transfer'
-                        ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400'
-                        : 'border-border/40 glass hover:bg-white/5 text-muted-foreground'
-                    }`}
-                  >
-                    <ArrowRightLeft size={20} className="mb-1" />
-                    Transferencia
-                  </button>
-                </div>
-              </div>
-
-              {/* Cash change calculation */}
-              {paymentMethod === 'cash' && (
-                <div className="space-y-3 pt-1">
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Monto Recibido
-                    </label>
-                    <GlassInput
-                      type="number"
-                      step="any"
-                      value={cashReceived}
-                      onChange={(e) => setCashReceived(e.target.value)}
-                      autoFocus
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/10 text-sm">
-                    <span className="font-semibold text-muted-foreground">Cambio / Devolución:</span>
-                    <span className="font-mono font-bold text-lg text-emerald-400">
-                      {formatCurrency(cashChange)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2.5 pt-3">
-                <GlassButton
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPaymentModalOpen(false)}
-                >
-                  Cancelar
-                </GlassButton>
-                <GlassButton
-                  variant="primary"
-                  onClick={handleProcessOrder}
-                  disabled={isSubmittingOrder}
-                  className="px-6"
-                >
-                  {isSubmittingOrder ? 'Procesando Venta...' : 'Completar Venta'}
-                </GlassButton>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Modal: Ticket Receipt & Print */}
+      {/* Modal 4: Completed Ticket Receipt Preview with SAT breakdown & Bilingual Change */}
       <AnimatePresence>
         {completedOrder && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
@@ -923,15 +1160,19 @@ export function PosClient() {
                 {completedOrder.items.map((it) => (
                   <div key={it.item.id_item} className="flex justify-between items-start">
                     <div className="flex-1 pr-2">
-                      <p className="font-semibold text-zinc-900 leading-tight">{it.item.description}</p>
-                      <p className="text-[10px] text-zinc-500">{it.quantity} × {formatCurrency(it.unitPrice)}</p>
+                      <p className="font-semibold text-zinc-900 leading-tight">
+                        {it.item.description}
+                      </p>
+                      <p className="text-[10px] text-zinc-500">
+                        {it.quantity} × {formatCurrency(it.unitPrice)}
+                      </p>
                     </div>
                     <span className="font-bold">{formatCurrency(it.totalPrice)}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Totals */}
+              {/* Totals & SAT Payments Breakdown */}
               <div className="space-y-1 text-xs font-mono border-b border-dashed border-zinc-300 pb-3">
                 <div className="flex justify-between text-zinc-600">
                   <span>Subtotal:</span>
@@ -945,19 +1186,56 @@ export function PosClient() {
                   <span>TOTAL:</span>
                   <span>{formatCurrency(completedOrder.total)}</span>
                 </div>
-                {completedOrder.paymentMethod === 'cash' && (
-                  <>
-                    <div className="flex justify-between text-zinc-600 pt-1">
-                      <span>Efectivo Recibido:</span>
-                      <span>{formatCurrency(completedOrder.cashReceived || 0)}</span>
+
+                {/* SAT Payment Breakdown */}
+                <div className="pt-2 mt-2 border-t border-dashed border-zinc-200">
+                  <div className="flex justify-between font-semibold text-zinc-800 text-[11px]">
+                    <span>Forma Pago SAT:</span>
+                    <span>
+                      [{completedOrder.primaryMethod}]{' '}
+                      {SAT_PAYMENT_METHODS.find((m) => m.code === completedOrder.primaryMethod)?.label}
+                    </span>
+                  </div>
+
+                  {completedOrder.payments.map((p, i) => (
+                    <div key={i} className="flex justify-between text-zinc-600 text-[10px]">
+                      <span>
+                        • SAT {p.method} ({p.currency}):
+                      </span>
+                      <span>
+                        {formatCurrency(p.amountMxn)}{' '}
+                        {p.currency === 'USD' && `($${p.amountUsd?.toFixed(2)} USD)`}
+                      </span>
                     </div>
-                    <div className="flex justify-between text-zinc-900 font-bold">
-                      <span>Cambio:</span>
-                      <span>{formatCurrency(completedOrder.change || 0)}</span>
+                  ))}
+
+                  {/* Change in BOTH MXN and USD */}
+                  {completedOrder.changeMxn > 0 && (
+                    <div className="pt-1.5 mt-1 border-t border-zinc-200 text-zinc-950 font-bold">
+                      <div className="flex justify-between text-xs">
+                        <span>CAMBIO ENTREGADO:</span>
+                        <span>{formatCurrency(completedOrder.changeMxn)}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] text-emerald-700">
+                        <span>Equiv. en Dólares (USD):</span>
+                        <span>${completedOrder.changeUsd.toFixed(2)} USD</span>
+                      </div>
                     </div>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
+
+              {/* Observaciones de la Venta (impresión en ticket) */}
+              {completedOrder.notes && (
+                <div className="border-b border-dashed border-zinc-300 pb-2.5 text-left">
+                  <p className="text-[10px] font-bold text-zinc-700 uppercase tracking-wide">
+                    Observaciones:
+                  </p>
+                  <p className="text-[11px] text-zinc-800 font-mono mt-0.5 whitespace-pre-wrap bg-zinc-50 p-2 rounded-lg border border-zinc-200">
+                    {completedOrder.notes}
+                  </p>
+                </div>
+              )}
 
               <div className="text-center text-[10px] text-zinc-500">
                 <p>¡Gracias por su compra!</p>
@@ -974,7 +1252,12 @@ export function PosClient() {
                   Imprimir Ticket
                 </button>
                 <button
-                  onClick={() => setCompletedOrder(null)}
+                  onClick={() => {
+                    setCompletedOrder(null)
+                    setIsClientSelected(false)
+                    initialClientPromptDone.current = false
+                    setClientModalOpen(true)
+                  }}
                   className="flex-1 py-2.5 rounded-xl border border-zinc-300 text-zinc-800 text-xs font-bold hover:bg-zinc-100 transition-colors"
                 >
                   Nueva Venta

@@ -22,11 +22,13 @@ interface TableActionMenuProps {
 
 export function TableActionMenu({
   items,
-  align = 'end',
+  align = 'start',
   triggerAriaLabel = 'Abrir menú de acciones',
 }: TableActionMenuProps) {
+  const [open, setOpen] = React.useState(false)
+
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root open={open} onOpenChange={setOpen}>
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
@@ -56,8 +58,8 @@ export function TableActionMenu({
                 )}
                 <DropdownMenu.Item
                   disabled={item.disabled}
-                  onSelect={(e) => {
-                    e.preventDefault()
+                  onSelect={() => {
+                    setOpen(false)
                     item.onClick()
                   }}
                   className={cn(
