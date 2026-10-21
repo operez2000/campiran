@@ -443,10 +443,10 @@ export function LabelPrintModal({
         <DialogHeader className="mb-4">
           <DialogTitle className="text-xl font-black text-foreground flex items-center justify-between">
             <span className="flex items-center gap-2">
-              <Printer className="w-5 h-5 text-emerald-400" />
+              <Printer className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               Impresión de Etiquetas con Código de Barras
             </span>
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
               Total: {totalLabels} {totalLabels === 1 ? 'etiqueta' : 'etiquetas'}
             </span>
           </DialogTitle>
@@ -459,13 +459,13 @@ export function LabelPrintModal({
           {/* Lado Izquierdo: Lista de Productos en Cola (7 cols) */}
           <div className="lg:col-span-7 space-y-4">
             {/* Selector de Plantilla */}
-            <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 space-y-2">
+            <div className="p-3.5 rounded-2xl bg-muted/30 dark:bg-white/[0.04] border border-border/60 dark:border-white/10 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5 text-emerald-400" />
+                  <Tag className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   Plantilla de Etiqueta (Formato de Impresión)
                 </span>
-                <span className="text-[11px] text-muted-foreground font-mono">
+                <span className="text-[11px] text-muted-foreground font-mono font-semibold">
                   {activeConfig.label_width} x {activeConfig.label_height} {activeConfig.unit}
                 </span>
               </div>
@@ -473,16 +473,16 @@ export function LabelPrintModal({
               <select
                 value={selectedConfigId}
                 onChange={(e) => setSelectedConfigId(e.target.value)}
-                className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                className="w-full bg-white dark:bg-neutral-900 border-2 border-neutral-300 dark:border-neutral-700 rounded-xl px-3 py-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 shadow-sm"
               >
                 {configs.map((c) => (
-                  <option key={c.id_config} value={c.id_config} className="bg-neutral-900 text-white">
+                  <option key={c.id_config} value={c.id_config} className="bg-white text-neutral-900 dark:bg-neutral-900 dark:text-white font-medium">
                     {c.name} — {c.printer_brand} ({c.label_width}x{c.label_height} {c.unit} | {c.labels_per_row} col)
                     {c.is_default ? ' ★ (Predeterminada)' : ''}
                   </option>
                 ))}
                 {configs.length === 0 && (
-                  <option value="default-fallback" className="bg-neutral-900 text-white">
+                  <option value="default-fallback" className="bg-white text-neutral-900 dark:bg-neutral-900 dark:text-white font-medium">
                     Estándar Térmica 50x25mm (1 columna)
                   </option>
                 )}
@@ -490,15 +490,15 @@ export function LabelPrintModal({
             </div>
 
             {/* Controles Rápidos de Cantidad */}
-            <div className="flex items-center justify-between text-xs text-muted-foreground bg-white/[0.02] p-2.5 rounded-xl border border-white/5">
-              <span className="font-semibold">Ajustar todas a:</span>
+            <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/40 dark:bg-white/[0.02] p-2.5 rounded-xl border border-border/50 dark:border-white/5">
+              <span className="font-semibold text-foreground">Ajustar todas a:</span>
               <div className="flex items-center gap-1.5">
                 {[1, 2, 5, 10, 20].map((num) => (
                   <button
                     key={num}
                     type="button"
                     onClick={() => setAllQuantities(num)}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-bold text-foreground transition-all"
+                    className="px-2.5 py-0.5 rounded-md bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border border-neutral-300 dark:border-neutral-700 text-[11px] font-bold text-neutral-900 dark:text-neutral-100 transition-all shadow-sm cursor-pointer"
                   >
                     {num}
                   </button>
@@ -507,9 +507,9 @@ export function LabelPrintModal({
             </div>
 
             {/* Tabla / Lista de Productos */}
-            <div className="border border-white/10 rounded-2xl overflow-hidden bg-black/20 max-h-[320px] overflow-y-auto scroll-modern">
+            <div className="border border-border/60 dark:border-white/10 rounded-2xl overflow-hidden bg-card dark:bg-black/20 max-h-[320px] overflow-y-auto scroll-modern shadow-sm">
               <table className="w-full text-left text-xs">
-                <thead className="bg-white/5 border-b border-white/10 text-muted-foreground sticky top-0 backdrop-blur-md">
+                <thead className="bg-muted/70 dark:bg-white/5 border-b border-border/60 dark:border-white/10 text-muted-foreground sticky top-0 backdrop-blur-md">
                   <tr>
                     <th className="p-2.5 font-semibold">Producto</th>
                     <th className="p-2.5 font-semibold">Código / Barras</th>
@@ -517,7 +517,7 @@ export function LabelPrintModal({
                     <th className="p-2.5 font-semibold text-right">Quitar</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-border/40 dark:divide-white/5">
                   {queue.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="p-6 text-center text-muted-foreground">
@@ -526,10 +526,10 @@ export function LabelPrintModal({
                     </tr>
                   ) : (
                     queue.map((item) => (
-                      <tr key={item.id_item} className="hover:bg-white/[0.02]">
+                      <tr key={item.id_item} className="hover:bg-muted/40 dark:hover:bg-white/[0.02] transition-colors">
                         <td className="p-2.5 max-w-[180px]">
                           <p className="font-bold text-foreground truncate">{item.description}</p>
-                          <p className="text-[10px] text-emerald-400">
+                          <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">
                             Precio: ${Number(getProductPrice(item)).toFixed(2)}
                           </p>
                         </td>
@@ -543,7 +543,7 @@ export function LabelPrintModal({
                               type="button"
                               onClick={() => updateQuantity(item.id_item, (item.quantity || 1) - 1)}
                               disabled={(item.quantity || 1) <= 1}
-                              className="p-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-muted-foreground disabled:opacity-30"
+                              className="p-1 rounded-md bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 disabled:opacity-30 cursor-pointer shadow-sm"
                             >
                               <Minus className="w-3 h-3" />
                             </button>
@@ -553,12 +553,12 @@ export function LabelPrintModal({
                               max="999"
                               value={item.quantity || 1}
                               onChange={(e) => updateQuantity(item.id_item, parseInt(e.target.value, 10) || 1)}
-                              className="w-12 text-center bg-black/40 border border-white/10 rounded-md py-0.5 text-xs font-bold text-foreground"
+                              className="w-12 text-center bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-md py-0.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm"
                             />
                             <button
                               type="button"
                               onClick={() => updateQuantity(item.id_item, (item.quantity || 1) + 1)}
-                              className="p-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-muted-foreground"
+                              className="p-1 rounded-md bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 cursor-pointer shadow-sm"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
@@ -568,7 +568,7 @@ export function LabelPrintModal({
                           <button
                             type="button"
                             onClick={() => removeItem(item.id_item)}
-                            className="p-1 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-md transition-all"
+                            className="p-1 text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-500/10 rounded-md transition-all cursor-pointer"
                             title="Quitar de la lista"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -583,17 +583,17 @@ export function LabelPrintModal({
           </div>
 
           {/* Lado Derecho: Vista Previa y Botones de Acción (5 cols) */}
-          <div className="lg:col-span-5 flex flex-col justify-between p-4 rounded-3xl bg-black/40 border border-white/10">
+          <div className="lg:col-span-5 flex flex-col justify-between p-4 rounded-3xl bg-card dark:bg-black/40 border border-border/60 dark:border-white/10 shadow-sm">
             <div>
               <div className="flex items-center justify-between mb-3 text-xs">
                 <span className="font-bold text-foreground">Vista Previa de Impresión</span>
-                <span className="text-[10px] text-muted-foreground font-mono">
+                <span className="text-[10px] text-muted-foreground font-mono font-semibold">
                   {activeConfig.labels_per_row || 1} {activeConfig.labels_per_row === 1 ? 'columna' : 'columnas'}
                 </span>
               </div>
 
               {/* Contenedor de Vista Previa */}
-              <div className="p-4 bg-neutral-950/80 rounded-2xl border border-white/5 flex flex-col items-center justify-center min-h-[220px] max-h-[340px] overflow-auto scroll-modern">
+              <div className="p-4 bg-muted/50 dark:bg-neutral-950/80 rounded-2xl border border-border/50 dark:border-white/5 flex flex-col items-center justify-center min-h-[220px] max-h-[340px] overflow-auto scroll-modern">
                 {queue.length > 0 ? (
                   <LabelPreview
                     config={activeConfig}
@@ -625,7 +625,7 @@ export function LabelPrintModal({
             </div>
 
             {/* Botones de Impresión */}
-            <div className="space-y-2 pt-4 border-t border-white/10 mt-4">
+            <div className="space-y-2 pt-4 border-t border-border/60 dark:border-white/10 mt-4">
               <GlassButton
                 variant="primary"
                 onClick={handleBrowserPrint}

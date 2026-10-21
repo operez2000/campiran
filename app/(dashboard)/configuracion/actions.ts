@@ -401,7 +401,12 @@ export async function saveBranchLabelConfigAction(
       .select()
       .single()
 
-    if (error) throw new Error('Error al actualizar configuración de etiquetas: ' + error.message)
+    if (error) {
+      if (error.message.includes('schema cache')) {
+        throw new Error('La tabla "branch_label_configs" aún no existe en la base de datos. Por favor ejecuta el script "supabase/014_branch_label_configs.sql" en el SQL Editor de Supabase.')
+      }
+      throw new Error('Error al actualizar configuración de etiquetas: ' + error.message)
+    }
     result = data as BranchLabelConfig
   } else {
     const { data, error } = await adminClient
@@ -410,7 +415,12 @@ export async function saveBranchLabelConfigAction(
       .select()
       .single()
 
-    if (error) throw new Error('Error al guardar configuración de etiquetas: ' + error.message)
+    if (error) {
+      if (error.message.includes('schema cache')) {
+        throw new Error('La tabla "branch_label_configs" aún no existe en la base de datos. Por favor ejecuta el script "supabase/014_branch_label_configs.sql" en el SQL Editor de Supabase.')
+      }
+      throw new Error('Error al guardar configuración de etiquetas: ' + error.message)
+    }
     result = data as BranchLabelConfig
   }
 

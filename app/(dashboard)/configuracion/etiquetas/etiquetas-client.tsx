@@ -567,8 +567,8 @@ export function EtiquetasClient({
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-foreground text-sm">{cfg.name}</span>
                         {cfg.is_default && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 dark:border-amber-500/40">
+                            <Star className="w-3 h-3 fill-amber-500 text-amber-500 dark:fill-amber-400 dark:text-amber-400" />
                             Predeterminada
                           </span>
                         )}
@@ -585,7 +585,7 @@ export function EtiquetasClient({
 
                     {/* Dimensiones */}
                     <td className="p-3">
-                      <span className="font-mono font-bold text-foreground bg-white/5 px-2 py-1 rounded-md border border-white/10">
+                      <span className="font-mono font-bold text-foreground bg-muted/60 dark:bg-white/5 px-2 py-1 rounded-md border border-border/60 dark:border-white/10">
                         {cfg.label_width} x {cfg.label_height} {cfg.unit}
                       </span>
                     </td>
@@ -607,22 +607,22 @@ export function EtiquetasClient({
                     <td className="p-3">
                       <div className="flex flex-wrap gap-1 max-w-[200px]">
                         {cfg.include_barcode && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/15 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border border-emerald-500/30 dark:border-emerald-500/20 font-semibold">
                             CB (Barras)
                           </span>
                         )}
                         {cfg.include_price && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-indigo-500/15 dark:bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 border border-indigo-500/30 dark:border-indigo-500/20 font-semibold">
                             Precio ({cfg.price_to_print})
                           </span>
                         )}
                         {cfg.include_item_name && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-white/5 text-muted-foreground border border-white/10 font-medium">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-muted/60 dark:bg-white/5 text-foreground/80 dark:text-muted-foreground border border-border/60 dark:border-white/10 font-medium">
                             Descripción
                           </span>
                         )}
                         {cfg.include_code && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-white/5 text-muted-foreground border border-white/10 font-medium">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] bg-muted/60 dark:bg-white/5 text-foreground/80 dark:text-muted-foreground border border-border/60 dark:border-white/10 font-medium">
                             Código
                           </span>
                         )}
@@ -731,7 +731,7 @@ export function EtiquetasClient({
                     <button
                       type="button"
                       onClick={() => setIsCustomMode(!isCustomMode)}
-                      className="text-[11px] text-emerald-400 hover:underline font-semibold"
+                      className="text-[11px] text-emerald-700 dark:text-emerald-400 hover:underline font-bold"
                     >
                       {isCustomMode ? 'Usar presets de marca' : 'Configuración manual'}
                     </button>
@@ -755,10 +755,10 @@ export function EtiquetasClient({
                               applyPreset(firstPres.id)
                             }
                           }}
-                          className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 shadow-sm"
                         >
                           {PRINTER_PRESETS.map((p) => (
-                            <option key={p.brand} value={p.brand} className="bg-neutral-900 text-white">
+                            <option key={p.brand} value={p.brand} className="bg-white text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100">
                               {p.brand}
                             </option>
                           ))}
@@ -779,10 +779,10 @@ export function EtiquetasClient({
                               applyPreset(firstPres.id)
                             }
                           }}
-                          className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 shadow-sm"
                         >
                           {availableModels.map((m) => (
-                            <option key={m.model} value={m.model} className="bg-neutral-900 text-white">
+                            <option key={m.model} value={m.model} className="bg-white text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100">
                               {m.model}
                             </option>
                           ))}
@@ -791,42 +791,43 @@ export function EtiquetasClient({
 
                       {/* Tamaños Predefinidos */}
                       <div className="sm:col-span-2">
-                        <label className="text-[11px] text-muted-foreground block mb-1">
+                        <label className="text-[11px] font-semibold text-foreground block mb-1">
                           Tamaño de Etiqueta Estándar de este Modelo
                         </label>
                         <select
                           value={formSelectedPresetId}
                           onChange={(e) => applyPreset(e.target.value)}
-                          className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-xs font-semibold text-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                          className="w-full bg-white dark:bg-neutral-900 border-2 border-emerald-600/50 dark:border-emerald-500/50 rounded-xl px-3 py-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
                         >
                           {availablePresets.map((ps) => (
-                            <option key={ps.id} value={ps.id} className="bg-neutral-900 text-white">
+                            <option key={ps.id} value={ps.id} className="bg-white text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100 font-semibold">
                               {ps.name} ({ps.label_width} x {ps.label_height} {ps.unit} — {ps.labels_per_row} col)
                             </option>
                           ))}
-                          <option value="custom" className="bg-neutral-900 text-amber-300">
+                          <option value="custom" className="bg-white text-amber-900 dark:bg-neutral-900 dark:text-amber-300 font-bold">
                             ⚙️ Personalizado (Ingresar medidas manualmente)
                           </option>
                         </select>
                       </div>
                     </div>
                   ) : (
-                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300">
-                      Modo manual activado: Puedes especificar cualquier combinación de dimensiones a continuación.
+                    <div className="p-3.5 rounded-2xl bg-amber-100 text-amber-950 border-2 border-amber-400 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-700/80 text-xs font-semibold leading-relaxed shadow-sm">
+                      <span className="font-bold underline mr-1">Modo manual activado:</span>
+                      Puedes especificar cualquier combinación de dimensiones a continuación.
                     </div>
                   )}
                 </div>
 
                 {/* Dimensiones y Unidad (Manual o Editable) */}
-                <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 space-y-3">
+                <div className="p-3 rounded-2xl bg-muted/30 dark:bg-white/[0.04] border border-border/60 dark:border-white/10 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                      <Sliders className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                       Dimensiones Físicas de la Etiqueta
                     </span>
 
                     {/* Selector de Unidad: cm o in */}
-                    <div className="flex items-center gap-1 bg-black/30 p-1 rounded-xl border border-white/10">
+                    <div className="flex items-center gap-1 bg-muted/60 dark:bg-black/30 p-1 rounded-xl border border-border/60 dark:border-white/10">
                       <button
                         type="button"
                         onClick={() => {
@@ -840,7 +841,7 @@ export function EtiquetasClient({
                         }}
                         className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                           formUnit === 'cm'
-                            ? 'bg-emerald-500 text-white shadow-md'
+                            ? 'bg-emerald-600 text-white shadow-md'
                             : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
@@ -859,7 +860,7 @@ export function EtiquetasClient({
                         }}
                         className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                           formUnit === 'in'
-                            ? 'bg-emerald-500 text-white shadow-md'
+                            ? 'bg-emerald-600 text-white shadow-md'
                             : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
@@ -871,39 +872,39 @@ export function EtiquetasClient({
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {/* Ancho */}
                     <div>
-                      <label className="text-[11px] text-muted-foreground block mb-1">
+                      <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
                         Ancho ({formUnit}) *
                       </label>
                       <input
                         type="number"
-                        step="0.01"
-                        min="0.5"
+                        step="any"
+                        min="0.1"
                         value={formWidth}
                         onChange={(e) => setFormWidth(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl px-3 py-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
                         required
                       />
                     </div>
 
                     {/* Alto */}
                     <div>
-                      <label className="text-[11px] text-muted-foreground block mb-1">
+                      <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
                         Alto ({formUnit}) *
                       </label>
                       <input
                         type="number"
-                        step="0.01"
-                        min="0.5"
+                        step="any"
+                        min="0.1"
                         value={formHeight}
                         onChange={(e) => setFormHeight(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl px-3 py-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
                         required
                       />
                     </div>
 
                     {/* Etiquetas por renglón */}
                     <div>
-                      <label className="text-[11px] text-muted-foreground block mb-1">
+                      <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
                         Etiquetas / Renglón *
                       </label>
                       <input
@@ -913,129 +914,129 @@ export function EtiquetasClient({
                         max="10"
                         value={formLabelsPerRow}
                         onChange={(e) => setFormLabelsPerRow(parseInt(e.target.value, 10) || 1)}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl px-3 py-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
                         required
                       />
                     </div>
 
                     {/* Espacio entre columnas */}
                     <div>
-                      <label className="text-[11px] text-muted-foreground block mb-1">
+                      <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
                         Espacio entre Columnas ({formUnit})
                       </label>
                       <input
                         type="number"
-                        step="0.01"
+                        step="any"
                         min="0"
                         disabled={formLabelsPerRow <= 1}
                         value={formGapX}
                         onChange={(e) => setFormGapX(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-foreground disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl px-3 py-2 text-xs font-medium text-neutral-900 dark:text-neutral-100 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
                       />
                     </div>
 
                     {/* Espacio entre renglones */}
                     <div>
-                      <label className="text-[11px] text-muted-foreground block mb-1">
+                      <label className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 block mb-1">
                         Espacio entre Renglones ({formUnit})
                       </label>
                       <input
                         type="number"
-                        step="0.01"
+                        step="any"
                         min="0"
                         value={formGapY}
                         onChange={(e) => setFormGapY(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl px-3 py-2 text-xs font-medium text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Contenido de la Etiqueta */}
-                <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 space-y-2.5">
+                <div className="p-3 rounded-2xl bg-muted/30 dark:bg-white/[0.04] border border-border/60 dark:border-white/10 space-y-2.5">
                   <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-amber-400" />
+                    <Layers className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                     Elementos a Imprimir en la Etiqueta
                   </span>
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-white/5">
+                    <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-muted/60 dark:hover:bg-white/5">
                       <input
                         type="checkbox"
                         checked={formIncludeBarcode}
                         onChange={(e) => setFormIncludeBarcode(e.target.checked)}
-                        className="rounded border-white/20 text-emerald-500 focus:ring-emerald-500/50"
+                        className="rounded border-border/70 text-emerald-600 focus:ring-emerald-500/50"
                       />
-                      <span>Código de Barras</span>
+                      <span className="font-medium text-foreground">Código de Barras</span>
                     </label>
 
-                    <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-white/5">
+                    <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-muted/60 dark:hover:bg-white/5">
                       <input
                         type="checkbox"
                         checked={formIncludeItemName}
                         onChange={(e) => setFormIncludeItemName(e.target.checked)}
-                        className="rounded border-white/20 text-emerald-500 focus:ring-emerald-500/50"
+                        className="rounded border-border/70 text-emerald-600 focus:ring-emerald-500/50"
                       />
-                      <span>Nombre del Producto</span>
+                      <span className="font-medium text-foreground">Nombre del Producto</span>
                     </label>
 
-                    <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-white/5">
+                    <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-muted/60 dark:hover:bg-white/5">
                       <input
                         type="checkbox"
                         checked={formIncludePrice}
                         onChange={(e) => setFormIncludePrice(e.target.checked)}
-                        className="rounded border-white/20 text-emerald-500 focus:ring-emerald-500/50"
+                        className="rounded border-border/70 text-emerald-600 focus:ring-emerald-500/50"
                       />
-                      <span>Precio de Venta</span>
+                      <span className="font-medium text-foreground">Precio de Venta</span>
                     </label>
 
-                    <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-white/5">
+                    <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-muted/60 dark:hover:bg-white/5">
                       <input
                         type="checkbox"
                         checked={formIncludeCode}
                         onChange={(e) => setFormIncludeCode(e.target.checked)}
-                        className="rounded border-white/20 text-emerald-500 focus:ring-emerald-500/50"
+                        className="rounded border-border/70 text-emerald-600 focus:ring-emerald-500/50"
                       />
-                      <span>Código Interno</span>
+                      <span className="font-medium text-foreground">Código Interno</span>
                     </label>
 
-                    <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-white/5 col-span-2">
+                    <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-muted/60 dark:hover:bg-white/5 col-span-2">
                       <input
                         type="checkbox"
                         checked={formIncludeStoreName}
                         onChange={(e) => setFormIncludeStoreName(e.target.checked)}
-                        className="rounded border-white/20 text-emerald-500 focus:ring-emerald-500/50"
+                        className="rounded border-border/70 text-emerald-600 focus:ring-emerald-500/50"
                       />
-                      <span>Nombre Comercial de la Empresa ({company.trade_name || 'Campiran'})</span>
+                      <span className="font-medium text-foreground">Nombre Comercial de la Empresa ({company.trade_name || 'Campiran'})</span>
                     </label>
                   </div>
 
                   {/* Selector de Precio si está activo */}
                   {formIncludePrice && (
-                    <div className="pt-2 border-t border-white/10 flex items-center gap-2">
+                    <div className="pt-2 border-t border-border/60 dark:border-white/10 flex items-center gap-2">
                       <span className="text-[11px] text-muted-foreground font-semibold">
                         Lista de Precio a imprimir:
                       </span>
                       <select
                         value={formPriceToPrint}
                         onChange={(e) => setFormPriceToPrint(e.target.value as LabelPriceOption)}
-                        className="bg-black/20 border border-white/10 rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none"
+                        className="bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg px-2.5 py-1 text-xs text-neutral-900 dark:text-neutral-100 font-bold focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm"
                       >
-                        <option value="price1" className="bg-neutral-900 text-white">Precio 1 (General)</option>
-                        <option value="price2" className="bg-neutral-900 text-white">Precio 2 (Mayoreo)</option>
-                        <option value="price3" className="bg-neutral-900 text-white">Precio 3 (Especial)</option>
+                        <option value="price1" className="bg-white text-neutral-900 dark:bg-neutral-900 dark:text-white">Precio 1 (General)</option>
+                        <option value="price2" className="bg-white text-neutral-900 dark:bg-neutral-900 dark:text-white">Precio 2 (Mayoreo)</option>
+                        <option value="price3" className="bg-white text-neutral-900 dark:bg-neutral-900 dark:text-white">Precio 3 (Especial)</option>
                       </select>
                     </div>
                   )}
 
                   {/* Predeterminada */}
-                  <div className="pt-2 border-t border-white/10">
+                  <div className="pt-2 border-t border-border/60 dark:border-white/10">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={formIsDefault}
                         onChange={(e) => setFormIsDefault(e.target.checked)}
-                        className="rounded border-white/20 text-emerald-500 focus:ring-emerald-500/50"
+                        className="rounded border-border/70 text-emerald-600 focus:ring-emerald-500/50"
                       />
                       <span className="text-xs font-bold text-foreground">
                         Usar como plantilla predeterminada de esta sucursal
@@ -1046,18 +1047,18 @@ export function EtiquetasClient({
               </div>
 
               {/* Columna Derecha: Vista Previa en Vivo (5 cols) */}
-              <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 rounded-3xl bg-black/40 border border-white/10">
+              <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 rounded-3xl bg-card dark:bg-black/40 border border-border/60 dark:border-white/10 shadow-sm">
                 <div className="w-full flex items-center justify-between mb-3 text-xs">
                   <span className="font-bold text-foreground flex items-center gap-1.5">
-                    <Eye className="w-4 h-4 text-emerald-400" />
+                    <Eye className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     Vista Previa en Tiempo Real
                   </span>
-                  <span className="text-[11px] font-mono text-muted-foreground">
+                  <span className="text-[11px] font-mono text-muted-foreground font-semibold">
                     {formWidth} x {formHeight} {formUnit} ({formLabelsPerRow} col)
                   </span>
                 </div>
 
-                <div className="w-full flex flex-col items-center justify-center p-6 bg-neutral-950/80 rounded-2xl border border-white/5 overflow-auto max-h-[360px]">
+                <div className="w-full flex flex-col items-center justify-center p-6 bg-muted/50 dark:bg-neutral-950/80 rounded-2xl border border-border/50 dark:border-white/5 overflow-auto max-h-[360px]">
                   {/* Grid de simulación de columnas por renglón */}
                   <div
                     className="flex flex-wrap items-center justify-center gap-3"
