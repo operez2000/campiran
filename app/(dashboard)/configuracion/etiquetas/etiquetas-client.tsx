@@ -112,17 +112,20 @@ export function EtiquetasClient({
     setLoading(true)
     try {
       const data = await getBranchLabelConfigsAction(selectedStoreId)
-      setConfigs(data)
-    } catch (err: unknown) {
-      toast.error('Error al cargar configuraciones de etiquetas')
+      setConfigs(data || [])
+    } catch {
+      // Manejo silencioso: la pantalla muestra el empty state con botón para crear plantilla
     } finally {
       setLoading(false)
     }
   }, [selectedStoreId])
 
   useEffect(() => {
-    fetchConfigs()
-  }, [fetchConfigs])
+    // Si cambia de sucursal, refrescar
+    if (selectedStoreId && selectedStoreId !== initialStoreId) {
+      fetchConfigs()
+    }
+  }, [selectedStoreId, initialStoreId, fetchConfigs])
 
   // Realtime subscription
   useEffect(() => {
@@ -507,21 +510,24 @@ export function EtiquetasClient({
               <tr className="glass-table-header border-b border-white/10">
                 <TableColumnHeader
                   title="Plantilla / Nombre"
-                  sorted={sortKey === 'name'}
-                  direction={sortDirection}
-                  onSort={() => handleSort('name')}
+                  sortKey="name"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
                 />
                 <TableColumnHeader
                   title="Marca y Modelo"
-                  sorted={sortKey === 'printer_brand'}
-                  direction={sortDirection}
-                  onSort={() => handleSort('printer_brand')}
+                  sortKey="printer_brand"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
                 />
                 <TableColumnHeader
                   title="Dimensiones"
-                  sorted={sortKey === 'dimensions'}
-                  direction={sortDirection}
-                  onSort={() => handleSort('dimensions')}
+                  sortKey="dimensions"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
                 />
                 <th className="p-3 text-muted-foreground font-semibold">Columnas / Gaps</th>
                 <th className="p-3 text-muted-foreground font-semibold">Campos Visibles</th>

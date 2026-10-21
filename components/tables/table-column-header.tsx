@@ -12,6 +12,8 @@ interface TableColumnHeaderProps
   sortKey?: string
   currentSortKey?: string | null
   sortDirection?: SortDirection
+  sorted?: boolean
+  direction?: SortDirection
   onSort?: (key: string) => void
   align?: 'left' | 'center' | 'right'
   className?: string
@@ -22,14 +24,17 @@ export function TableColumnHeader({
   sortKey,
   currentSortKey,
   sortDirection = 'asc',
+  sorted,
+  direction,
   onSort,
   align = 'left',
   className,
   children,
   ...props
 }: TableColumnHeaderProps) {
-  const isSorted = !!(sortKey && currentSortKey === sortKey)
-  const isClickable = !!(sortKey && onSort)
+  const isSorted = sorted !== undefined ? sorted : !!(sortKey && currentSortKey === sortKey)
+  const activeDirection = direction || sortDirection
+  const isClickable = !!((sortKey || onSort) && onSort)
 
   const alignClass =
     align === 'center'
@@ -69,12 +74,12 @@ export function TableColumnHeader({
             )}
             title={
               isSorted
-                ? `Ordenado ${sortDirection === 'asc' ? 'ascendente' : 'descendente'}`
+                ? `Ordenado ${activeDirection === 'asc' ? 'ascendente' : 'descendente'}`
                 : 'Ordenar columna'
             }
           >
             {isSorted ? (
-              sortDirection === 'asc' ? (
+              activeDirection === 'asc' ? (
                 <ArrowUp size={13} className="stroke-[2.5]" />
               ) : (
                 <ArrowDown size={13} className="stroke-[2.5]" />

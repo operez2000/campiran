@@ -329,7 +329,10 @@ export async function getBranchLabelConfigsAction(id_store: string): Promise<Bra
     .order('name', { ascending: true })
 
   if (error) {
-    console.error('[LabelConfigs] Error al obtener configuraciones:', error)
+    console.warn(
+      '[LabelConfigs] No se pudieron obtener configuraciones. Si es la primera vez, asegúrate de ejecutar la migración 014_branch_label_configs.sql en Supabase SQL Editor. Detalle:',
+      error.message || error.code || JSON.stringify(error)
+    )
     return []
   }
 
