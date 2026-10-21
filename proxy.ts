@@ -4,8 +4,8 @@ import { getAuthenticatedProfile } from '@/lib/auth-profile'
 
 // Route prefixes each role is allowed to access
 const ROLE_ALLOWED_PREFIXES: Record<string, string[]> = {
-  ADMIN: ['/pos', '/inventario', '/catalogo', '/clientes', '/proveedores', '/reportes', '/admin'],
-  MANAGER: ['/pos', '/inventario', '/catalogo', '/clientes', '/proveedores', '/reportes'],
+  ADMIN: ['/pos', '/inventario', '/catalogo', '/clientes', '/proveedores', '/reportes', '/admin', '/configuracion'],
+  MANAGER: ['/pos', '/inventario', '/catalogo', '/clientes', '/proveedores', '/reportes', '/configuracion'],
   CASHIER: ['/pos', '/clientes'],
   ALMACENISTA: ['/inventario', '/catalogo'],
   PENDING: ['/pending'],

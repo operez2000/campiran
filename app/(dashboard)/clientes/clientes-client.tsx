@@ -338,106 +338,106 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-full flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3">
       {/* ── Page Header ────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/10">
-            <Users size={24} />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-md shadow-emerald-500/10 shrink-0">
+            <Users size={18} />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground leading-tight">
               Directorio de Clientes
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+            <p className="text-xs text-muted-foreground line-clamp-1">
               Gestión de clientes, datos fiscales para facturación y listas de precios personalizadas
             </p>
           </div>
         </div>
 
-        <GlassButton variant="primary" onClick={handleOpenCreate} className="self-start sm:self-auto shadow-lg shadow-emerald-500/20">
-          <Plus size={16} className="mr-1.5" />
+        <GlassButton variant="primary" size="sm" onClick={handleOpenCreate} className="self-start sm:self-auto shadow-md shadow-emerald-500/20 text-xs h-8 sm:h-9">
+          <Plus size={15} className="mr-1" />
           Nuevo Cliente
         </GlassButton>
       </div>
 
-      {/* ── KPI Summary Cards ───────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-        <GlassCard padding="sm" className="relative overflow-hidden group hover:border-emerald-500/30 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Total Registrados</span>
-            <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-              <Users size={15} />
+      {/* ── KPI Summary Cards (Compact) ─────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 shrink-0">
+        <div className="glass rounded-xl px-3 py-1.5 flex items-center justify-between border border-border/40 hover:border-emerald-500/30 transition-all">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+              <Users size={13} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium text-muted-foreground truncate leading-tight">Total</p>
+              <p className="text-sm font-bold text-foreground leading-none">{metrics.total}</p>
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-foreground">{metrics.total}</span>
-            <span className="text-[11px] text-muted-foreground">clientes</span>
-          </div>
-        </GlassCard>
+          <span className="text-[10px] text-muted-foreground/70 hidden sm:inline shrink-0">clientes</span>
+        </div>
 
-        <GlassCard padding="sm" className="relative overflow-hidden group hover:border-emerald-500/30 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Menudeo</span>
-            <div className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-              <Tag size={15} />
+        <div className="glass rounded-xl px-3 py-1.5 flex items-center justify-between border border-border/40 hover:border-emerald-500/30 transition-all">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+              <Tag size={13} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium text-muted-foreground truncate leading-tight">Menudeo</p>
+              <p className="text-sm font-bold text-emerald-400 leading-none">{metrics.menudeo}</p>
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-emerald-400">{metrics.menudeo}</span>
-            <span className="text-[11px] text-emerald-500/80 font-medium">Precio 1</span>
-          </div>
-        </GlassCard>
+          <span className="text-[10px] text-emerald-500/80 font-medium shrink-0">Precio 1</span>
+        </div>
 
-        <GlassCard padding="sm" className="relative overflow-hidden group hover:border-blue-500/30 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Mayoreo</span>
-            <div className="w-7 h-7 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
-              <Building2 size={15} />
+        <div className="glass rounded-xl px-3 py-1.5 flex items-center justify-between border border-border/40 hover:border-blue-500/30 transition-all">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
+              <Building2 size={13} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium text-muted-foreground truncate leading-tight">Mayoreo</p>
+              <p className="text-sm font-bold text-blue-400 leading-none">{metrics.mayoreo}</p>
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-blue-400">{metrics.mayoreo}</span>
-            <span className="text-[11px] text-blue-400/80 font-medium">Precio 2</span>
-          </div>
-        </GlassCard>
+          <span className="text-[10px] text-blue-400/80 font-medium shrink-0">Precio 2</span>
+        </div>
 
-        <GlassCard padding="sm" className="relative overflow-hidden group hover:border-teal-500/30 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Clientes Activos</span>
-            <div className="w-7 h-7 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center">
-              <CheckCircle2 size={15} />
+        <div className="glass rounded-xl px-3 py-1.5 flex items-center justify-between border border-border/40 hover:border-teal-500/30 transition-all">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-teal-500/10 text-teal-400 flex items-center justify-center shrink-0">
+              <CheckCircle2 size={13} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium text-muted-foreground truncate leading-tight">Activos</p>
+              <p className="text-sm font-bold text-teal-400 leading-none">{metrics.active}</p>
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-teal-400">{metrics.active}</span>
-            <span className="text-[11px] text-teal-500/80 font-medium">operativos</span>
-          </div>
-        </GlassCard>
+          <span className="text-[10px] text-teal-500/80 font-medium shrink-0">operativos</span>
+        </div>
 
-        <GlassCard padding="sm" className="relative overflow-hidden group hover:border-indigo-500/30 transition-all col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Con RFC</span>
-            <div className="w-7 h-7 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
-              <FileText size={15} />
+        <div className="glass rounded-xl px-3 py-1.5 flex items-center justify-between border border-border/40 hover:border-indigo-500/30 transition-all col-span-2 sm:col-span-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
+              <FileText size={13} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium text-muted-foreground truncate leading-tight">Con RFC</p>
+              <p className="text-sm font-bold text-indigo-400 leading-none">{metrics.withRfc}</p>
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-indigo-400">{metrics.withRfc}</span>
-            <span className="text-[11px] text-muted-foreground">fiscales</span>
-          </div>
-        </GlassCard>
+          <span className="text-[10px] text-muted-foreground/70 hidden sm:inline shrink-0">fiscales</span>
+        </div>
       </div>
 
       {/* ── Filters & Search Toolbar ────────────────────────────── */}
-      <GlassCard padding="sm">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <GlassCard padding="none" className="p-2 shrink-0">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
           <div className="flex-1 max-w-md relative">
             <GlassInput
               placeholder="Buscar por nombre, RFC, correo, teléfono o tipo (menudeo/mayoreo)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              icon={<Search size={16} />}
+              icon={<Search size={15} />}
             />
             {search && (
               <button
@@ -452,11 +452,11 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Filter by Client Type (Menudeo / Mayoreo) */}
-            <div className="flex items-center gap-1 p-1 rounded-xl glass border border-border/40">
+            <div className="flex items-center gap-1 p-0.5 rounded-xl glass border border-border/40">
               <button
                 type="button"
                 onClick={() => setTypeFilter('ALL')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                   typeFilter === 'ALL'
                     ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20 font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
@@ -467,7 +467,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
               <button
                 type="button"
                 onClick={() => setTypeFilter('1')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                   typeFilter === '1'
                     ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20 font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
@@ -483,7 +483,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
               <button
                 type="button"
                 onClick={() => setTypeFilter('2')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                   typeFilter === '2'
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
@@ -499,10 +499,10 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
             </div>
 
             {/* Segmented Filter Control by Status */}
-            <div className="flex items-center gap-1 p-1 rounded-xl glass border border-border/40">
+            <div className="flex items-center gap-1 p-0.5 rounded-xl glass border border-border/40">
               <button
                 onClick={() => setStatusFilter('A')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                   statusFilter === 'A'
                     ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20 font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
@@ -515,7 +515,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
               </button>
               <button
                 onClick={() => setStatusFilter('I')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                   statusFilter === 'I'
                     ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20 font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
@@ -528,7 +528,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
               </button>
               <button
                 onClick={() => setStatusFilter('ALL')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                   statusFilter === 'ALL'
                     ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20 font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
@@ -547,9 +547,9 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
               onClick={fetchClients}
               disabled={loading}
               title="Recargar directorio"
-              className="h-9 px-3"
+              className="h-8 px-2.5"
             >
-              <RefreshCw size={14} className={loading ? 'animate-spin text-emerald-400' : ''} />
+              <RefreshCw size={13} className={loading ? 'animate-spin text-emerald-400' : ''} />
               <span className="hidden sm:inline ml-1.5 text-xs">Actualizar</span>
             </GlassButton>
           </div>
@@ -557,8 +557,8 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
       </GlassCard>
 
       {/* ── Clients Table Card ──────────────────────────────────── */}
-      <GlassCard padding="none" className="overflow-hidden shadow-xl">
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern">
+      <GlassCard padding="none" className="overflow-hidden shadow-xl flex-1 min-h-0 flex flex-col">
+        <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 scroll-modern">
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">

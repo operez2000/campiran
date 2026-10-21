@@ -54,8 +54,8 @@ function statusToStatusCode(status: ProfileStatus): string {
 }
 
 /**
- * Obtiene la lista completa de usuarios y tiendas activas.
- * Consulta auth.users, la tabla profiles y la tabla legacy users con sincronización transparente.
+ * Obtiene la lista completa de usuarios y tiendas activas con sus credenciales biométricas (WebAuthn, Face ID, PIN de Cajero).
+ * Consulta auth.users, la tabla profiles, user_biometrics y la tabla legacy users con sincronización transparente.
  */
 export async function getUsersAndStoresAction(): Promise<{ users: Profile[]; stores: Store[] }> {
   const adminClient = createAdminClient()
@@ -69,7 +69,61 @@ export async function getUsersAndStoresAction(): Promise<{ users: Profile[]; sto
 
   const stores = (storesData || []) as Store[]
 
-  // 2. Intentar consultar profiles
+  // 2. Consultar credenciales biométricas (user_biometrics)
+  const biometricsMap = new Map<string, UserBiometric>()
+  try {
+    const { data: bioData, error: bioErr } = await adminClient
+      .from('user_biometrics')
+      .select('*')
+
+    if (!bioErr && bioData) {
+      for (const b of bioData) {
+        if (b.id_user) {
+          biometricsMap.set(b.id_user, b as UserBiometric)
+        }
+      }
+    }
+  } catch {
+    // La tabla user_biometrics puede no haber sido creada todavía
+  }
+
+  // 3. Fallback de biometría desde auth.users user_metadata si falta en DB
+  let authUsersList: any[] = []
+  try {
+    const { data: authData } = await adminClient.auth.admin.listUsers()
+    authUsersList = authData?.users || []
+    for (const au of authUsersList) {
+      const meta = au.user_metadata || {}
+      if (
+        meta.has_webauthn ||
+        meta.has_face ||
+        meta.cashier_number ||
+        meta.cashier_pin ||
+        meta.webauthn_credential ||
+        meta.face_photo_url
+      ) {
+        if (!biometricsMap.has(au.id)) {
+          biometricsMap.set(au.id, {
+            id_biometric: au.id,
+            id_user: au.id,
+            cashier_number: meta.cashier_number || null,
+            cashier_pin: meta.cashier_pin || null,
+            has_webauthn: Boolean(meta.has_webauthn),
+            webauthn_credential: meta.webauthn_credential || null,
+            has_face: Boolean(meta.has_face),
+            face_photo_url: meta.face_photo_url || null,
+            face_descriptor: meta.face_descriptor || null,
+            created_at: au.created_at,
+            updated_at: au.updated_at || au.created_at,
+          })
+        }
+      }
+    }
+  } catch {
+    // Continuar si falla listUsers
+  }
+
+  // 4. Intentar consultar profiles
   let profiles: Profile[] = []
   try {
     const { data: profData, error: profErr } = await adminClient
@@ -84,14 +138,19 @@ export async function getUsersAndStoresAction(): Promise<{ users: Profile[]; sto
     // La tabla profiles puede no existir aún en la base de datos
   }
 
-  // Si profiles ya tiene registros, retornarlos
+  // Si profiles ya tiene registros, retornar con biometría vinculada
   if (profiles.length > 0) {
-    return { users: profiles, stores }
+    const enrichedProfiles = profiles.map((p) => ({
+      ...p,
+      biometrics: biometricsMap.get(p.id) || null,
+    }))
+    return { users: enrichedProfiles, stores }
   }
 
-  // 3. Fallback inteligente: auth.users + public.users
-  const { data: authData } = await adminClient.auth.admin.listUsers()
-  const authUsers = authData?.users || []
+  // 5. Fallback inteligente: auth.users + public.users
+  const authUsers = authUsersList.length > 0
+    ? authUsersList
+    : ((await adminClient.auth.admin.listUsers()).data?.users || [])
 
   const { data: legacyUsersData } = await adminClient.from('users').select('*')
   const legacyUsers = legacyUsersData || []
@@ -135,6 +194,7 @@ export async function getUsersAndStoresAction(): Promise<{ users: Profile[]; sto
       avatar_url: avatarUrl,
       created_at: lu?.created_at || au.created_at,
       updated_at: au.updated_at || au.created_at,
+      biometrics: biometricsMap.get(au.id) || null,
     })
   }
 
@@ -154,6 +214,7 @@ export async function getUsersAndStoresAction(): Promise<{ users: Profile[]; sto
       avatar_url: null,
       created_at: lu.created_at || new Date().toISOString(),
       updated_at: lu.created_at || new Date().toISOString(),
+      biometrics: biometricsMap.get(lu.id_user) || null,
     })
   }
 
@@ -165,8 +226,8 @@ export async function getUsersAndStoresAction(): Promise<{ users: Profile[]; sto
 }
 
 /**
- * Actualiza el rol, sucursal asignada y estado de un usuario.
- * Sincroniza tanto en profiles (si existe), en users y en user_metadata de auth.
+ * Actualiza el rol, sucursal asignada, datos de contacto y credenciales de cajero de un usuario.
+ * Sincroniza tanto en profiles (si existe), en users, en user_biometrics y en user_metadata de auth.
  */
 export async function updateUserAction(data: {
   id: string
@@ -175,6 +236,8 @@ export async function updateUserAction(data: {
   status: ProfileStatus
   full_name?: string
   phone?: string | null
+  cashier_number?: string | null
+  cashier_pin?: string | null
 }) {
   const adminClient = createAdminClient()
 
@@ -209,15 +272,35 @@ export async function updateUserAction(data: {
     // Si profiles no existe, continuar
   }
 
-  // 3. Sincronizar metadata en auth.users
+  // 3. Actualizar datos de cajero (No. de Cajero y PIN) si fueron enviados
+  if (data.cashier_number !== undefined || data.cashier_pin !== undefined) {
+    try {
+      const bioPayload: Record<string, unknown> = {
+        id_user: data.id,
+        updated_at: new Date().toISOString(),
+      }
+      if (data.cashier_number !== undefined) bioPayload.cashier_number = data.cashier_number ? data.cashier_number.trim() : null
+      if (data.cashier_pin !== undefined) bioPayload.cashier_pin = data.cashier_pin ? data.cashier_pin.trim() : null
+
+      await adminClient.from('user_biometrics').upsert(bioPayload, { onConflict: 'id_user' })
+    } catch {
+      // Ignorar si la tabla no existe aún
+    }
+  }
+
+  // 4. Sincronizar metadata en auth.users
   try {
+    const metaUpdates: Record<string, unknown> = {
+      role: data.role,
+      id_store: storeId,
+      status: data.status,
+      ...(data.full_name ? { full_name: data.full_name } : {}),
+    }
+    if (data.cashier_number !== undefined) metaUpdates.cashier_number = data.cashier_number ? data.cashier_number.trim() : null
+    if (data.cashier_pin !== undefined) metaUpdates.cashier_pin = data.cashier_pin ? data.cashier_pin.trim() : null
+
     await adminClient.auth.admin.updateUserById(data.id, {
-      user_metadata: {
-        role: data.role,
-        id_store: storeId,
-        status: data.status,
-        ...(data.full_name ? { full_name: data.full_name } : {}),
-      },
+      user_metadata: metaUpdates,
     })
   } catch {
     // Ignorar si el usuario auth no permite edición directa
@@ -251,6 +334,8 @@ export async function createUserAction(formData: {
   id_store: string | null
   phone?: string | null
   status?: ProfileStatus
+  cashier_number?: string | null
+  cashier_pin?: string | null
 }) {
   const adminClient = createAdminClient()
 
@@ -281,6 +366,10 @@ export async function createUserAction(formData: {
       id_store: storeId,
       phone: formData.phone || null,
       status,
+      cashier_number: formData.cashier_number ? formData.cashier_number.trim() : null,
+      cashier_pin: formData.cashier_pin ? formData.cashier_pin.trim() : null,
+      has_webauthn: false,
+      has_face: false,
     },
   })
 
@@ -319,6 +408,33 @@ export async function createUserAction(formData: {
     // Si profiles no existe en la base de datos todavía
   }
 
+  // 4. Insertar datos biométricos y de cajero iniciales en user_biometrics
+  let initialBiometrics: UserBiometric | null = null
+  if (formData.cashier_number || formData.cashier_pin) {
+    try {
+      const bioPayload = {
+        id_user: newUserId,
+        cashier_number: formData.cashier_number ? formData.cashier_number.trim() : null,
+        cashier_pin: formData.cashier_pin ? formData.cashier_pin.trim() : null,
+        has_webauthn: false,
+        has_face: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+      const { data: bioCreated } = await adminClient
+        .from('user_biometrics')
+        .upsert(bioPayload, { onConflict: 'id_user' })
+        .select()
+        .single()
+
+      if (bioCreated) {
+        initialBiometrics = bioCreated as UserBiometric
+      }
+    } catch {
+      // Ignorar si la tabla no existe aún
+    }
+  }
+
   revalidatePath('/admin/usuarios')
   return {
     success: true,
@@ -333,6 +449,7 @@ export async function createUserAction(formData: {
       avatar_url: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      biometrics: initialBiometrics,
     } as Profile,
   }
 }

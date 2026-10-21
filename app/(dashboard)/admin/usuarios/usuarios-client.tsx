@@ -14,7 +14,7 @@ import { toast } from 'sonner'
 import {
   UserCog, Search, Edit3, Check, X, Shield, Store as StoreIcon,
   RefreshCw, Power, CheckCircle2, UserPlus, Phone, Mail, Lock, Trash2, Users,
-  Fingerprint, ScanFace
+  Fingerprint, ScanFace, KeyRound, ShieldCheck, Eye, EyeOff
 } from 'lucide-react'
 import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
 import { BiometricsEnrollmentModal } from '@/components/biometrics/biometrics-enrollment-modal'
@@ -48,6 +48,7 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('ALL')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
+  const [biometricsFilter, setBiometricsFilter] = useState<string>('ALL')
 
   // Edit User Modal state
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null)
@@ -56,6 +57,9 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
   const [selectedRole, setSelectedRole] = useState<UserRole>('PENDING')
   const [selectedStoreId, setSelectedStoreId] = useState<string>('')
   const [selectedStatus, setSelectedStatus] = useState<ProfileStatus>('pending')
+  const [editCashierNumber, setEditCashierNumber] = useState('')
+  const [editCashierPin, setEditCashierPin] = useState('')
+  const [showEditPin, setShowEditPin] = useState(false)
   const [saving, setSaving] = useState(false)
 
   // Biometrics Enrollment Modal state
@@ -71,6 +75,8 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
   const [createRole, setCreateRole] = useState<UserRole>('CASHIER')
   const [createStoreId, setCreateStoreId] = useState<string>('')
   const [createStatus, setCreateStatus] = useState<ProfileStatus>('active')
+  const [createCashierNumber, setCreateCashierNumber] = useState('')
+  const [createCashierPin, setCreateCashierPin] = useState('')
   const [creating, setCreating] = useState(false)
 
   // Confirm delete / suspend state
@@ -98,7 +104,7 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
     }
   }, [initialUsers.length, fetchData])
 
-  // Realtime subscriptions on profiles & users
+  // Realtime subscriptions on profiles, users & user_biometrics
   useEffect(() => {
     const channel = supabase
       .channel('admin-users-live')
@@ -106,6 +112,9 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
         fetchData()
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+        fetchData()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_biometrics' }, () => {
         fetchData()
       })
       .subscribe()
@@ -119,16 +128,31 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
     return profiles.filter((p) => {
       if (roleFilter !== 'ALL' && p.role !== roleFilter) return false
       if (statusFilter !== 'ALL' && p.status !== statusFilter) return false
+
+      if (biometricsFilter === 'webauthn' && !p.biometrics?.has_webauthn) return false
+      if (biometricsFilter === 'face' && !p.biometrics?.has_face) return false
+      if (biometricsFilter === 'pin' && !(p.biometrics?.cashier_pin || p.biometrics?.cashier_number)) return false
+      if (
+        biometricsFilter === 'none' &&
+        (p.biometrics?.has_webauthn ||
+          p.biometrics?.has_face ||
+          p.biometrics?.cashier_pin ||
+          p.biometrics?.cashier_number)
+      ) {
+        return false
+      }
+
       if (search.trim()) {
         const q = search.toLowerCase()
         const name = (p.full_name || '').toLowerCase()
         const email = (p.email || '').toLowerCase()
         const phone = (p.phone || '').toLowerCase()
-        if (!name.includes(q) && !email.includes(q) && !phone.includes(q)) return false
+        const cashierNum = (p.biometrics?.cashier_number || '').toLowerCase()
+        if (!name.includes(q) && !email.includes(q) && !phone.includes(q) && !cashierNum.includes(q)) return false
       }
       return true
     })
-  }, [profiles, roleFilter, statusFilter, search])
+  }, [profiles, roleFilter, statusFilter, biometricsFilter, search])
 
   // Sorting state
   const [sortKey, setSortKey] = useState<string>('name')
@@ -149,7 +173,7 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, roleFilter, statusFilter])
+  }, [search, roleFilter, statusFilter, biometricsFilter])
 
   const sortedProfiles = useMemo(() => {
     const list = [...filteredProfiles]
@@ -179,6 +203,19 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
           bVal = storeB.toLowerCase()
           break
         }
+        case 'biometrics': {
+          const scoreA =
+            (a.biometrics?.has_webauthn ? 4 : 0) +
+            (a.biometrics?.has_face ? 2 : 0) +
+            (a.biometrics?.cashier_pin ? 1 : 0)
+          const scoreB =
+            (b.biometrics?.has_webauthn ? 4 : 0) +
+            (b.biometrics?.has_face ? 2 : 0) +
+            (b.biometrics?.cashier_pin ? 1 : 0)
+          if (scoreA < scoreB) return sortDirection === 'asc' ? -1 : 1
+          if (scoreA > scoreB) return sortDirection === 'asc' ? 1 : -1
+          return 0
+        }
         case 'status':
           aVal = a.status || ''
           bVal = b.status || ''
@@ -206,6 +243,9 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
     setSelectedRole(profile.role || 'PENDING')
     setSelectedStoreId(profile.id_store || '')
     setSelectedStatus(profile.status || 'pending')
+    setEditCashierNumber(profile.biometrics?.cashier_number || '')
+    setEditCashierPin(profile.biometrics?.cashier_pin || '')
+    setShowEditPin(false)
   }
 
   const handleSave = async () => {
@@ -220,6 +260,8 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
         status: selectedStatus,
         full_name: editName.trim() || undefined,
         phone: editPhone.trim() || null,
+        cashier_number: editCashierNumber.trim() || null,
+        cashier_pin: editCashierPin.trim() || null,
       })
 
       toast.success(`Usuario ${editName || editingProfile.email} actualizado correctamente`)
@@ -285,7 +327,7 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
 
     setCreating(true)
     try {
-      await createUserAction({
+      const res = await createUserAction({
         full_name: createName.trim(),
         email: createEmail.trim(),
         password: createPassword,
@@ -293,6 +335,8 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
         role: createRole,
         id_store: createRole === 'ADMIN' ? null : createStoreId || null,
         status: createStatus,
+        cashier_number: createCashierNumber.trim() || null,
+        cashier_pin: createCashierPin.trim() || null,
       })
 
       toast.success(`Usuario ${createName} creado exitosamente`)
@@ -304,7 +348,23 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
       setCreateRole('CASHIER')
       setCreateStoreId('')
       setCreateStatus('active')
+      setCreateCashierNumber('')
+      setCreateCashierPin('')
       fetchData()
+
+      // Sugerir enrolar biometría (WebAuthn / Face ID) si es rol operativo
+      if (res?.user && (createRole === 'CASHIER' || createRole === 'MANAGER' || createRole === 'ADMIN')) {
+        toast('¿Deseas configurar la biometría ahora?', {
+          description: 'Puedes enrolar sensor Touch ID / Face ID o capturar el rostro con la cámara.',
+          action: {
+            label: 'Configurar',
+            onClick: () => {
+              setBiometricsModalUser(res.user)
+              setBiometricsModalOpen(true)
+            },
+          },
+        })
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al crear usuario'
       toast.error(msg)
@@ -314,49 +374,50 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-full flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3">
       <div className="dashboard-bg" />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
-            <UserCog className="text-emerald-500" size={28} />
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground flex items-center gap-2 leading-tight">
+            <UserCog className="text-emerald-500" size={20} />
             Usuarios y Roles
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground line-clamp-1">
             Administración de cuentas registradas en Supabase, roles del sistema y asignación de sucursales
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <GlassButton
             variant="primary"
-            size="md"
+            size="sm"
+            className="text-xs h-8 sm:h-9"
             onClick={() => setIsCreateOpen(true)}
           >
-            <UserPlus size={16} className="mr-2" />
+            <UserPlus size={15} className="mr-1.5" />
             Nuevo Usuario
           </GlassButton>
         </div>
       </div>
 
       {/* Filters Bar */}
-      <GlassCard padding="sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <GlassCard padding="none" className="p-2 shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
           <div className="flex-1 max-w-md">
             <GlassInput
               placeholder="Buscar usuario por nombre o correo..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              icon={<Search size={16} />}
+              icon={<Search size={15} />}
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Role Filter */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-input text-xs font-medium">
-              <Shield size={14} className="text-muted-foreground" />
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl glass-input text-xs font-medium">
+              <Shield size={13} className="text-muted-foreground" />
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
@@ -371,13 +432,29 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
               </select>
             </div>
 
+            {/* Biometrics Filter */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl glass-input text-xs font-medium">
+              <Fingerprint size={13} className="text-emerald-400" />
+              <select
+                value={biometricsFilter}
+                onChange={(e) => setBiometricsFilter(e.target.value)}
+                className="bg-transparent border-none text-foreground text-xs focus:outline-none cursor-pointer"
+              >
+                <option value="ALL" className="bg-zinc-900 text-white">Toda Biometría</option>
+                <option value="webauthn" className="bg-zinc-900 text-white">Con WebAuthn</option>
+                <option value="face" className="bg-zinc-900 text-white">Con Face ID</option>
+                <option value="pin" className="bg-zinc-900 text-white">Con PIN / No. Caja</option>
+                <option value="none" className="bg-zinc-900 text-white">Sin Biometría</option>
+              </select>
+            </div>
+
             {/* Status Filter */}
-            <div className="flex items-center gap-1 p-1 rounded-xl glass">
+            <div className="flex items-center gap-1 p-0.5 rounded-xl glass border border-border/40">
               <button
                 onClick={() => setStatusFilter('active')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                   statusFilter === 'active'
-                    ? 'bg-emerald-500 text-white shadow-sm'
+                    ? 'bg-emerald-500 text-white shadow-sm font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -385,9 +462,9 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
               </button>
               <button
                 onClick={() => setStatusFilter('pending')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                   statusFilter === 'pending'
-                    ? 'bg-amber-500 text-white shadow-sm'
+                    ? 'bg-amber-500 text-white shadow-sm font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -395,9 +472,9 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
               </button>
               <button
                 onClick={() => setStatusFilter('inactive')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                   statusFilter === 'inactive'
-                    ? 'bg-rose-500 text-white shadow-sm'
+                    ? 'bg-rose-500 text-white shadow-sm font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -405,9 +482,9 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
               </button>
               <button
                 onClick={() => setStatusFilter('ALL')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                   statusFilter === 'ALL'
-                    ? 'bg-white/15 text-foreground shadow-sm'
+                    ? 'bg-white/15 text-foreground shadow-sm font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -421,16 +498,17 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
               onClick={fetchData}
               disabled={loading}
               title="Recargar usuarios desde Supabase"
+              className="h-8 px-2.5"
             >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={13} className={loading ? 'animate-spin text-emerald-400' : ''} />
             </GlassButton>
           </div>
         </div>
       </GlassCard>
 
       {/* Users Table */}
-      <GlassCard padding="none" className="overflow-hidden">
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern">
+      <GlassCard padding="none" className="overflow-hidden shadow-xl flex-1 min-h-0 flex flex-col">
+        <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 scroll-modern">
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -459,6 +537,13 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                   onSort={handleSort}
                 />
                 <TableColumnHeader
+                  title="Biometría y Acceso"
+                  sortKey="biometrics"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
                   title="Estado"
                   sortKey="status"
                   currentSortKey={sortKey}
@@ -471,7 +556,7 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
             <tbody className="divide-y divide-border/20">
               {loading && profiles.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                     <div className="flex items-center justify-center gap-2">
                       <RefreshCw size={18} className="animate-spin text-emerald-500" />
                       <span>Cargando usuarios desde Supabase...</span>
@@ -480,7 +565,7 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                 </tr>
               ) : paginatedProfiles.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                     <p className="text-base font-medium">No se encontraron usuarios</p>
                     <p className="text-xs mt-1 text-muted-foreground/80">
                       Modifica los filtros de búsqueda o agrega un nuevo usuario.
@@ -490,6 +575,7 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
               ) : (
                 paginatedProfiles.map((p) => {
                   const assignedStore = stores.find((s) => s.id_store === p.id_store)
+                  const bio = p.biometrics
 
                   return (
                     <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group">
@@ -572,6 +658,88 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                         ) : (
                           <span className="text-amber-500">Sin sucursal asignada</span>
                         )}
+                      </td>
+
+                      {/* Biometría y Acceso */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col gap-1.5 min-w-[210px]">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {/* WebAuthn / Touch ID / Face ID Badge */}
+                            {bio?.has_webauthn ? (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-xs"
+                                title="Biometría WebAuthn (Touch ID / Face ID / Windows Hello) activada"
+                              >
+                                <Fingerprint size={12} className="text-emerald-400" />
+                                <span>WebAuthn</span>
+                              </span>
+                            ) : (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] text-muted-foreground/60 bg-white/[0.03] border border-border/30"
+                                title="Sin sensor biométrico WebAuthn registrado"
+                              >
+                                <Fingerprint size={11} className="text-muted-foreground/40" />
+                                <span>Sin sensor</span>
+                              </span>
+                            )}
+
+                            {/* Face ID / Foto Facial Badge */}
+                            {bio?.has_face ? (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 shadow-xs"
+                                title="Reconocimiento facial y foto de referencia registrados"
+                              >
+                                <ScanFace size={12} className="text-indigo-400" />
+                                <span>Facial</span>
+                                {bio.face_photo_url && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                                )}
+                              </span>
+                            ) : (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] text-muted-foreground/60 bg-white/[0.03] border border-border/30"
+                                title="Sin foto facial registrada"
+                              >
+                                <ScanFace size={11} className="text-muted-foreground/40" />
+                                <span>Sin rostro</span>
+                              </span>
+                            )}
+
+                            {/* Cajero / PIN Badge */}
+                            {bio?.cashier_pin ? (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                                title={`Caja: ${bio.cashier_number || 'S/N'} • PIN configurado`}
+                              >
+                                <KeyRound size={11} className="text-amber-400" />
+                                <span>{bio.cashier_number ? `Caja ${bio.cashier_number}` : 'PIN ✓'}</span>
+                              </span>
+                            ) : bio?.cashier_number ? (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-white/[0.05] text-foreground border border-border/40"
+                                title={`No. de Cajero: ${bio.cashier_number}`}
+                              >
+                                <KeyRound size={11} className="text-muted-foreground" />
+                                <span>{bio.cashier_number}</span>
+                              </span>
+                            ) : null}
+                          </div>
+
+                          {/* Botón rápido para abrir configuración biométrica */}
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setBiometricsModalUser(p)
+                                setBiometricsModalOpen(true)
+                              }}
+                              className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors hover:underline cursor-pointer font-medium"
+                            >
+                              <Fingerprint size={11} />
+                              <span>Configurar biometría</span>
+                            </button>
+                          </div>
+                        </div>
                       </td>
 
                       <td className="px-4 py-3.5 text-center">
@@ -739,8 +907,93 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                 </div>
               </div>
 
-              {/* Biometrics Config Button inside Edit */}
-              <div className="pt-2">
+              {/* Sección Biometría y Cajero */}
+              <div className="pt-2 space-y-3 border-t border-border/30">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                    <Fingerprint size={14} className="text-emerald-400" />
+                    <span>Credenciales de Cajero y Biometría</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (editingProfile) {
+                        setBiometricsModalUser(editingProfile)
+                        setBiometricsModalOpen(true)
+                      }
+                    }}
+                    className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors underline cursor-pointer"
+                  >
+                    Asistente Biométrico Completo
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-[11px] text-muted-foreground block mb-1">
+                      No. de Cajero / Caja
+                    </label>
+                    <GlassInput
+                      placeholder="Ej. CAJA-01"
+                      value={editCashierNumber}
+                      onChange={(e) => setEditCashierNumber(e.target.value)}
+                      icon={<KeyRound size={14} />}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] text-muted-foreground block mb-1">
+                      PIN de Seguridad (4-6 dígitos)
+                    </label>
+                    <div className="relative">
+                      <GlassInput
+                        type={showEditPin ? 'text' : 'password'}
+                        maxLength={6}
+                        placeholder="••••"
+                        value={editCashierPin}
+                        onChange={(e) => setEditCashierPin(e.target.value.replace(/\D/g, ''))}
+                        className="tracking-widest font-mono pr-8"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowEditPin(!showEditPin)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                      >
+                        {showEditPin ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Pills */}
+                <div className="grid grid-cols-2 gap-2 p-2.5 rounded-2xl bg-white/[0.02] border border-border/30">
+                  <div className="flex items-center gap-2">
+                    <Fingerprint
+                      size={16}
+                      className={editingProfile?.biometrics?.has_webauthn ? 'text-emerald-400' : 'text-muted-foreground/40'}
+                    />
+                    <div>
+                      <p className="text-[11px] font-semibold text-foreground">WebAuthn</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {editingProfile?.biometrics?.has_webauthn ? 'Sensor Activo' : 'Sin sensor'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <ScanFace
+                      size={16}
+                      className={editingProfile?.biometrics?.has_face ? 'text-indigo-400' : 'text-muted-foreground/40'}
+                    />
+                    <div>
+                      <p className="text-[11px] font-semibold text-foreground">Facial</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {editingProfile?.biometrics?.has_face ? 'Rostro registrado' : 'Sin foto'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -749,11 +1002,11 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                       setBiometricsModalOpen(true)
                     }
                   }}
-                  className="w-full p-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-between transition-colors text-xs font-semibold"
+                  className="w-full p-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-between transition-colors text-xs font-semibold cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
                     <Fingerprint size={16} />
-                    <span>Configurar Biometría, Face ID y PIN de Cajero</span>
+                    <span>Enrolar Huella, Face ID o Capturar Rostro</span>
                   </div>
                   <span className="text-[10px] text-emerald-300 underline">Gestionar</span>
                 </button>
@@ -954,6 +1207,47 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                       Pendiente de Aprobación
                     </button>
                   </div>
+                </div>
+
+                {/* Credenciales de Cajero y Biometría */}
+                <div className="pt-2 border-t border-border/30 space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                    <Fingerprint size={15} className="text-emerald-400" />
+                    <span>Identificación de Cajero y Acceso Biométrico (Opcional)</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] text-muted-foreground block mb-1">
+                        No. de Cajero / Caja
+                      </label>
+                      <GlassInput
+                        placeholder="Ej. CAJA-01 o 001"
+                        value={createCashierNumber}
+                        onChange={(e) => setCreateCashierNumber(e.target.value)}
+                        icon={<KeyRound size={14} />}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-muted-foreground block mb-1">
+                        PIN de Seguridad (4-6 dígitos)
+                      </label>
+                      <GlassInput
+                        type="password"
+                        maxLength={6}
+                        placeholder="••••"
+                        value={createCashierPin}
+                        onChange={(e) => setCreateCashierPin(e.target.value.replace(/\D/g, ''))}
+                        className="tracking-widest font-mono"
+                        icon={<Lock size={14} />}
+                      />
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+                    💡 Podrás enrolar sensores Touch ID / Face ID (WebAuthn) y capturar su rostro con la cámara inmediatamente después de crearlo.
+                  </p>
                 </div>
 
                 <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border/40">

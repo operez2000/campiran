@@ -13,6 +13,8 @@ import {
   Store as StoreIcon, Check, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
 
+import { HeaderAttendanceButton } from '@/components/attendance/header-attendance-button'
+
 interface HeaderProps {
   profile: Profile
   onMenuClick: () => void
@@ -205,6 +207,9 @@ export function Header({
       )}
 
       <div className="ml-auto flex items-center gap-2">
+        {/* Attendance Check-In / Check-Out */}
+        <HeaderAttendanceButton profile={profile} />
+
         {/* Dark mode toggle */}
         <button
           onClick={toggleDark}

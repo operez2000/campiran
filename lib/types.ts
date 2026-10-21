@@ -18,6 +18,7 @@ export interface Profile {
   avatar_url: string | null
   created_at: string
   updated_at: string
+  biometrics?: UserBiometric | null
 }
 
 // ── Stores (Tiendas/Sucursales) ──────────────────────────────
@@ -56,6 +57,54 @@ export interface LocationLabelSettings {
   barcode_height: number
   updated_at: string
   created_at: string
+}
+
+// ── Company Settings (Global / Multi-sucursal) ───────────────
+export interface CompanySettings {
+  id_company: string
+  legal_name: string | null
+  trade_name: string | null
+  rfc: string | null
+  tax_regime: string | null
+  tax_regime_code: string | null
+  street: string | null
+  exterior_number: string | null
+  interior_number: string | null
+  neighborhood: string | null
+  postal_code: string | null
+  city: string | null
+  state: string | null
+  country: string | null
+  phone: string | null
+  email: string | null
+  website: string | null
+  logo_url: string | null
+  ticket_footer_message: string | null
+  qz_cert?: string | null
+  qz_private_key?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+// ── Branch Printers (Por Sucursal / QZ Tray) ─────────────────
+export type PrinterConnectionType = 'network' | 'bluetooth'
+
+export interface BranchPrinter {
+  id_printer: string
+  id_store: string
+  name: string
+  connection_type: PrinterConnectionType
+  ip_address: string | null
+  ip_port: number
+  bluetooth_name: string | null
+  paper_width: number
+  characters_per_line: number
+  cut_paper: boolean
+  open_cash_drawer: boolean
+  is_default: boolean
+  status: 'A' | 'I'
+  created_at?: string
+  updated_at?: string
 }
 
 // ── Catalog ──────────────────────────────────────────────────
@@ -236,6 +285,7 @@ export interface SatPaymentMethodInfo {
 
 export interface PaymentBreakdownItem {
   method: SatPaymentCode
+  amount?: number
   amountMxn: number
   amountUsd?: number
   currency: 'MXN' | 'USD'
@@ -274,7 +324,44 @@ export interface UserBiometric {
   face_photo_url: string | null
   face_descriptor: number[] | Record<string, unknown> | null
   created_at: string
+  updated_at?: string
+}
+
+// ── Employee Attendance (Control de Asistencia / Horas Trabajadas) ──
+export type AttendanceStatus = 'open' | 'closed'
+export type AttendanceAuthMethod = 'session' | 'pin' | 'webauthn' | 'face' | 'biometric'
+
+export interface EmployeeAttendance {
+  id_attendance: string
+  id_user: string
+  id_store: string
+  check_in: string
+  check_out: string | null
+  total_minutes: number
+  notes: string | null
+  status: AttendanceStatus
+  auth_method?: AttendanceAuthMethod
+  created_at: string
   updated_at: string
+  // Relations
+  user?: Profile
+  store?: Store
+}
+
+export interface AttendanceDailySummary {
+  date: string // YYYY-MM-DD
+  userId: string
+  userName: string
+  userEmail: string | null
+  userRole: UserRole
+  storeId: string
+  storeName: string
+  records: EmployeeAttendance[]
+  firstCheckIn: string
+  lastCheckOut: string | null
+  totalMinutes: number
+  totalHoursFormatted: string
+  hasOpenShift: boolean
 }
 
 export interface Order {

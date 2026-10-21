@@ -268,16 +268,16 @@ export function StockClient() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-full flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3">
       <div className="dashboard-bg" />
 
       {/* Header & Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground leading-tight">
             Inventario & Stock
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground line-clamp-1">
             Control de existencias en tiempo real para{' '}
             <span className="font-semibold text-emerald-500">
               {currentStore?.description ?? 'sucursal activa'}
@@ -287,91 +287,81 @@ export function StockClient() {
         <InventarioTabs />
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <GlassCard variant="default" padding="sm" className="relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Artículos Registrados</p>
-              <p className="text-2xl font-bold text-foreground mt-1">{stats.totalItems}</p>
+      {/* KPI Cards (Compact) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 shrink-0">
+        <div className="glass rounded-xl px-3 py-1.5 flex items-center justify-between border border-border/40 hover:border-emerald-500/30 transition-all">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+              <Boxes size={13} />
             </div>
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-              <Boxes size={20} />
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium text-muted-foreground truncate leading-tight">Artículos</p>
+              <p className="text-sm font-bold text-foreground leading-none">{stats.totalItems}</p>
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="font-medium text-emerald-500">{stats.totalUnits}</span> unidades en almacén
-          </div>
-        </GlassCard>
+          <span className="text-[10px] text-muted-foreground/70 hidden sm:inline shrink-0">{stats.totalUnits} u.</span>
+        </div>
 
-        <GlassCard
-          variant={stats.lowStockCount > 0 ? 'amber' : 'default'}
-          padding="sm"
-          className="relative overflow-hidden"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Bajo Mínimo</p>
-              <p className="text-2xl font-bold text-amber-500 mt-1">{stats.lowStockCount}</p>
+        <div className={`glass rounded-xl px-3 py-1.5 flex items-center justify-between border transition-all ${
+          stats.lowStockCount > 0 ? 'border-amber-500/40 bg-amber-500/5' : 'border-border/40 hover:border-emerald-500/30'
+        }`}>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+              <AlertTriangle size={13} />
             </div>
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-              <AlertTriangle size={20} />
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium text-muted-foreground truncate leading-tight">Bajo Mínimo</p>
+              <p className="text-sm font-bold text-amber-500 leading-none">{stats.lowStockCount}</p>
             </div>
           </div>
-          <div className="mt-3 text-xs text-muted-foreground">
-            {stats.lowStockCount > 0 ? (
-              <span className="text-amber-500 font-medium">Requieren resurtido inmediato</span>
-            ) : (
-              <span className="text-emerald-500 font-medium">Nivel de stock óptimo</span>
-            )}
-          </div>
-        </GlassCard>
+          <span className="text-[10px] text-amber-500/80 font-medium shrink-0">
+            {stats.lowStockCount > 0 ? 'críticos' : 'óptimo'}
+          </span>
+        </div>
 
-        <GlassCard variant="indigo" padding="sm" className="relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Total Unidades</p>
-              <p className="text-2xl font-bold text-indigo-400 mt-1">{stats.totalUnits}</p>
+        <div className="glass rounded-xl px-3 py-1.5 flex items-center justify-between border border-border/40 hover:border-indigo-500/30 transition-all">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
+              <Layers size={13} />
             </div>
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-              <Layers size={20} />
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium text-muted-foreground truncate leading-tight">Total Unidades</p>
+              <p className="text-sm font-bold text-indigo-400 leading-none">{stats.totalUnits}</p>
             </div>
           </div>
-          <div className="mt-3 text-xs text-muted-foreground">En todas las ubicaciones</div>
-        </GlassCard>
+          <span className="text-[10px] text-muted-foreground/70 hidden sm:inline shrink-0">en almacén</span>
+        </div>
 
-        <GlassCard variant="emerald" padding="sm" className="relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Valor del Inventario</p>
-              <p className="text-2xl font-bold text-emerald-400 mt-1">
-                {formatCurrency(stats.totalValuation)}
-              </p>
+        <div className="glass rounded-xl px-3 py-1.5 flex items-center justify-between border border-border/40 hover:border-emerald-500/30 transition-all">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+              <DollarSign size={13} />
             </div>
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-              <DollarSign size={20} />
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium text-muted-foreground truncate leading-tight">Valuación</p>
+              <p className="text-sm font-bold text-emerald-400 leading-none">{formatCurrency(stats.totalValuation)}</p>
             </div>
           </div>
-          <div className="mt-3 text-xs text-muted-foreground">Basado en costo unitario</div>
-        </GlassCard>
+          <span className="text-[10px] text-muted-foreground/70 hidden sm:inline shrink-0">costo</span>
+        </div>
       </div>
 
       {/* Filters bar */}
-      <GlassCard padding="sm" className="space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <GlassCard padding="none" className="p-2 shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
           <div className="flex-1 max-w-md">
             <GlassInput
               placeholder="Buscar por código, código de barras o descripción..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              icon={<Search size={16} />}
+              icon={<Search size={15} />}
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Location selector */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-input text-xs font-medium">
-              <MapPin size={14} className="text-muted-foreground" />
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl glass-input text-xs font-medium">
+              <MapPin size={13} className="text-muted-foreground" />
               <select
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
@@ -389,13 +379,13 @@ export function StockClient() {
             {/* Low stock toggle */}
             <button
               onClick={() => setOnlyLowStock((prev) => !prev)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-medium transition-all ${
                 onlyLowStock
-                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm'
-                  : 'glass-input text-muted-foreground hover:text-foreground'
+                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm font-semibold'
+                  : 'glass text-muted-foreground hover:text-foreground'
               }`}
             >
-              <TrendingDown size={14} />
+              <TrendingDown size={13} />
               <span>Solo bajo mínimo</span>
             </button>
 
@@ -406,16 +396,17 @@ export function StockClient() {
               onClick={fetchStocks}
               disabled={loading}
               title="Recargar datos"
+              className="h-8 px-2.5"
             >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={13} className={loading ? 'animate-spin text-emerald-400' : ''} />
             </GlassButton>
           </div>
         </div>
       </GlassCard>
 
       {/* Stock Table */}
-      <GlassCard padding="none" className="overflow-hidden">
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern">
+      <GlassCard padding="none" className="overflow-hidden shadow-xl flex-1 min-h-0 flex flex-col">
+        <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 scroll-modern">
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">

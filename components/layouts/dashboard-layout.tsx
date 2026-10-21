@@ -161,9 +161,9 @@ export function DashboardLayout({ profile, children }: DashboardLayoutProps) {
           isDesktopOpen={desktopOpen}
         />
 
-        <main className="flex-1 overflow-y-auto scroll-modern relative p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto scroll-modern relative p-3 sm:p-4 lg:p-5 flex flex-col min-h-0">
           <div className="dashboard-bg" />
-          <div className="max-w-[1600px] mx-auto w-full pb-10">
+          <div className="max-w-[1600px] mx-auto w-full flex-1 flex flex-col min-h-0">
             {children}
           </div>
         </main>

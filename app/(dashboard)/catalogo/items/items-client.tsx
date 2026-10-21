@@ -702,49 +702,49 @@ export function ItemsClient() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-full flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3">
       <div className="dashboard-bg" />
 
       {/* Header and Sub-Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
-            <Tags className="text-emerald-500" size={28} />
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground flex items-center gap-2 leading-tight">
+            <Tags className="text-emerald-500" size={20} />
             Catálogo de Artículos
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground line-clamp-1">
             Gestión de productos y servicios
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <CatalogoTabs />
-          <GlassButton variant="primary" onClick={() => handleOpenCreate()}>
-            <Plus size={16} className="mr-1.5" />
+          <GlassButton variant="primary" size="sm" className="text-xs h-8 sm:h-9" onClick={() => handleOpenCreate()}>
+            <Plus size={15} className="mr-1" />
             {activeTab === 'S' ? 'Nuevo Servicio' : activeTab === 'P' ? 'Nuevo Producto' : 'Nuevo Artículo'}
           </GlassButton>
         </div>
       </div>
 
       {/* Tabs de Segmentación: Productos vs Servicios */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-1.5 rounded-2xl glass border border-white/10">
-        <div className="flex items-center gap-1.5 p-1 rounded-xl glass-input">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-1 rounded-xl glass border border-white/10 shrink-0">
+        <div className="flex items-center gap-1 p-0.5 rounded-lg glass-input">
           <button
             type="button"
             onClick={() => handleTabChange('P')}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150 cursor-pointer ${
               activeTab === 'P'
                 ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25'
                 : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
             }`}
           >
             {tabLoading === 'P' ? (
-              <Loader2 size={16} className="animate-spin text-white" />
+              <Loader2 size={13} className="animate-spin text-white" />
             ) : (
-              <Package size={16} />
+              <Package size={13} />
             )}
             <span>Productos</span>
             <span
-              className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+              className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold ${
                 activeTab === 'P' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
               }`}
             >
@@ -755,20 +755,20 @@ export function ItemsClient() {
           <button
             type="button"
             onClick={() => handleTabChange('S')}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150 cursor-pointer ${
               activeTab === 'S'
                 ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/25'
                 : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
             }`}
           >
             {tabLoading === 'S' ? (
-              <Loader2 size={16} className="animate-spin text-white" />
+              <Loader2 size={13} className="animate-spin text-white" />
             ) : (
-              <Wrench size={16} />
+              <Wrench size={13} />
             )}
             <span>Servicios</span>
             <span
-              className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+              className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold ${
                 activeTab === 'S' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
               }`}
             >
@@ -779,20 +779,20 @@ export function ItemsClient() {
           <button
             type="button"
             onClick={() => handleTabChange('ALL')}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150 cursor-pointer ${
               activeTab === 'ALL'
                 ? 'bg-gradient-to-r from-slate-700 to-slate-900 text-white shadow-md shadow-slate-500/25 dark:from-white/20 dark:to-white/10 dark:text-white'
                 : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
             }`}
           >
             {tabLoading === 'ALL' ? (
-              <Loader2 size={16} className="animate-spin text-white" />
+              <Loader2 size={13} className="animate-spin text-white" />
             ) : (
-              <Layers size={16} />
+              <Layers size={13} />
             )}
             <span>Todos</span>
             <span
-              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+              className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
                 activeTab === 'ALL' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
               }`}
             >
@@ -802,21 +802,21 @@ export function ItemsClient() {
         </div>
 
         {/* Info contextual sutil */}
-        <div className="hidden sm:flex items-center gap-2 text-xs px-3">
+        <div className="hidden sm:flex items-center gap-2 text-xs px-2">
           {activeTab === 'P' && (
-            <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+            <span className="flex items-center gap-1.5 text-emerald-400 font-medium text-[11px]">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Artículos físicos · Control de inventario y fotografías
             </span>
           )}
           {activeTab === 'S' && (
-            <span className="flex items-center gap-1.5 text-indigo-400 font-medium">
+            <span className="flex items-center gap-1.5 text-indigo-400 font-medium text-[11px]">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
               Servicios intangibles · Sin fotografías · Mano de obra & comisiones
             </span>
           )}
           {activeTab === 'ALL' && (
-            <span className="flex items-center gap-1.5 text-muted-foreground font-medium">
+            <span className="flex items-center gap-1.5 text-muted-foreground font-medium text-[11px]">
               Vista general consolidada del catálogo
             </span>
           )}
@@ -824,21 +824,21 @@ export function ItemsClient() {
       </div>
 
       {/* Filters Bar */}
-      <GlassCard padding="sm" className="space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <GlassCard padding="none" className="p-2 shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
           <div className="flex-1 max-w-md">
             <GlassInput
               placeholder="Buscar por código, código de barras o descripción..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              icon={<Search size={16} />}
+              icon={<Search size={15} />}
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Category Filter */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-input text-xs font-medium">
-              <Layers size={14} className="text-muted-foreground" />
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl glass-input text-xs font-medium">
+              <Layers size={13} className="text-muted-foreground" />
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
@@ -854,11 +854,11 @@ export function ItemsClient() {
             </div>
 
             {/* Status Filter */}
-            <div className="flex items-center gap-1 p-1 rounded-xl glass">
+            <div className="flex items-center gap-1 p-0.5 rounded-xl glass border border-border/40">
               <button
                 onClick={() => setStatusFilter('A')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === 'A'
-                    ? 'bg-emerald-500 text-white shadow-sm'
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${statusFilter === 'A'
+                    ? 'bg-emerald-500 text-white shadow-sm font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
                   }`}
               >
@@ -866,8 +866,8 @@ export function ItemsClient() {
               </button>
               <button
                 onClick={() => setStatusFilter('I')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === 'I'
-                    ? 'bg-emerald-500 text-white shadow-sm'
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${statusFilter === 'I'
+                    ? 'bg-emerald-500 text-white shadow-sm font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
                   }`}
               >
@@ -875,8 +875,8 @@ export function ItemsClient() {
               </button>
               <button
                 onClick={() => setStatusFilter('ALL')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === 'ALL'
-                    ? 'bg-emerald-500 text-white shadow-sm'
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${statusFilter === 'ALL'
+                    ? 'bg-emerald-500 text-white shadow-sm font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
                   }`}
               >
@@ -888,8 +888,8 @@ export function ItemsClient() {
       </GlassCard>
 
       {/* Items Table */}
-      <GlassCard padding="none" className="overflow-hidden">
-        <div className={`overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern transition-opacity duration-150 ${tabLoading !== null ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+      <GlassCard padding="none" className="overflow-hidden shadow-xl flex-1 min-h-0 flex flex-col">
+        <div className={`overflow-x-auto overflow-y-auto flex-1 min-h-0 scroll-modern transition-opacity duration-150 ${tabLoading !== null ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">

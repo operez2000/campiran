@@ -8,7 +8,7 @@ import { GlassCard } from '@/components/glass-card'
 import { GlassButton } from '@/components/glass-button'
 import { GlassInput } from '@/components/glass-input'
 import { StatusBadge } from '@/components/status-badge'
-import { type Order, type Stock } from '@/lib/types'
+import { type Order, type Stock, type Profile } from '@/lib/types'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
 import jsPDF from 'jspdf'
@@ -20,9 +20,10 @@ import {
 import {
   BarChart3, TrendingUp, DollarSign, ShoppingCart,
   AlertTriangle, Download, FileSpreadsheet, FileText,
-  Calendar, RefreshCw, Trophy, ArrowUpRight, Search
+  Calendar, RefreshCw, Trophy, ArrowUpRight, Search, Clock
 } from 'lucide-react'
 import { TableColumnHeader, TablePagination } from '@/components/tables'
+import { AttendanceReportTab } from './attendance-report-tab'
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'year'
 
@@ -32,10 +33,15 @@ interface TopProduct {
   totalRevenue: number
 }
 
-export function ReportesClient() {
+interface ReportesClientProps {
+  currentProfile?: Profile | null
+}
+
+export function ReportesClient({ currentProfile = null }: ReportesClientProps) {
   const supabase = createClient()
   const { currentStore, storeId } = useStore()
 
+  const [activeTab, setActiveTab] = useState<'ventas' | 'asistencia'>('ventas')
   const [period, setPeriod] = useState<PeriodFilter>('month')
   const [orders, setOrders] = useState<Order[]>([])
   const [criticalStocks, setCriticalStocks] = useState<Stock[]>([])
@@ -345,66 +351,113 @@ export function ReportesClient() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="dashboard-bg" />
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header & Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
-            <BarChart3 className="text-emerald-500" size={28} />
-            Reportes & Rendimiento
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground flex items-center gap-2 leading-tight">
+            {activeTab === 'ventas' ? (
+              <BarChart3 className="text-emerald-500" size={20} />
+            ) : (
+              <Clock className="text-emerald-500" size={20} />
+            )}
+            {activeTab === 'ventas' ? 'Reportes & Rendimiento' : 'Control de Asistencia & Horas'}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Análisis financiero y métricas comerciales para{' '}
-            <span className="font-semibold text-emerald-500">
-              {currentStore?.description ?? 'sucursal activa'}
-            </span>
+          <p className="text-xs text-muted-foreground line-clamp-1">
+            {activeTab === 'ventas' ? (
+              <>
+                Análisis financiero y métricas comerciales para{' '}
+                <span className="font-semibold text-emerald-500">
+                  {currentStore?.description ?? 'sucursal activa'}
+                </span>
+              </>
+            ) : (
+              <>
+                Registro de entradas, salidas y cómputo de horas trabajadas por empleado
+              </>
+            )}
           </p>
         </div>
 
-        {/* Action buttons & Period Filter */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Period selector */}
-          <div className="flex items-center gap-1 p-1 rounded-xl glass">
-            {(
-              [
-                { id: 'today', label: 'Hoy' },
-                { id: 'week', label: '7 Días' },
-                { id: 'month', label: '30 Días' },
-                { id: 'year', label: 'Año' },
-              ] as const
-            ).map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setPeriod(t.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  period === t.id
-                    ? 'bg-emerald-500 text-white shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+        {/* Tab Switcher */}
+        <div className="flex items-center gap-1.5 p-1 rounded-2xl glass border border-[var(--border)]">
+          <button
+            onClick={() => setActiveTab('ventas')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'ventas'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20'
+                : 'text-muted-foreground hover:text-foreground hover:bg-emerald-500/10'
+            }`}
+          >
+            <BarChart3 size={15} />
+            <span>Ventas & Rendimiento</span>
+          </button>
 
-          <GlassButton variant="ghost" size="sm" onClick={handleExportPDF} title="Exportar PDF">
-            <FileText size={15} className="mr-1.5" />
-            PDF
-          </GlassButton>
-          <GlassButton variant="ghost" size="sm" onClick={handleExportExcel} title="Exportar Excel">
-            <FileSpreadsheet size={15} className="mr-1.5" />
-            Excel
-          </GlassButton>
-          <GlassButton variant="ghost" size="sm" onClick={fetchReportData} title="Refrescar">
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          </GlassButton>
+          <button
+            onClick={() => setActiveTab('asistencia')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'asistencia'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20'
+                : 'text-muted-foreground hover:text-foreground hover:bg-emerald-500/10'
+            }`}
+          >
+            <Clock size={15} />
+            <span>Asistencia de Empleados</span>
+          </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Render Active Tab Content */}
+      {activeTab === 'asistencia' ? (
+        <AttendanceReportTab
+          currentProfile={currentProfile || null}
+          activeStoreId={storeId}
+        />
+      ) : (
+        <>
+          {/* Action buttons & Period Filter for Ventas */}
+          <div className="flex justify-end items-center gap-2">
+            {/* Period selector */}
+            <div className="flex items-center gap-1 p-1 rounded-xl glass">
+              {(
+                [
+                  { id: 'today', label: 'Hoy' },
+                  { id: 'week', label: '7 Días' },
+                  { id: 'month', label: '30 Días' },
+                  { id: 'year', label: 'Año' },
+                ] as const
+              ).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setPeriod(t.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    period === t.id
+                      ? 'bg-emerald-500 text-white shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            <GlassButton variant="ghost" size="sm" onClick={handleExportPDF} title="Exportar PDF">
+              <FileText size={15} className="mr-1.5" />
+              PDF
+            </GlassButton>
+            <GlassButton variant="ghost" size="sm" onClick={handleExportExcel} title="Exportar Excel">
+              <FileSpreadsheet size={15} className="mr-1.5" />
+              Excel
+            </GlassButton>
+            <GlassButton variant="ghost" size="sm" onClick={fetchReportData} title="Refrescar">
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            </GlassButton>
+          </div>
+
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <GlassCard variant="emerald" padding="sm">
           <div className="flex items-center justify-between">
             <div>
@@ -716,6 +769,8 @@ export function ReportesClient() {
           realtimeLabel="Ventas consolidadas"
         />
       </GlassCard>
+        </>
+      )}
     </div>
   )
 }

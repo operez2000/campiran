@@ -25,7 +25,10 @@
 ## Compras
 ## Ventas
 ## Reportes
-## Configuración
+## Configuración [COMPLETADO]
+- Datos de la Empresa (Globales / Multi-sucursal) con datos fiscales del SAT y logotipo (máx 720px con compresión automática).
+- Impresoras de recibos por sucursal gestionadas mediante QZ Tray (IP y Bluetooth) con comandos ESC/POS.
+- Restricción de permisos: ADMIN (edición total) y MANAGER (solo sucursal / lectura global).
 
 ## Dashboard Solo para el usuario admin
 
@@ -51,7 +54,7 @@
 ### Agregar registro de clientes
 ### Agregar registro de proveedores
 ### Agregar registro de reportes
-### Agregar registro de configuración
+### Agregar registro de configuración [COMPLETADO]
 ### Agregar registro de usuarios
 ### Agregar registro de roles
 ### Agregar registro de permisos

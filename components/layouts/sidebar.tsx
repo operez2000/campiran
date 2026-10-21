@@ -9,7 +9,8 @@ import { type UserRole } from '@/lib/types'
 import {
   ShoppingCart, Package, Grid3X3, Users, Truck,
   BarChart3, Settings, ChevronRight, ScanLine, ArrowLeftRight,
-  Boxes, Store, UserCog, Tags, Layers, Building2, MapPin
+  Boxes, Store, UserCog, Tags, Layers, Building2, MapPin,
+  SlidersHorizontal, Printer
 } from 'lucide-react'
 
 interface SubNavItem {
@@ -74,6 +75,16 @@ const NAV_ITEMS: NavItem[] = [
     href: '/reportes',
     icon: <BarChart3 size={18} />,
     roles: ['ADMIN', 'MANAGER'],
+  },
+  {
+    label: 'Configuración',
+    href: '/configuracion/empresa',
+    icon: <SlidersHorizontal size={18} />,
+    roles: ['ADMIN', 'MANAGER'],
+    children: [
+      { label: 'Empresa', href: '/configuracion/empresa', icon: <Building2 size={15} /> },
+      { label: 'Impresoras', href: '/configuracion/impresoras', icon: <Printer size={15} /> },
+    ],
   },
   {
     label: 'Administración',

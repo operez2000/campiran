@@ -16,6 +16,8 @@ import {
   type Profile,
   type SatPaymentCode,
   type PaymentBreakdownItem,
+  type BranchPrinter,
+  type CompanySettings,
 } from '@/lib/types'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -29,6 +31,7 @@ import { PosClientModal } from '@/components/pos/pos-client-modal'
 import { ShiftOpenModal } from '@/components/pos/shift-open-modal'
 import { PosPaymentModal, SAT_PAYMENT_METHODS } from '@/components/pos/pos-payment-modal'
 import { getActiveShiftAction, closeShiftAction, getPosClientsAction } from './shift-actions'
+import { printOrderReceipt } from '@/lib/qz-tray-service'
 
 interface CartLine {
   item: Item
@@ -89,6 +92,77 @@ export function PosClient() {
     exchangeRate: number
     notes?: string
   } | null>(null)
+  const [printingWithQz, setPrintingWithQz] = useState(false)
+
+  const handlePrintTicket = async () => {
+    if (!completedOrder) return
+    setPrintingWithQz(true)
+
+    try {
+      // 1. Check if there's an active branch printer for this store
+      if (storeId) {
+        const { data: printer } = await supabase
+          .from('branch_printers')
+          .select('*')
+          .eq('id_store', storeId)
+          .eq('status', 'A')
+          .order('is_default', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (printer) {
+          const { data: company } = await supabase
+            .from('company_settings')
+            .select('*')
+            .limit(1)
+            .maybeSingle()
+
+          await printOrderReceipt(
+            printer as BranchPrinter,
+            {
+              orderNumber: completedOrder.orderNumber,
+              date: completedOrder.date,
+              clientName: completedOrder.clientName,
+              items: completedOrder.items.map((it) => ({
+                description: it.item.description || 'Artículo',
+                quantity: it.quantity,
+                unitPrice: it.unitPrice,
+                totalPrice: it.totalPrice,
+              })),
+              subtotal: completedOrder.subtotal,
+              tax: completedOrder.tax,
+              total: completedOrder.total,
+              primaryMethod: completedOrder.primaryMethod,
+              payments: completedOrder.payments.map((p) => ({
+                method: SAT_PAYMENT_METHODS.find((m) => m.code === p.method)?.label || p.method,
+                amount: p.amountMxn || p.amountUsd || 0,
+                reference: p.reference,
+              })),
+              cashReceivedMxn: completedOrder.cashReceivedMxn,
+              cashReceivedUsd: completedOrder.cashReceivedUsd,
+              changeMxn: completedOrder.changeMxn,
+              changeUsd: completedOrder.changeUsd,
+              exchangeRate: completedOrder.exchangeRate,
+              notes: completedOrder.notes,
+            },
+            company as CompanySettings | null,
+            currentStore?.description || undefined
+          )
+
+          toast.success(`Ticket impreso en "${printer.name}" vía QZ Tray`)
+          setPrintingWithQz(false)
+          return
+        }
+      }
+    } catch (err: unknown) {
+      console.warn('[POS] QZ Tray no disponible, recurriendo a impresión de navegador:', err)
+    } finally {
+      setPrintingWithQz(false)
+    }
+
+    // Fallback: window.print()
+    window.print()
+  }
 
   // 1. Fetch Current Authenticated User Profile
   useEffect(() => {
@@ -1245,11 +1319,12 @@ export function PosClient() {
               {/* Modal Actions */}
               <div className="flex items-center gap-2 pt-2 print:hidden">
                 <button
-                  onClick={() => window.print()}
-                  className="flex-1 py-2.5 rounded-xl bg-zinc-900 text-white text-xs font-bold hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5"
+                  onClick={handlePrintTicket}
+                  disabled={printingWithQz}
+                  className="flex-1 py-2.5 rounded-xl bg-zinc-900 text-white text-xs font-bold hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
-                  <Printer size={15} />
-                  Imprimir Ticket
+                  <Printer size={15} className={printingWithQz ? 'animate-spin' : ''} />
+                  <span>{printingWithQz ? 'Imprimiendo...' : 'Imprimir Ticket'}</span>
                 </button>
                 <button
                   onClick={() => {

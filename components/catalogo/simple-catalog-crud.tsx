@@ -222,53 +222,55 @@ export function SimpleCatalogCrud({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-full flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3">
       <div className="dashboard-bg" />
 
       {/* Header and Sub-Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground flex items-center gap-2 leading-tight">
             {icon}
             {title}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+          <p className="text-xs text-muted-foreground line-clamp-1">{subtitle}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <CatalogoTabs />
           <GlassButton
             variant="primary"
+            size="sm"
+            className="text-xs h-8 sm:h-9"
             onClick={() => {
               setEditingRecord(null)
               setDescriptionInput('')
               setModalOpen(true)
             }}
           >
-            <Plus size={16} className="mr-1.5" />
+            <Plus size={15} className="mr-1" />
             Nuevo Registro
           </GlassButton>
         </div>
       </div>
 
       {/* Filters Bar */}
-      <GlassCard padding="sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <GlassCard padding="none" className="p-2 shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
           <div className="flex-1 max-w-md">
             <GlassInput
               placeholder={`Buscar en ${title.toLowerCase()}...`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              icon={<Search size={16} />}
+              icon={<Search size={15} />}
             />
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 p-1 rounded-xl glass">
+            <div className="flex items-center gap-1 p-0.5 rounded-xl glass border border-border/40">
               <button
                 onClick={() => setStatusFilter('A')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                   statusFilter === 'A'
-                    ? 'bg-emerald-500 text-white shadow-sm'
+                    ? 'bg-emerald-500 text-white shadow-sm font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -276,9 +278,9 @@ export function SimpleCatalogCrud({
               </button>
               <button
                 onClick={() => setStatusFilter('I')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                   statusFilter === 'I'
-                    ? 'bg-emerald-500 text-white shadow-sm'
+                    ? 'bg-emerald-500 text-white shadow-sm font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -286,9 +288,9 @@ export function SimpleCatalogCrud({
               </button>
               <button
                 onClick={() => setStatusFilter('ALL')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                   statusFilter === 'ALL'
-                    ? 'bg-emerald-500 text-white shadow-sm'
+                    ? 'bg-emerald-500 text-white shadow-sm font-semibold'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -302,16 +304,17 @@ export function SimpleCatalogCrud({
               onClick={fetchRecords}
               disabled={loading}
               title="Recargar"
+              className="h-8 px-2.5"
             >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={13} className={loading ? 'animate-spin text-emerald-400' : ''} />
             </GlassButton>
           </div>
         </div>
       </GlassCard>
 
       {/* Records Table */}
-      <GlassCard padding="none" className="overflow-hidden">
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern">
+      <GlassCard padding="none" className="overflow-hidden shadow-xl flex-1 min-h-0 flex flex-col">
+        <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 scroll-modern">
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
