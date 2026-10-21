@@ -694,7 +694,7 @@ export function EtiquetasClient({
       {/* Modal Crear / Editar Plantilla de Etiquetas */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="glass border-white/20 rounded-3xl max-w-4xl p-6 max-h-[90vh] overflow-y-auto scroll-modern">
-          <DialogHeader className="mb-4">
+          <DialogHeader className="mb-4 pr-8">
             <DialogTitle className="text-xl font-black text-foreground flex items-center gap-2">
               <Tag className="w-5 h-5 text-emerald-400" />
               {editingConfig ? 'Editar Plantilla de Etiqueta' : 'Nueva Plantilla de Etiqueta'}

@@ -1215,10 +1215,10 @@ export function PosClient() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white text-zinc-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 print:shadow-none print:m-0 print:p-2"
+              className="bg-white text-zinc-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 print:shadow-none print:m-0 print:p-2 max-h-[90vh] overflow-y-auto scroll-modern"
             >
               {/* Thermal ticket layout */}
-              <div className="text-center border-b border-dashed border-zinc-300 pb-3">
+              <div className="text-center border-b border-dashed border-zinc-300 pb-3 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-white z-20 shadow-xs">
                 <h2 className="font-black text-xl tracking-tight text-zinc-950">CAMPIRAN POS</h2>
                 <p className="text-xs text-zinc-600 mt-0.5">{currentStore?.description ?? 'Matriz'}</p>
                 <p className="text-[11px] text-zinc-500 font-mono mt-1">

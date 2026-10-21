@@ -176,13 +176,13 @@ export function StoreGeoGuard({ profile }: StoreGeoGuardProps) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.92, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="glass-card border border-emerald-500/30 max-w-md w-full p-6 shadow-2xl relative overflow-hidden space-y-5"
+          className="glass-card border border-emerald-500/30 max-w-md w-full p-6 shadow-2xl relative overflow-hidden space-y-5 max-h-[90vh] overflow-y-auto scroll-modern"
         >
           {/* Luz ambiental decorativa */}
           <div className="absolute -top-16 -right-16 w-36 h-36 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
 
           {/* Encabezado */}
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-3 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 pb-2 bg-card/95 dark:bg-card/90 backdrop-blur-xl border-b border-border/30 z-20">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 flex-shrink-0 animate-pulse">
                 <Navigation size={22} className="text-white" />

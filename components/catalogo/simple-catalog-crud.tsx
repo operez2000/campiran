@@ -407,9 +407,9 @@ export function SimpleCatalogCrud({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-md w-full p-6 space-y-4"
+              className="glass-card max-w-md w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto scroll-modern"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
                 <h3 className="text-base font-bold text-foreground">
                   {editingRecord ? `Editar ${title.slice(0, -1)}` : `Nuevo(a) ${title.slice(0, -1)}`}
                 </h3>

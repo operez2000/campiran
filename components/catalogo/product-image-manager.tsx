@@ -572,9 +572,9 @@ export function ProductImageManager({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-lg w-full p-5 space-y-4 flex flex-col"
+              className="glass-card max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto scroll-modern"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 shrink-0 sticky -top-5 -mx-5 px-5 pt-5 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
                 <div className="flex items-center gap-2">
                   <Camera size={18} className="text-emerald-400" />
                   <h3 className="text-sm font-bold text-foreground">Visor de Cámara en Vivo</h3>

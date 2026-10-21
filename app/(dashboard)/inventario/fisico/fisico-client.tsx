@@ -1397,9 +1397,9 @@ export function FisicoClient() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-sm w-full p-4 space-y-3 relative overflow-hidden"
+              className="glass-card max-w-sm w-full p-4 space-y-3 relative overflow-hidden max-h-[90vh] overflow-y-auto scroll-modern"
             >
-              <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <div className="flex items-center justify-between pb-2 border-b border-white/10 shrink-0 sticky -top-4 -mx-4 px-4 pt-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
                 <div className="flex items-center gap-2">
                   <Camera size={18} className="text-emerald-400" />
                   <h3 className="text-sm font-bold text-foreground">Escáner de Cámara</h3>
@@ -1449,7 +1449,7 @@ export function FisicoClient() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card max-w-xl w-full p-4 space-y-3 max-h-[85vh] flex flex-col"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
+              <div className="flex items-center justify-between border-b border-border/40 pb-2.5 shrink-0 sticky -top-4 -mx-4 px-4 pt-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
                 <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
                   <Search size={18} className="text-emerald-400" />
                   Buscar Artículo por Descripción
@@ -1519,11 +1519,23 @@ export function FisicoClient() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-sm w-full p-5 space-y-4"
+              className="glass-card max-w-sm w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto scroll-modern"
             >
-              <div className="flex items-center gap-2.5 text-amber-400">
-                <AlertCircle size={22} />
-                <h3 className="text-base font-bold text-foreground">¿Cerrar Inventario?</h3>
+              <div className="flex items-center justify-between border-b border-border/40 pb-2.5 shrink-0 sticky -top-5 -mx-5 px-5 pt-5 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
+                <div className="flex items-center gap-2.5 text-amber-400">
+                  <AlertCircle size={22} />
+                  <h3 className="text-base font-bold text-foreground">¿Cerrar Inventario?</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmCloseOpen(false)
+                    focusScannerInput()
+                  }}
+                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
+                >
+                  <X size={18} />
+                </button>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Al confirmar, las existencias del sistema serán ajustadas para igualar el conteo físico ({readings.length} lecturas). Esta acción no se puede deshacer.
@@ -1563,7 +1575,7 @@ export function FisicoClient() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card max-w-3xl w-full p-4 sm:p-5 space-y-3 max-h-[85vh] flex flex-col"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
+              <div className="flex items-center justify-between border-b border-border/40 pb-2.5 shrink-0 sticky -top-4 sm:-top-5 -mx-4 sm:-mx-5 px-4 sm:px-5 pt-4 sm:pt-5 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
                 <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
                   <History size={18} className="text-emerald-400" />
                   Historial de Inventarios Cerrados

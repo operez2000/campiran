@@ -162,10 +162,10 @@ export function ShiftOpenModal({
               initial={{ opacity: 0, scale: 0.94, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 15 }}
-              className="glass-card border-border/50 rounded-3xl max-w-lg w-full p-6 relative overflow-hidden shadow-2xl"
+              className="glass-card border-border/50 rounded-3xl max-w-lg w-full p-6 relative overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto scroll-modern"
             >
               {/* Header */}
-              <div className="flex items-center gap-3 mb-5 border-b border-border/20 pb-4">
+              <div className="flex items-center gap-3 mb-5 border-b border-border/20 pb-4 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
                 <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 shrink-0">
                   <Lock size={22} />
                 </div>

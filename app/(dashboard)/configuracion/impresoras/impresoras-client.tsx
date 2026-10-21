@@ -774,9 +774,9 @@ export function ImpresorasClient({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-lg w-full p-6 space-y-4"
+              className="glass-card max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto scroll-modern"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
                 <div className="flex items-center gap-2">
                   <Printer size={20} className="text-emerald-500" />
                   <h3 className="text-base font-bold text-foreground">

@@ -43,32 +43,34 @@ export function ConfirmDialog({
           {/* Dialog */}
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
-              className="glass-card w-full max-w-md p-6 relative"
+              className="glass-card w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto scroll-modern"
               initial={{ opacity: 0, scale: 0.92, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
-              {/* Close button */}
-              <button
-                onClick={() => onOpenChange(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-lg btn-ghost text-[var(--muted)]"
-              >
-                <X size={16} />
-              </button>
-
-              {/* Icon */}
-              <div className={`mb-4 inline-flex p-3 rounded-2xl ${
-                variant === 'destructive'
-                  ? 'bg-red-500/10 text-red-500'
-                  : 'bg-amber-500/10 text-amber-500'
-              }`}>
-                <AlertTriangle size={22} />
+              {/* Sticky Header */}
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-4 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className={`p-2 rounded-xl ${
+                    variant === 'destructive'
+                      ? 'bg-red-500/10 text-red-500'
+                      : 'bg-amber-500/10 text-amber-500'
+                  }`}>
+                    <AlertTriangle size={18} />
+                  </div>
+                  <h3 className="text-base font-bold text-[var(--foreground)]">
+                    {title}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => onOpenChange(false)}
+                  className="p-1.5 rounded-lg btn-ghost text-[var(--muted)] hover:text-foreground"
+                >
+                  <X size={16} />
+                </button>
               </div>
 
-              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-2">
-                {title}
-              </h3>
               <p className="text-sm text-[var(--muted)] mb-6">
                 {description}
               </p>

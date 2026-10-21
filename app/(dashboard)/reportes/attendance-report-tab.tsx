@@ -840,8 +840,8 @@ export function AttendanceReportTab({
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               className="w-full max-w-lg"
             >
-              <GlassCard variant="default" padding="lg" className="border-emerald-500/30 shadow-2xl">
-                <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+              <GlassCard variant="default" padding="lg" className="border-emerald-500/30 shadow-2xl max-h-[90vh] overflow-y-auto scroll-modern">
+                <div className="flex items-center justify-between pb-3 border-b border-[var(--border)] shrink-0 sticky -top-6 -mx-6 px-6 pt-2 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
                   <div className="flex items-center gap-2">
                     <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-500">
                       <Clock size={20} />

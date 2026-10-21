@@ -162,18 +162,18 @@ export function BiometricsEnrollmentModal({
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="glass-card border-border/50 rounded-3xl max-w-lg w-full p-6 relative z-10 overflow-hidden shadow-2xl"
+              className="glass-card border-border/50 rounded-3xl max-w-lg w-full p-6 relative z-10 overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto scroll-modern"
             >
               {/* Close Button */}
               <button
                 onClick={() => !saving && onOpenChange(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+                className="absolute top-4 right-4 z-30 p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
               >
                 <X size={18} />
               </button>
 
               {/* Header */}
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3 mb-4 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 pb-2 bg-card/95 dark:bg-card/90 backdrop-blur-xl border-b border-border/30 z-20">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
                   <ShieldCheck size={22} />
                 </div>

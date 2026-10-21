@@ -216,13 +216,13 @@ export function PosPaymentModal({
             {/* Close Button */}
             <button
               onClick={() => !isSubmitting && onOpenChange(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+              className="absolute top-4 right-4 z-30 p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
             >
               <X size={18} />
             </button>
 
             {/* Header */}
-            <div className="flex items-center gap-3 mb-4 border-b border-border/20 pb-3">
+            <div className="flex items-center gap-3 mb-4 border-b border-border/20 pb-3 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
                 <Receipt size={20} />
               </div>
@@ -243,7 +243,7 @@ export function PosPaymentModal({
             </div>
 
             {/* Total Display Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 p-3 rounded-2xl bg-white/[0.03] border border-border/40">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 p-3 rounded-2xl bg-white/[0.03] border border-border/40 shrink-0">
               <div>
                 <span className="text-[10px] text-muted-foreground block">Total a Pagar</span>
                 <span className="text-base font-bold text-foreground font-mono">

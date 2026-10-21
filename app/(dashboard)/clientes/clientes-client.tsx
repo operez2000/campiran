@@ -830,7 +830,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
                     <Users size={18} />
@@ -1129,7 +1129,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card max-w-2xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
                     <ShoppingBag size={18} />
@@ -1217,11 +1217,20 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-md w-full p-6 space-y-4 shadow-2xl"
+              className="glass-card max-w-md w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto scroll-modern"
             >
-              <h3 className="text-base font-bold text-foreground">
-                {clientToDelete.status === 'A' ? '¿Desactivar Cliente?' : '¿Reactivar Cliente?'}
-              </h3>
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
+                <h3 className="text-base font-bold text-foreground">
+                  {clientToDelete.status === 'A' ? '¿Desactivar Cliente?' : '¿Reactivar Cliente?'}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmOpen(false)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {clientToDelete.status === 'A'
                   ? `El cliente "${clientToDelete.first_name} ${clientToDelete.last_name || ''}" será desactivado de forma lógica. Podrá reactivarlo en cualquier momento desde el filtro de Inactivos.`

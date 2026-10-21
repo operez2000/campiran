@@ -272,7 +272,7 @@ export function AttendanceKioskModal({
         >
           <GlassCard variant="default" padding="lg" className="border-emerald-500/30 shadow-2xl max-h-[92vh] overflow-y-auto scroll-modern">
             {/* Header & Close */}
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)] shrink-0 sticky -top-6 -mx-6 px-6 pt-2 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
                   <Clock size={22} />

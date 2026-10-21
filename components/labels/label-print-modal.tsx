@@ -440,7 +440,7 @@ export function LabelPrintModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="glass border-white/20 rounded-3xl max-w-5xl p-6 max-h-[92vh] overflow-y-auto scroll-modern">
-        <DialogHeader className="mb-4">
+        <DialogHeader className="mb-4 pr-8">
           <DialogTitle className="text-xl font-black text-foreground flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Printer className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
