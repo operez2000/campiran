@@ -107,6 +107,51 @@ export interface BranchPrinter {
   updated_at?: string
 }
 
+// ── Branch Label Printers & Configs (Por Sucursal) ───────────
+export type LabelUnit = 'cm' | 'in'
+export type BarcodeType = 'CODE128' | 'EAN13'
+export type LabelPriceOption = 'price1' | 'price2' | 'price3'
+
+export interface BranchLabelConfig {
+  id_config: string
+  id_store: string
+  name: string
+  printer_brand: string
+  printer_model: string | null
+  unit: LabelUnit
+  label_width: number
+  label_height: number
+  labels_per_row: number
+  gap_x: number
+  gap_y: number
+  margin_top: number
+  margin_left: number
+  page_width: number | null
+  page_height: number | null
+  include_item_name: boolean
+  include_price: boolean
+  price_to_print: LabelPriceOption
+  include_code: boolean
+  include_barcode: boolean
+  include_store_name: boolean
+  barcode_type: BarcodeType
+  is_default: boolean
+  status: 'A' | 'I'
+  created_at?: string
+  updated_at?: string
+}
+
+export interface LabelPrintQueueItem {
+  id_item: string
+  code: string | null
+  barcode: string | null
+  description: string | null
+  price1?: number | null
+  price2?: number | null
+  price3?: number | null
+  quantity: number // cuántas etiquetas imprimir de este producto
+}
+
 // ── Catalog ──────────────────────────────────────────────────
 export interface Area {
   id_area: string

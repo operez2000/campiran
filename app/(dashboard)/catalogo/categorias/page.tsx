@@ -14,7 +14,7 @@ export default function CategoriasPage() {
       subtitle="Clasificación general de artículos y familias de producto"
       tableName="categories"
       idColumn="id_category"
-      icon={<Layers className="text-emerald-500" size={28} />}
+      icon={<Layers className="text-emerald-500" size={20} />}
     />
   )
 }

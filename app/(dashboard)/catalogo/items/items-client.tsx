@@ -14,11 +14,14 @@ import { toast } from 'sonner'
 import {
   Tags, Search, Plus, Edit3, Trash2, RotateCcw,
   X, Check, Filter, Layers, DollarSign, Barcode,
-  Image as ImageIcon, Package, Wrench, Sparkles, Percent, Loader2
+  Image as ImageIcon, Package, Wrench, Sparkles, Percent, Loader2, Tag
 } from 'lucide-react'
 import { ProductImageManager, type ManagedImageItem } from '@/components/catalogo/product-image-manager'
 import { ProductImageCarouselModal } from '@/components/catalogo/product-image-carousel-modal'
 import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
+import { useStore } from '@/components/providers/store-provider'
+import { LabelPrintModal } from '@/components/labels/label-print-modal'
+import { type LabelPrintQueueItem } from '@/lib/types'
 
 interface ItemFormData {
   code: string
@@ -132,6 +135,26 @@ export function ItemsClient() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null)
   const [deleting, setDeleting] = useState(false)
+
+  // Contexto de Sucursal e Impresión de Etiquetas
+  const { storeId } = useStore()
+  const [printModalOpen, setPrintModalOpen] = useState(false)
+  const [printQueue, setPrintQueue] = useState<LabelPrintQueueItem[]>([])
+
+  const handleOpenPrintModal = useCallback((itemsToPrint: Item[]) => {
+    const queueItems: LabelPrintQueueItem[] = itemsToPrint.map((item) => ({
+      id_item: item.id_item,
+      code: item.code,
+      barcode: item.barcode,
+      description: item.description,
+      price1: item.price1 || item.price,
+      price2: item.price2,
+      price3: item.price3,
+      quantity: 1,
+    }))
+    setPrintQueue(queueItems)
+    setPrintModalOpen(true)
+  }, [])
 
   // Fetch Master Data (Solo se ejecuta una única vez al montar el componente)
   const fetchData = useCallback(async () => {
@@ -716,8 +739,24 @@ export function ItemsClient() {
             Gestión de productos y servicios
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <CatalogoTabs />
+          <GlassButton
+            variant="secondary"
+            size="sm"
+            className="text-xs h-8 sm:h-9 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+            onClick={() => {
+              const productsOnly = filteredItems.filter((i) => i.type !== 'S' && i.status === 'A')
+              if (productsOnly.length === 0) {
+                toast.error('No hay productos disponibles para imprimir etiquetas.')
+                return
+              }
+              handleOpenPrintModal(productsOnly.slice(0, 20))
+            }}
+          >
+            <Tag size={15} className="mr-1 text-emerald-400" />
+            Imprimir Etiquetas
+          </GlassButton>
           <GlassButton variant="primary" size="sm" className="text-xs h-8 sm:h-9" onClick={() => handleOpenCreate()}>
             <Plus size={15} className="mr-1" />
             {activeTab === 'S' ? 'Nuevo Servicio' : activeTab === 'P' ? 'Nuevo Producto' : 'Nuevo Artículo'}
@@ -1014,6 +1053,16 @@ export function ItemsClient() {
                                     label: `Ver fotos (${item.item_images!.length})`,
                                     icon: <ImageIcon size={15} />,
                                     onClick: () => setCarouselModalItem(item),
+                                    variant: 'default' as const,
+                                  },
+                                ]
+                              : []),
+                            ...(!isService
+                              ? [
+                                  {
+                                    label: 'Imprimir etiqueta',
+                                    icon: <Barcode size={15} />,
+                                    onClick: () => handleOpenPrintModal([item]),
                                     variant: 'default' as const,
                                   },
                                 ]
@@ -1590,6 +1639,14 @@ export function ItemsClient() {
         onClose={() => setCarouselModalItem(null)}
         productName={carouselModalItem?.description || ''}
         images={carouselModalItem?.item_images || []}
+      />
+
+      {/* Modal: Impresión de Etiquetas con Códigos de Barras */}
+      <LabelPrintModal
+        open={printModalOpen}
+        onOpenChange={setPrintModalOpen}
+        storeId={storeId || ''}
+        items={printQueue}
       />
     </div>
   )

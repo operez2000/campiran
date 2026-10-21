@@ -42,21 +42,60 @@ export function mapUserToProfile(u: Record<string, unknown>, userMeta?: Record<s
     role,
     id_store: (u.id_store as string) || null,
     status,
-    avatar_url: (u.avatar_url as string) || (userMeta?.avatar_url as string) || (userMeta?.picture as string) || null,
+    avatar_url:
+      (u.avatar_url as string) ||
+      (userMeta?.avatar_url as string) ||
+      (userMeta?.picture as string) ||
+      (userMeta?.avatar as string) ||
+      null,
     created_at: (u.created_at as string) || new Date().toISOString(),
     updated_at: (u.updated_at as string) || new Date().toISOString(),
   }
 }
 
 /**
+ * Extracts avatar URL from user metadata or OAuth identities (e.g. Gmail / Google)
+ */
+export function extractAvatarUrl(user: {
+  user_metadata?: Record<string, unknown> | null
+  identities?: Array<{ provider?: string; identity_data?: Record<string, unknown> | null }> | null
+}): string | null {
+  const meta = user.user_metadata
+  if (meta?.avatar_url && typeof meta.avatar_url === 'string' && meta.avatar_url.trim()) {
+    return meta.avatar_url.trim()
+  }
+  if (meta?.picture && typeof meta.picture === 'string' && meta.picture.trim()) {
+    return meta.picture.trim()
+  }
+  if (meta?.avatar && typeof meta.avatar === 'string' && meta.avatar.trim()) {
+    return meta.avatar.trim()
+  }
+  if (user.identities && Array.isArray(user.identities)) {
+    for (const ident of user.identities) {
+      const idData = ident?.identity_data
+      if (idData?.avatar_url && typeof idData.avatar_url === 'string' && idData.avatar_url.trim()) {
+        return idData.avatar_url.trim()
+      }
+      if (idData?.picture && typeof idData.picture === 'string' && idData.picture.trim()) {
+        return idData.picture.trim()
+      }
+    }
+  }
+  return null
+}
+
+/**
  * Robust profile resolver that checks `profiles` table first,
  * and falls back seamlessly to the legacy `users` table or auto-provisions
  * the profile for authenticated users.
+ * Automatically synchronizes and preserves Gmail / Google OAuth avatar.
  */
 export async function getAuthenticatedProfile(
   supabase: SupabaseClient,
   user: User
 ): Promise<Profile> {
+  const googleAvatar = extractAvatarUrl(user)
+
   // 1. Try querying public.profiles
   try {
     const { data: profile, error } = await supabase
@@ -66,7 +105,33 @@ export async function getAuthenticatedProfile(
       .maybeSingle()
 
     if (!error && profile) {
-      return profile as Profile
+      const currentAvatar = (profile.avatar_url as string) || googleAvatar || null
+
+      // If database has no avatar_url but Google OAuth has one, persist it
+      if (!profile.avatar_url && googleAvatar) {
+        try {
+          const { createAdminClient } = await import('@/utils/supabase/admin')
+          const adminClient = createAdminClient()
+          await adminClient
+            .from('profiles')
+            .update({ avatar_url: googleAvatar, updated_at: new Date().toISOString() })
+            .eq('id', user.id)
+        } catch {
+          try {
+            await supabase
+              .from('profiles')
+              .update({ avatar_url: googleAvatar, updated_at: new Date().toISOString() })
+              .eq('id', user.id)
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      return {
+        ...(profile as Profile),
+        avatar_url: currentAvatar,
+      }
     }
   } catch {
     // profiles table might not exist in database yet
@@ -81,7 +146,11 @@ export async function getAuthenticatedProfile(
       .maybeSingle()
 
     if (!userError && legacyUser) {
-      return mapUserToProfile(legacyUser, user.user_metadata)
+      const mapped = mapUserToProfile(legacyUser, user.user_metadata)
+      if (!mapped.avatar_url && googleAvatar) {
+        mapped.avatar_url = googleAvatar
+      }
+      return mapped
     }
   } catch {
     // users query failed
@@ -122,7 +191,7 @@ export async function getAuthenticatedProfile(
       email: user.email,
       role: defaultRole,
       status: 'active',
-      avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+      avatar_url: googleAvatar,
     })
   } catch {
     // Fallback to regular supabase client if admin client fails
@@ -147,7 +216,7 @@ export async function getAuthenticatedProfile(
     role: defaultRole,
     id_store: null,
     status: 'active',
-    avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+    avatar_url: googleAvatar,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }

@@ -8,6 +8,9 @@ import { type Profile } from '@/lib/types'
 import { X, PanelLeftClose } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+import { UserAvatar } from '@/components/user-avatar'
+import { getRoleLabel } from '@/lib/utils'
+
 interface DashboardLayoutProps {
   profile: Profile
   children: React.ReactNode
@@ -103,8 +106,25 @@ export function DashboardLayout({ profile, children }: DashboardLayoutProps) {
             <SidebarNav role={profile.role} />
           </div>
 
+          {/* User profile preview */}
+          <div className="p-2.5 mx-3 mb-2 rounded-2xl glass border border-white/5 flex items-center gap-2.5">
+            <UserAvatar
+              src={profile.avatar_url}
+              name={profile.full_name || profile.email}
+              size="sm"
+            />
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-xs font-semibold text-foreground truncate">
+                {profile.full_name || 'Usuario'}
+              </p>
+              <p className="text-[10px] text-muted-foreground truncate">
+                {getRoleLabel(profile.role)}
+              </p>
+            </div>
+          </div>
+
           {/* Footer */}
-          <div className="p-4 border-t border-[var(--border)]">
+          <div className="p-3 border-t border-[var(--border)]">
             <p className="text-xs text-[var(--muted)] text-center">
               v0.1.0 · Campiran © 2026
             </p>
@@ -146,6 +166,23 @@ export function DashboardLayout({ profile, children }: DashboardLayoutProps) {
               </div>
               <div className="flex-1 overflow-y-auto scroll-modern">
                 <SidebarNav role={profile.role} onNavigate={() => setMobileOpen(false)} />
+              </div>
+
+              {/* User profile preview */}
+              <div className="p-2.5 mx-3 mb-2 rounded-2xl glass border border-white/5 flex items-center gap-2.5">
+                <UserAvatar
+                  src={profile.avatar_url}
+                  name={profile.full_name || profile.email}
+                  size="sm"
+                />
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-xs font-semibold text-foreground truncate">
+                    {profile.full_name || 'Usuario'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground truncate">
+                    {getRoleLabel(profile.role)}
+                  </p>
+                </div>
               </div>
             </motion.aside>
           </>

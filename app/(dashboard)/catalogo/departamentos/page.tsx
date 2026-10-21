@@ -14,7 +14,7 @@ export default function DepartamentosPage() {
       subtitle="Catálogo de departamentos para segmentación de inventario"
       tableName="departments"
       idColumn="id_department"
-      icon={<Building2 className="text-emerald-500" size={28} />}
+      icon={<Building2 className="text-emerald-500" size={20} />}
     />
   )
 }

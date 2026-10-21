@@ -15,6 +15,8 @@ import {
 
 import { HeaderAttendanceButton } from '@/components/attendance/header-attendance-button'
 
+import { UserAvatar } from '@/components/user-avatar'
+
 interface HeaderProps {
   profile: Profile
   onMenuClick: () => void
@@ -35,6 +37,31 @@ export function Header({
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [storeMenuOpen, setStoreMenuOpen] = useState(false)
   const [stores, setStores] = useState<Store[]>([])
+
+  // Close menus on click outside or escape key
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as HTMLElement
+      if (!target.closest('.user-menu-container')) {
+        setUserMenuOpen(false)
+      }
+      if (!target.closest('.store-menu-container')) {
+        setStoreMenuOpen(false)
+      }
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setUserMenuOpen(false)
+        setStoreMenuOpen(false)
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('click', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
 
   // Dark mode
   useEffect(() => {
@@ -144,7 +171,7 @@ export function Header({
 
       {/* Store selector (ADMIN only) */}
       {profile.role === 'ADMIN' && (
-        <div className="relative">
+        <div className="relative store-menu-container">
           <button
             onClick={() => setStoreMenuOpen((p) => !p)}
             className={cn(
@@ -220,42 +247,73 @@ export function Header({
         </button>
 
         {/* User menu */}
-        <div className="relative">
+        <div className="relative user-menu-container">
           <button
             onClick={() => setUserMenuOpen((p) => !p)}
-            className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl btn-ghost"
+            className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl btn-ghost hover:bg-white/[0.06] transition-colors"
+            aria-label="Menú de usuario"
           >
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-indigo-500 flex items-center justify-center text-white text-xs font-semibold">
-              {getInitials(profile.full_name)}
-            </div>
+            <UserAvatar
+              src={profile.avatar_url}
+              name={profile.full_name || profile.email}
+              size="sm"
+            />
             <div className="hidden sm:block text-left">
-              <p className="text-sm font-medium text-[var(--foreground)] leading-none">
+              <p className="text-sm font-medium text-[var(--foreground)] leading-none truncate max-w-[130px]">
                 {profile.full_name ?? 'Usuario'}
               </p>
               <p className="text-xs text-[var(--muted)] leading-none mt-0.5">
                 {getRoleLabel(profile.role)}
               </p>
             </div>
-            <ChevronDown size={14} className={cn('text-[var(--muted)] transition-transform', userMenuOpen && 'rotate-180')} />
+            <ChevronDown size={14} className={cn('text-[var(--muted)] transition-transform duration-200', userMenuOpen && 'rotate-180')} />
           </button>
 
           <AnimatePresence>
             {userMenuOpen && (
               <motion.div
-                className="absolute right-0 top-full mt-2 w-52 glass-card p-1 z-50"
+                className="absolute right-0 top-full mt-2 w-64 glass-card p-2 z-50 shadow-2xl"
                 initial={{ opacity: 0, y: -8, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
               >
-                <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm sidebar-nav-item">
-                  <User size={15} />
-                  Mi perfil
-                </button>
+                {/* User card header */}
+                <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/5 flex items-center gap-3 mb-1.5">
+                  <UserAvatar
+                    src={profile.avatar_url}
+                    name={profile.full_name || profile.email}
+                    size="md"
+                  />
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-semibold text-foreground truncate leading-tight">
+                      {profile.full_name ?? 'Usuario'}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate font-mono mt-0.5">
+                      {profile.email ?? ''}
+                    </p>
+                    <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      {getRoleLabel(profile.role)}
+                    </span>
+                  </div>
+                </div>
+
+                {profile.role === 'ADMIN' && (
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false)
+                      router.push('/admin/usuarios')
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm sidebar-nav-item"
+                  >
+                    <User size={15} />
+                    Gestión de usuarios
+                  </button>
+                )}
                 <div className="my-1 border-t border-[var(--border)]" />
                 <button
                   onClick={handleSignOut}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-red-500 hover:bg-red-500/10 transition-colors"
                 >
                   <LogOut size={15} />
                   Cerrar sesión

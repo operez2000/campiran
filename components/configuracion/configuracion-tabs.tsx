@@ -2,16 +2,17 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Building2, Printer } from 'lucide-react'
+import { Building2, Printer, Tag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function ConfiguracionTabs() {
   const pathname = usePathname()
   const isEmpresa = pathname.startsWith('/configuracion/empresa')
   const isImpresoras = pathname.startsWith('/configuracion/impresoras')
+  const isEtiquetas = pathname.startsWith('/configuracion/etiquetas')
 
   return (
-    <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md w-fit mb-6">
+    <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md w-fit mb-6">
       <Link
         href="/configuracion/empresa"
         className={cn(
@@ -35,6 +36,18 @@ export function ConfiguracionTabs() {
       >
         <Printer size={15} />
         <span>Impresoras de Recibos (Por Sucursal)</span>
+      </Link>
+      <Link
+        href="/configuracion/etiquetas"
+        className={cn(
+          'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all',
+          isEtiquetas
+            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+            : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+        )}
+      >
+        <Tag size={15} />
+        <span>Etiquetas de Códigos de Barras (Por Sucursal)</span>
       </Link>
     </div>
   )

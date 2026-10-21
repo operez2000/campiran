@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
 import { BiometricsEnrollmentModal } from '@/components/biometrics/biometrics-enrollment-modal'
+import { UserAvatar } from '@/components/user-avatar'
 import {
   getUsersAndStoresAction,
   updateUserAction,
@@ -616,17 +617,12 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
 
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
-                          {p.avatar_url ? (
-                            <img
-                              src={p.avatar_url}
-                              alt={p.full_name || 'Usuario'}
-                              className="w-9 h-9 rounded-xl object-cover shadow-md border border-white/10"
-                            />
-                          ) : (
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-md">
-                              {getInitials(p.full_name)}
-                            </div>
-                          )}
+                          <UserAvatar
+                            src={p.avatar_url}
+                            name={p.full_name || p.email}
+                            size="md"
+                            rounded="xl"
+                          />
                           <div>
                             <span className="font-semibold text-foreground group-hover:text-emerald-400 transition-colors block leading-tight">
                               {p.full_name || 'Sin nombre'}
@@ -794,6 +790,27 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                   >
                     <X size={18} />
                   </button>
+                </div>
+              </div>
+
+              {/* User Avatar & Identity Header */}
+              <div className="p-3 rounded-2xl glass border border-white/5 flex items-center gap-3 bg-white/[0.02]">
+                <UserAvatar
+                  src={editingProfile.avatar_url}
+                  name={editingProfile.full_name || editingProfile.email}
+                  size="lg"
+                  rounded="xl"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-foreground truncate">
+                    {editingProfile.full_name || 'Usuario'}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate font-mono">
+                    {editingProfile.email}
+                  </p>
+                  <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    {getRoleLabel(editingProfile.role)}
+                  </span>
                 </div>
               </div>
 

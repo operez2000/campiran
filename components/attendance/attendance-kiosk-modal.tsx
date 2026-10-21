@@ -15,6 +15,7 @@ import { getUserBiometricsAction } from '@/app/(dashboard)/admin/usuarios/action
 import { authenticateWebAuthn, isWebAuthnAvailable } from '@/lib/webauthn'
 import { FaceCameraModal } from '@/components/biometrics/face-camera-modal'
 import { getInitials, getRoleLabel } from '@/lib/utils'
+import { UserAvatar } from '@/components/user-avatar'
 import { toast } from 'sonner'
 import {
   Clock, Store as StoreIcon, KeyRound, LogIn, LogOut,
@@ -345,9 +346,11 @@ export function AttendanceKioskModal({
                 <div className="space-y-2.5 p-3 rounded-2xl glass border border-emerald-500/20 bg-emerald-500/5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-xs font-bold">
-                        {getInitials(selectedEmployee.full_name)}
-                      </div>
+                      <UserAvatar
+                        src={selectedEmployee.avatar_url}
+                        name={selectedEmployee.full_name}
+                        size="sm"
+                      />
                       <div className="text-xs">
                         <div className="font-semibold text-foreground">
                           {selectedEmployee.full_name}

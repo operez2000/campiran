@@ -30,15 +30,16 @@ export function formatRelative(date: string | Date): string {
   return formatDistanceToNow(new Date(date), { addSuffix: true, locale: es })
 }
 
-/** Get initials from full name */
+/** Get initials from full name (e.g. "Oscar Pérez" -> "OP") */
 export function getInitials(name: string | null | undefined): string {
-  if (!name) return '?'
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
+  if (!name || !name.trim()) return '?'
+  const clean = name.includes('@')
+    ? name.split('@')[0].replace(/[._-]/g, ' ')
+    : name.trim()
+  const parts = clean.split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return (parts[0][0] || '?').toUpperCase()
+  return ((parts[0][0] || '') + (parts[1][0] || '')).toUpperCase()
 }
 
 /** Truncate text */

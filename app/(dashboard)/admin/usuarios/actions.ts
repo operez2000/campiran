@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { type Profile, type Store, type UserRole, type ProfileStatus, type UserBiometric } from '@/lib/types'
+import { extractAvatarUrl } from '@/lib/auth-profile'
 
 // Map single-character role code to system role
 function roleCodeToRole(code: string | null | undefined): UserRole {
@@ -138,12 +139,29 @@ export async function getUsersAndStoresAction(): Promise<{ users: Profile[]; sto
     // La tabla profiles puede no existir aún en la base de datos
   }
 
-  // Si profiles ya tiene registros, retornar con biometría vinculada
+  // Si profiles ya tiene registros, retornar con biometría y avatar de Google vinculados
   if (profiles.length > 0) {
-    const enrichedProfiles = profiles.map((p) => ({
-      ...p,
-      biometrics: biometricsMap.get(p.id) || null,
-    }))
+    const enrichedProfiles = profiles.map((p) => {
+      const au = authUsersList.find(
+        (u) =>
+          u.id === p.id ||
+          (u.email && p.email && u.email.toLowerCase() === p.email.toLowerCase())
+      )
+      const meta = au?.user_metadata
+      const googleAvatar = au ? extractAvatarUrl(au) : null
+      const avatarUrl = p.avatar_url || googleAvatar || null
+
+      // Si falta en la tabla profiles pero existe en la cuenta de Google, actualizar en segundo plano
+      if (!p.avatar_url && googleAvatar) {
+        adminClient.from('profiles').update({ avatar_url: googleAvatar }).eq('id', p.id).then(() => {})
+      }
+
+      return {
+        ...p,
+        avatar_url: avatarUrl,
+        biometrics: biometricsMap.get(p.id) || null,
+      }
+    })
     return { users: enrichedProfiles, stores }
   }
 
@@ -179,8 +197,8 @@ export async function getUsersAndStoresAction(): Promise<{ users: Profile[]; sto
       'Usuario'
 
     const avatarUrl =
-      au.user_metadata?.avatar_url ||
-      au.user_metadata?.picture ||
+      (lu?.avatar_url as string) ||
+      extractAvatarUrl(au) ||
       null
 
     userMap.set(au.id, {
@@ -211,7 +229,7 @@ export async function getUsersAndStoresAction(): Promise<{ users: Profile[]; sto
       role: roleCodeToRole(lu.role),
       id_store: lu.id_store || null,
       status: statusCodeToStatus(lu.status),
-      avatar_url: null,
+      avatar_url: (lu.avatar_url as string) || null,
       created_at: lu.created_at || new Date().toISOString(),
       updated_at: lu.created_at || new Date().toISOString(),
       biometrics: biometricsMap.get(lu.id_user) || null,

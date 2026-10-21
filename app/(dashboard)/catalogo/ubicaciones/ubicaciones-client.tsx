@@ -13,7 +13,7 @@ export function UbicacionesClient() {
       subtitle={`Pasillos, estantes y zonas físicas en ${currentStore?.description ?? 'sucursal activa'}`}
       tableName="locations"
       idColumn="id_location"
-      icon={<MapPin className="text-emerald-500" size={28} />}
+      icon={<MapPin className="text-emerald-500" size={20} />}
       storeIdFilter={storeId}
     />
   )

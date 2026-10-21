@@ -14,7 +14,7 @@ export default function AreasPage() {
       subtitle="Catálogo de áreas operativas y organizacionales"
       tableName="areas"
       idColumn="id_area"
-      icon={<Building2 className="text-emerald-500" size={28} />}
+      icon={<Building2 className="text-emerald-500" size={20} />}
     />
   )
 }
