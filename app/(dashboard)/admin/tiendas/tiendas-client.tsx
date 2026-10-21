@@ -11,9 +11,12 @@ import { type Store } from '@/lib/types'
 import { toast } from 'sonner'
 import {
   Store as StoreIcon, Search, Plus, Edit3, Trash2, RotateCcw,
-  X, Check, MapPin, RefreshCw
+  X, Check, MapPin, RefreshCw, Crosshair, ExternalLink, Compass, Radio
 } from 'lucide-react'
 import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
+import { getDeviceCoordinates, formatDistance, parseCoordinatesOrUrl } from '@/lib/geolocation'
+import { searchAddressOrCoordinates, type GeocodingResult } from './actions'
+import { cn } from '@/lib/utils'
 
 export function TiendasClient() {
   const supabase = createClient()
@@ -28,6 +31,14 @@ export function TiendasClient() {
   const [editingStore, setEditingStore] = useState<Store | null>(null)
   const [description, setDescription] = useState('')
   const [location, setLocation] = useState('')
+  const [latitude, setLatitude] = useState('')
+  const [longitude, setLongitude] = useState('')
+  const [geofenceRadius, setGeofenceRadius] = useState('150')
+  const [capturingGps, setCapturingGps] = useState(false)
+  const [geoSearchQuery, setGeoSearchQuery] = useState('')
+  const [geoSearching, setGeoSearching] = useState(false)
+  const [geoResults, setGeoResults] = useState<GeocodingResult[]>([])
+  const [showGeoResults, setShowGeoResults] = useState(false)
   const [saving, setSaving] = useState(false)
 
   // Delete Confirm
@@ -119,6 +130,10 @@ export function TiendasClient() {
           aVal = (a.location || '').toLowerCase()
           bVal = (b.location || '').toLowerCase()
           break
+        case 'geofence':
+          aVal = a.latitude != null ? '1' : '0'
+          bVal = b.latitude != null ? '1' : '0'
+          break
         case 'status':
           aVal = a.status || ''
           bVal = b.status || ''
@@ -143,6 +158,12 @@ export function TiendasClient() {
     setEditingStore(null)
     setDescription('')
     setLocation('')
+    setLatitude('')
+    setLongitude('')
+    setGeofenceRadius('150')
+    setGeoSearchQuery('')
+    setGeoResults([])
+    setShowGeoResults(false)
     setModalOpen(true)
   }
 
@@ -150,7 +171,88 @@ export function TiendasClient() {
     setEditingStore(store)
     setDescription(store.description || '')
     setLocation(store.location || '')
+    setLatitude(store.latitude != null ? String(store.latitude) : '')
+    setLongitude(store.longitude != null ? String(store.longitude) : '')
+    setGeofenceRadius(store.geofence_radius != null ? String(store.geofence_radius) : '150')
+    setGeoSearchQuery('')
+    setGeoResults([])
+    setShowGeoResults(false)
     setModalOpen(true)
+  }
+
+  const handleCaptureGps = async () => {
+    setCapturingGps(true)
+    try {
+      const coords = await getDeviceCoordinates({ timeoutMs: 10000, enableHighAccuracy: true })
+      setLatitude(coords.latitude.toFixed(7))
+      setLongitude(coords.longitude.toFixed(7))
+      toast.success(
+        `Coordenadas capturadas con precisión de ±${Math.round(coords.accuracy || 0)}m`
+      )
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'No se pudo obtener la ubicación GPS'
+      toast.error(msg)
+    } finally {
+      setCapturingGps(false)
+    }
+  }
+
+  const handleGeoSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!geoSearchQuery.trim()) {
+      toast.error('Ingresa una dirección o enlace de Google Maps para buscar')
+      return
+    }
+
+    // 1. Detección instantánea si el usuario pegó coordenadas o enlace estándar
+    const instant = parseCoordinatesOrUrl(geoSearchQuery)
+    if (instant) {
+      setLatitude(instant.latitude.toFixed(7))
+      setLongitude(instant.longitude.toFixed(7))
+      toast.success('¡Coordenadas extraídas exitosamente!')
+      setGeoResults([])
+      setShowGeoResults(false)
+      return
+    }
+
+    // 2. Consulta al servidor (resuelve enlaces cortos goo.gl o busca direcciones con OpenStreetMap)
+    setGeoSearching(true)
+    setShowGeoResults(true)
+    try {
+      const res = await searchAddressOrCoordinates(geoSearchQuery)
+      if (res.success && res.results && res.results.length > 0) {
+        if (res.results.length === 1 && res.results[0].source !== 'search') {
+          const item = res.results[0]
+          setLatitude(item.latitude.toFixed(7))
+          setLongitude(item.longitude.toFixed(7))
+          toast.success(item.displayName)
+          setGeoResults([])
+          setShowGeoResults(false)
+        } else {
+          setGeoResults(res.results)
+        }
+      } else {
+        toast.error(res.error || 'No se encontraron resultados')
+        setGeoResults([])
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al buscar ubicación'
+      toast.error(msg)
+    } finally {
+      setGeoSearching(false)
+    }
+  }
+
+  const handleSelectGeoResult = (result: GeocodingResult) => {
+    setLatitude(result.latitude.toFixed(7))
+    setLongitude(result.longitude.toFixed(7))
+    if (!location.trim()) {
+      setLocation(result.displayName)
+    }
+    toast.success('Coordenadas asignadas a la sucursal')
+    setGeoResults([])
+    setShowGeoResults(false)
+    setGeoSearchQuery('')
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -160,10 +262,43 @@ export function TiendasClient() {
       return
     }
 
+    const latTrim = latitude.trim()
+    const lngTrim = longitude.trim()
+
+    let parsedLat: number | null = null
+    let parsedLng: number | null = null
+
+    if (latTrim || lngTrim) {
+      if (!latTrim || !lngTrim) {
+        toast.error('Debes proporcionar tanto la latitud como la longitud')
+        return
+      }
+      parsedLat = parseFloat(latTrim)
+      parsedLng = parseFloat(lngTrim)
+
+      if (isNaN(parsedLat) || parsedLat < -90 || parsedLat > 90) {
+        toast.error('La latitud debe ser un número válido entre -90 y 90')
+        return
+      }
+      if (isNaN(parsedLng) || parsedLng < -180 || parsedLng > 180) {
+        toast.error('La longitud debe ser un número válido entre -180 y 180')
+        return
+      }
+    }
+
+    const parsedRadius = geofenceRadius.trim() ? parseInt(geofenceRadius, 10) : 150
+    if (isNaN(parsedRadius) || parsedRadius < 10) {
+      toast.error('El radio de geocerca debe ser al menos de 10 metros')
+      return
+    }
+
     setSaving(true)
     const payload = {
       description: description.trim(),
       location: location.trim() || null,
+      latitude: parsedLat,
+      longitude: parsedLng,
+      geofence_radius: parsedRadius,
     }
 
     if (editingStore) {
@@ -322,6 +457,13 @@ export function TiendasClient() {
                   onSort={handleSort}
                 />
                 <TableColumnHeader
+                  title="Geocerca / GPS"
+                  sortKey="geofence"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <TableColumnHeader
                   title="Estado"
                   sortKey="status"
                   currentSortKey={sortKey}
@@ -334,13 +476,13 @@ export function TiendasClient() {
             <tbody className="divide-y divide-border/20">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
                     Cargando sucursales...
                   </td>
                 </tr>
               ) : paginatedStores.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
                     <p className="text-base font-medium">No se encontraron sucursales</p>
                   </td>
                 </tr>
@@ -383,6 +525,34 @@ export function TiendasClient() {
                       </span>
                     </td>
 
+                    <td className="px-4 py-3.5 text-xs">
+                      {store.latitude != null && store.longitude != null ? (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-[11px]">
+                            <Compass size={12} className="text-emerald-400" />
+                            {Number(store.latitude).toFixed(4)}, {Number(store.longitude).toFixed(4)}
+                            <span className="text-muted-foreground/80 font-sans ml-0.5">
+                              (±{store.geofence_radius || 150}m)
+                            </span>
+                          </span>
+                          <a
+                            href={`https://www.google.com/maps?q=${store.latitude},${store.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 rounded-lg text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                            title="Ver ubicación en Google Maps"
+                          >
+                            <ExternalLink size={13} />
+                          </a>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-muted-foreground/60 italic text-[11px]">
+                          <Radio size={12} />
+                          Sin geolocalización
+                        </span>
+                      )}
+                    </td>
+
                     <td className="px-4 py-3.5 text-center">
                       <StatusBadge status={store.status} />
                     </td>
@@ -412,7 +582,7 @@ export function TiendasClient() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-md w-full p-6 space-y-4"
+              className="glass-card max-w-lg w-full p-6 space-y-4 max-h-[92vh] overflow-y-auto scroll-modern"
             >
               <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2">
                 <h3 className="text-base font-bold text-foreground">
@@ -462,6 +632,209 @@ export function TiendasClient() {
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                   />
+                </div>
+
+                {/* Panel de Geolocalización y Geocerca */}
+                <div className="p-4 rounded-2xl bg-white/[0.03] border border-border/50 space-y-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                        <Compass size={16} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-foreground">Geolocalización & Detección</h4>
+                        <p className="text-[11px] text-muted-foreground">Ubica la sucursal por dirección, enlace de Maps o GPS</p>
+                      </div>
+                    </div>
+
+                    <GlassButton
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleCaptureGps}
+                      disabled={capturingGps}
+                      className="text-xs h-7 px-2.5 flex-shrink-0"
+                      title="Captura la ubicación del dispositivo si estás físicamente en la sucursal"
+                    >
+                      <Crosshair size={13} className={cn('mr-1.5 text-emerald-400', capturingGps && 'animate-spin')} />
+                      {capturingGps ? 'Capturando...' : 'Mi GPS actual'}
+                    </GlassButton>
+                  </div>
+
+                  {/* Buscador inteligente: Dirección o enlace de Google Maps */}
+                  <div className="space-y-1.5 relative">
+                    <label className="text-[11px] font-semibold text-muted-foreground block">
+                      Buscar por dirección o pegar enlace de Google Maps
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <GlassInput
+                          placeholder="Ej. Av. Reforma 222, CDMX o pega enlace de Maps"
+                          value={geoSearchQuery}
+                          onChange={(e) => {
+                            setGeoSearchQuery(e.target.value)
+                            // Si pega coordenadas o enlace, procesar al vuelo
+                            const direct = parseCoordinatesOrUrl(e.target.value)
+                            if (direct) {
+                              setLatitude(direct.latitude.toFixed(7))
+                              setLongitude(direct.longitude.toFixed(7))
+                              toast.success('¡Coordenadas extraídas exitosamente!')
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleGeoSearch()
+                            }
+                          }}
+                          className="text-xs pr-7"
+                        />
+                        {geoSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setGeoSearchQuery('')
+                              setGeoResults([])
+                              setShowGeoResults(false)
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                      <GlassButton
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleGeoSearch()}
+                        disabled={geoSearching || !geoSearchQuery.trim()}
+                        className="text-xs h-9 px-3 flex-shrink-0"
+                      >
+                        <Search size={13} className={cn('mr-1', geoSearching && 'animate-spin')} />
+                        {geoSearching ? 'Buscando...' : 'Buscar'}
+                      </GlassButton>
+                    </div>
+
+                    {/* Menú de resultados de búsqueda */}
+                    {showGeoResults && geoResults.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1.5 z-30 p-1.5 glass-card shadow-2xl max-h-48 overflow-y-auto scroll-modern border border-emerald-500/30">
+                        <div className="flex items-center justify-between px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/30 mb-1">
+                          <span>Resultados encontrados ({geoResults.length})</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowGeoResults(false)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            Cerrar
+                          </button>
+                        </div>
+                        {geoResults.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleSelectGeoResult(item)}
+                            className="w-full text-left p-2 rounded-xl text-xs hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors flex items-start gap-2 group"
+                          >
+                            <MapPin size={13} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="line-clamp-2 text-foreground group-hover:text-emerald-400 leading-snug">
+                                {item.displayName}
+                              </p>
+                              <span className="text-[10px] font-mono text-muted-foreground">
+                                {item.latitude.toFixed(5)}, {item.longitude.toFixed(5)}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Coordenadas numéricas y radio */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
+                        Latitud GPS
+                      </label>
+                      <GlassInput
+                        placeholder="Ej. 19.4326077"
+                        value={latitude}
+                        onChange={(e) => setLatitude(e.target.value)}
+                        className="text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
+                        Longitud GPS
+                      </label>
+                      <GlassInput
+                        placeholder="Ej. -99.1332080"
+                        value={longitude}
+                        onChange={(e) => setLongitude(e.target.value)}
+                        className="text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-end justify-between gap-3 pt-0.5">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
+                        Radio de Geocerca (metros)
+                      </label>
+                      <GlassInput
+                        type="number"
+                        min="10"
+                        max="5000"
+                        step="10"
+                        placeholder="150"
+                        value={geofenceRadius}
+                        onChange={(e) => setGeofenceRadius(e.target.value)}
+                        className="text-xs font-mono"
+                      />
+                    </div>
+
+                    {latitude && longitude && !isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude)) && (
+                      <div className="pb-0.5">
+                        <a
+                          href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors"
+                        >
+                          <ExternalLink size={13} />
+                          Abrir Google Maps
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Vista Previa de Mapa Embebido */}
+                  {latitude && longitude && !isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude)) && (
+                    <div className="pt-1 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span className="font-semibold flex items-center gap-1.5">
+                          <MapPin size={12} className="text-emerald-400" />
+                          Vista previa de la sucursal
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          Radio activo: ±{geofenceRadius || 150}m
+                        </span>
+                      </div>
+                      <div className="relative w-full h-36 rounded-2xl overflow-hidden border border-border/50 bg-black/20">
+                        <iframe
+                          title="Vista de mapa de la sucursal"
+                          className="w-full h-full border-0 pointer-events-auto"
+                          src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(longitude) - 0.005}%2C${Number(latitude) - 0.003}%2C${Number(longitude) + 0.005}%2C${Number(latitude) + 0.003}&layer=mapnik&marker=${latitude}%2C${longitude}`}
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
+                    Cuando un usuario abra la app a menos de este radio, el sistema le ofrecerá cambiar su sesión a esta sucursal automáticamente.
+                  </p>
                 </div>
 
                 <div className="flex items-center justify-end gap-2.5 pt-2">

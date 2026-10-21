@@ -85,6 +85,7 @@ CREATE TABLE public.items (
   description text,
   description_short text,
   type character,
+  classification text DEFAULT 'REGULAR'::text,
   id_area uuid,
   id_department uuid,
   id_category uuid,

@@ -8,13 +8,13 @@ import { GlassButton } from '@/components/glass-button'
 import { GlassInput } from '@/components/glass-input'
 import { StatusBadge } from '@/components/status-badge'
 import { CatalogoTabs } from '@/components/catalogo/catalogo-tabs'
-import { type Item, type ItemImage, type Category, type Area, type Department } from '@/lib/types'
+import { type Item, type ItemClassification, type ItemImage, type Category, type Area, type Department } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
   Tags, Search, Plus, Edit3, Trash2, RotateCcw,
   X, Check, Filter, Layers, DollarSign, Barcode,
-  Image as ImageIcon, Package, Wrench, Sparkles, Percent, Loader2, Tag
+  Image as ImageIcon, Package, Wrench, Sparkles, Percent, Loader2, Tag, FileText
 } from 'lucide-react'
 import { ProductImageManager, type ManagedImageItem } from '@/components/catalogo/product-image-manager'
 import { ProductImageCarouselModal } from '@/components/catalogo/product-image-carousel-modal'
@@ -29,6 +29,7 @@ interface ItemFormData {
   description: string
   description_short: string
   type: 'P' | 'S'
+  classification: ItemClassification
   unit: string
   cost: number
   last_cost: number
@@ -51,6 +52,7 @@ const INITIAL_FORM: ItemFormData = {
   description: '',
   description_short: '',
   type: 'P',
+  classification: 'REGULAR',
   unit: 'Pza',
   cost: 0,
   last_cost: 0,
@@ -89,6 +91,7 @@ export function ItemsClient() {
   // Filters
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('ALL')
+  const [classificationFilter, setClassificationFilter] = useState<'ALL' | 'REGULAR' | 'FICHA_TECNICA'>('ALL')
   const [statusFilter, setStatusFilter] = useState<'A' | 'I' | 'ALL'>('A')
   const [activeTab, setActiveTab] = useState<'P' | 'S' | 'ALL'>('P')
   const [tabLoading, setTabLoading] = useState<'P' | 'S' | 'ALL' | null>(null)
@@ -106,18 +109,25 @@ export function ItemsClient() {
     }, 180)
   }, [tabLoading])
 
-  // Realtime counters for products & services
+  // Realtime counters for products, services & classifications
   const stats = useMemo(() => {
     let products = 0
     let services = 0
+    let regular = 0
+    let fichaTecnica = 0
     items.forEach((item) => {
       if (item.type === 'S') {
         services++
       } else {
         products++
       }
+      if (item.classification === 'FICHA_TECNICA') {
+        fichaTecnica++
+      } else {
+        regular++
+      }
     })
-    return { products, services, total: items.length }
+    return { products, services, regular, fichaTecnica, total: items.length }
   }, [items])
 
   // Modal State
@@ -370,6 +380,7 @@ export function ItemsClient() {
 
       if (statusFilter !== 'ALL' && item.status !== statusFilter) return false
       if (categoryFilter !== 'ALL' && item.id_category !== categoryFilter) return false
+      if (classificationFilter !== 'ALL' && (item.classification || 'REGULAR') !== classificationFilter) return false
 
       if (search.trim()) {
         const q = search.toLowerCase()
@@ -381,7 +392,7 @@ export function ItemsClient() {
 
       return true
     })
-  }, [items, search, categoryFilter, statusFilter, activeTab])
+  }, [items, search, categoryFilter, classificationFilter, statusFilter, activeTab])
 
   // Sorting state
   const [sortKey, setSortKey] = useState<string>('description')
@@ -403,7 +414,7 @@ export function ItemsClient() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, categoryFilter, statusFilter, activeTab])
+  }, [search, categoryFilter, classificationFilter, statusFilter, activeTab])
 
   // Sorted items
   const sortedItems = useMemo(() => {
@@ -426,6 +437,10 @@ export function ItemsClient() {
         case 'type':
           aVal = `${a.type || ''}-${a.unit || ''}`.toLowerCase()
           bVal = `${b.type || ''}-${b.unit || ''}`.toLowerCase()
+          break
+        case 'classification':
+          aVal = (a.classification || 'REGULAR').toLowerCase()
+          bVal = (b.classification || 'REGULAR').toLowerCase()
           break
         case 'cost':
           aVal = Number(a.cost || 0)
@@ -470,6 +485,7 @@ export function ItemsClient() {
     setFormData({
       ...INITIAL_FORM,
       type: selectedType,
+      classification: 'REGULAR',
       unit: selectedType === 'S' ? 'Servicio' : 'Pza',
       unit_sat: selectedType === 'S' ? 'E48' : 'H87',
     })
@@ -487,6 +503,7 @@ export function ItemsClient() {
       description: item.description || '',
       description_short: item.description_short || '',
       type: (item.type as 'P' | 'S') || 'P',
+      classification: (item.classification as ItemClassification) || 'REGULAR',
       unit: item.unit || 'Pza',
       cost: Number(item.cost) || 0,
       last_cost: Number(item.last_cost) || 0,
@@ -625,6 +642,7 @@ export function ItemsClient() {
       description: formData.description.trim(),
       description_short: formData.description_short.trim() || null,
       type: formData.type,
+      classification: formData.classification || 'REGULAR',
       unit: formData.unit.trim() || 'Pza',
       cost: Number(formData.cost) || 0,
       last_cost: Number(formData.last_cost) || 0,
@@ -892,6 +910,20 @@ export function ItemsClient() {
               </select>
             </div>
 
+            {/* Classification Filter */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl glass-input text-xs font-medium">
+              <FileText size={13} className="text-muted-foreground" />
+              <select
+                value={classificationFilter}
+                onChange={(e) => setClassificationFilter(e.target.value as 'ALL' | 'REGULAR' | 'FICHA_TECNICA')}
+                className="bg-transparent border-none text-foreground text-xs focus:outline-none cursor-pointer"
+              >
+                <option value="ALL" className="bg-zinc-900 text-white">Todas las clasificaciones</option>
+                <option value="REGULAR" className="bg-zinc-900 text-white">Regular ({stats.regular})</option>
+                <option value="FICHA_TECNICA" className="bg-zinc-900 text-white">Ficha Técnica ({stats.fichaTecnica})</option>
+              </select>
+            </div>
+
             {/* Status Filter */}
             <div className="flex items-center gap-1 p-0.5 rounded-xl glass border border-border/40">
               <button
@@ -958,6 +990,14 @@ export function ItemsClient() {
                   align="center"
                 />
                 <TableColumnHeader
+                  title="Clasificación"
+                  sortKey="classification"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  align="center"
+                />
+                <TableColumnHeader
                   title={activeTab === 'S' ? 'Costo Base' : 'Costo'}
                   sortKey="cost"
                   currentSortKey={sortKey}
@@ -1002,7 +1042,7 @@ export function ItemsClient() {
             <tbody className="divide-y divide-border/20">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-16 text-center text-muted-foreground">
+                  <td colSpan={10} className="px-4 py-16 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-2.5" role="status" aria-live="polite">
                       <Loader2
                         size={28}
@@ -1014,7 +1054,7 @@ export function ItemsClient() {
                 </tr>
               ) : paginatedItems.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={10} className="px-4 py-12 text-center text-muted-foreground">
                     <p className="text-base font-medium">
                       {activeTab === 'S'
                         ? 'No se encontraron servicios'
@@ -1177,6 +1217,20 @@ export function ItemsClient() {
                         )}
                       </td>
 
+                      <td className="px-4 py-3.5 text-center text-xs">
+                        {item.classification === 'FICHA_TECNICA' ? (
+                          <span className="px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-medium text-[11px] inline-flex items-center gap-1 shadow-xs">
+                            <FileText size={11} />
+                            Ficha Técnica
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium text-[11px] inline-flex items-center gap-1 shadow-xs">
+                            <Tag size={11} />
+                            Regular
+                          </span>
+                        )}
+                      </td>
+
                       <td className="px-4 py-3.5 text-right font-mono text-xs text-muted-foreground">
                         {formatCurrency(Number(item.cost))}
                       </td>
@@ -1311,6 +1365,49 @@ export function ItemsClient() {
                     <Wrench size={15} />
                     <span>Servicio (Intangible / Mano de Obra)</span>
                   </button>
+                </div>
+
+                {/* Segmented Switch: Clasificación (Regular vs Ficha Técnica) */}
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    Clasificación del Artículo
+                  </label>
+                  <div className="p-1 rounded-xl glass border border-white/10 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          classification: 'REGULAR',
+                        }))
+                      }
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        formData.classification === 'REGULAR'
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                      }`}
+                    >
+                      <Tag size={14} />
+                      <span>Regular</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          classification: 'FICHA_TECNICA',
+                        }))
+                      }
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        formData.classification === 'FICHA_TECNICA'
+                          ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                      }`}
+                    >
+                      <FileText size={14} />
+                      <span>Ficha Técnica</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Basic Identification */}

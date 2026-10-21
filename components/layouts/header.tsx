@@ -10,7 +10,7 @@ import { type Profile, type Store } from '@/lib/types'
 import { toast } from 'sonner'
 import {
   Moon, Sun, Menu, ChevronDown, LogOut, User,
-  Store as StoreIcon, Check, PanelLeftClose, PanelLeftOpen,
+  Store as StoreIcon, Check, PanelLeftClose, PanelLeftOpen, Compass,
 } from 'lucide-react'
 
 import { HeaderAttendanceButton } from '@/components/attendance/header-attendance-button'
@@ -185,13 +185,18 @@ export function Header({
             <span className="max-w-[180px] truncate font-medium">
               {currentStore?.description ?? 'Seleccionar sucursal'}
             </span>
+            {currentStore?.latitude != null && currentStore?.longitude != null && (
+              <span title="Sucursal con geolocalización y geocerca activa">
+                <Compass size={13} className="text-emerald-400 flex-shrink-0" />
+              </span>
+            )}
             <ChevronDown size={14} className={cn('text-muted-foreground transition-transform duration-200', storeMenuOpen && 'rotate-180')} />
           </button>
 
           <AnimatePresence>
             {storeMenuOpen && (
               <motion.div
-                className="absolute top-full left-0 mt-2 w-60 glass-card p-1.5 z-50 shadow-2xl"
+                className="absolute top-full left-0 mt-2 w-64 glass-card p-1.5 z-50 shadow-2xl"
                 initial={{ opacity: 0, y: -8, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.97 }}
@@ -212,7 +217,12 @@ export function Header({
                   >
                     <StoreIcon size={14} className={storeId === store.id_store ? 'text-emerald-400' : 'text-muted-foreground'} />
                     <span className="flex-1 text-left truncate">{store.description}</span>
-                    {storeId === store.id_store && <Check size={14} className="text-emerald-400" />}
+                    {store.latitude != null && store.longitude != null && (
+                      <span title="GPS configurado">
+                        <Compass size={12} className="text-emerald-400/80" />
+                      </span>
+                    )}
+                    {storeId === store.id_store && <Check size={14} className="text-emerald-400 ml-1" />}
                   </button>
                 ))}
                 {stores.length === 0 && (
@@ -230,6 +240,11 @@ export function Header({
           <div className="w-2 h-2 rounded-full bg-emerald-500" />
           <StoreIcon size={14} className="text-emerald-500" />
           <span className="font-medium text-foreground">{currentStore.description}</span>
+          {currentStore.latitude != null && currentStore.longitude != null && (
+            <span title="Sucursal con geolocalización y geocerca activa">
+              <Compass size={13} className="text-emerald-400" />
+            </span>
+          )}
         </div>
       )}
 

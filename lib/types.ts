@@ -28,6 +28,9 @@ export interface Store {
   id_store: string
   description: string | null
   location: string | null
+  latitude?: number | null
+  longitude?: number | null
+  geofence_radius?: number | null
   status: StoreStatus
   is_selected: boolean
   created_at: string
@@ -183,6 +186,7 @@ export interface CatalogSat {
 }
 
 export type ItemType = 'P' | 'S' // Producto | Servicio
+export type ItemClassification = 'REGULAR' | 'FICHA_TECNICA'
 
 export interface Item {
   id_item: string
@@ -191,6 +195,7 @@ export interface Item {
   description: string | null
   description_short: string | null
   type: ItemType | null
+  classification?: ItemClassification | null
   id_area: string | null
   id_department: string | null
   id_category: string | null

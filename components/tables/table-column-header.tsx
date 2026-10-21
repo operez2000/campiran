@@ -51,7 +51,7 @@ export function TableColumnHeader({
         align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left',
         className
       )}
-      onClick={isClickable ? () => onSort(sortKey) : undefined}
+      onClick={isClickable && sortKey ? () => onSort(sortKey) : undefined}
       {...props}
     >
       <div className={cn('inline-flex items-center gap-1.5 font-semibold', alignClass)}>

@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 
 import { UserAvatar } from '@/components/user-avatar'
 import { getRoleLabel } from '@/lib/utils'
+import { StoreGeoGuard } from '@/components/providers/store-geo-guard'
 
 interface DashboardLayoutProps {
   profile: Profile
@@ -191,6 +192,7 @@ export function DashboardLayout({ profile, children }: DashboardLayoutProps) {
 
       {/* ── Main Content ─────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <StoreGeoGuard profile={profile} />
         <Header
           profile={profile}
           onMenuClick={() => setMobileOpen(true)}

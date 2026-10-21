@@ -1135,9 +1135,10 @@ export function EtiquetasClient({
         onOpenChange={setDeleteDialogOpen}
         title="¿Eliminar plantilla de etiquetas?"
         description={`¿Estás seguro de que deseas eliminar la plantilla "${configToDelete?.name}"? Esta acción no se puede deshacer.`}
-        confirmText={deleting ? 'Eliminando...' : 'Eliminar'}
-        cancelText="Cancelar"
-        variant="danger"
+        confirmLabel={deleting ? 'Eliminando...' : 'Eliminar'}
+        cancelLabel="Cancelar"
+        loading={deleting}
+        variant="destructive"
         onConfirm={handleDelete}
       />
     </div>
