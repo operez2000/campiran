@@ -195,7 +195,7 @@ export function PosClientModal({
                       <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">
                         Menudeo · Lista #{publicoGeneralClient?.price_number || 1}
                       </span>
-                      <span className="px-1.5 py-0.2 rounded bg-indigo-500/10 dark:bg-white/[0.06] border border-indigo-500/25 dark:border-border/60 text-indigo-950 dark:text-foreground font-mono font-semibold text-[10px]">
+                      <span className="px-1.5 py-0.2 rounded bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/25 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 font-mono font-semibold text-[10px]">
                         RFC: {publicoGeneralClient?.rfc || 'XAXX010101000'}
                       </span>
                     </div>

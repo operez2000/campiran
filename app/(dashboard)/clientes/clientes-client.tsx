@@ -776,14 +776,14 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                       {/* RFC */}
                       <td className="px-4 py-4">
                         {hasRfc ? (
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/10 dark:bg-white/[0.06] border border-indigo-500/25 dark:border-border/60 font-mono text-xs text-indigo-950 dark:text-foreground font-semibold shadow-2xs">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/25 dark:border-indigo-500/30 font-mono text-xs text-indigo-700 dark:text-indigo-300 font-semibold shadow-2xs">
                             <span>{client.rfc}</span>
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(client.rfc!)
                                 toast.success('RFC copiado al portapapeles')
                               }}
-                              className="text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                              className="text-indigo-500/70 dark:text-indigo-300/70 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                               title="Copiar RFC"
                             >
                               <Copy size={11} />
