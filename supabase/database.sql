@@ -257,6 +257,10 @@ CREATE TABLE public.transactions (
   concept text,
   origin text,
   comments text,
+  stock_before integer,
+  stock_after integer,
+  id_purchase uuid,
+  id_supplier uuid,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT transactions_pkey PRIMARY KEY (id_transaction)
 );
@@ -307,4 +311,118 @@ CREATE TABLE public.inventory_readings (
   CONSTRAINT inventory_readings_id_store_fkey FOREIGN KEY (id_store) REFERENCES public.stores(id_store),
   CONSTRAINT inventory_readings_id_location_fkey FOREIGN KEY (id_location) REFERENCES public.locations(id_location),
   CONSTRAINT inventory_readings_id_user_fkey FOREIGN KEY (id_user) REFERENCES public.users(id_user)
+);
+
+CREATE TABLE public.branch_transfers (
+  id_transfer uuid NOT NULL DEFAULT gen_random_uuid(),
+  folio integer NOT NULL DEFAULT nextval('branch_transfers_folio_seq'::regclass),
+  id_origin_store uuid NOT NULL REFERENCES public.stores(id_store),
+  id_origin_location uuid REFERENCES public.locations(id_location),
+  id_dest_store uuid NOT NULL REFERENCES public.stores(id_store),
+  id_dest_location uuid REFERENCES public.locations(id_location),
+  transfer_mode text NOT NULL DEFAULT 'TRANSIT'::text,
+  status text NOT NULL DEFAULT 'IN_TRANSIT'::text,
+  record_status character DEFAULT 'A'::bpchar,
+  id_sent_by uuid,
+  sent_by_name text,
+  id_received_by uuid,
+  received_by_name text,
+  id_cancelled_by uuid,
+  cancelled_by_name text,
+  total_items integer NOT NULL DEFAULT 0,
+  total_quantity_sent numeric NOT NULL DEFAULT 0,
+  total_quantity_received numeric NOT NULL DEFAULT 0,
+  total_cost numeric NOT NULL DEFAULT 0,
+  notes text,
+  reception_notes text,
+  cancellation_reason text,
+  sent_at timestamp with time zone NOT NULL DEFAULT now(),
+  received_at timestamp with time zone,
+  cancelled_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT branch_transfers_pkey PRIMARY KEY (id_transfer)
+);
+
+CREATE TABLE public.branch_transfer_items (
+  id_transfer_item uuid NOT NULL DEFAULT gen_random_uuid(),
+  id_transfer uuid NOT NULL REFERENCES public.branch_transfers(id_transfer) ON DELETE CASCADE,
+  id_item uuid NOT NULL REFERENCES public.items(id_item),
+  quantity_sent numeric NOT NULL DEFAULT 1,
+  quantity_received numeric NOT NULL DEFAULT 0,
+  unit_cost numeric NOT NULL DEFAULT 0,
+  unit_price numeric NOT NULL DEFAULT 0,
+  stock_origin_before numeric DEFAULT 0,
+  stock_dest_before numeric DEFAULT 0,
+  notes text,
+  status character DEFAULT 'A'::bpchar,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT branch_transfer_items_pkey PRIMARY KEY (id_transfer_item)
+);
+
+CREATE TABLE public.purchases (
+  id_purchase uuid NOT NULL DEFAULT gen_random_uuid(),
+  purchase_number integer NOT NULL,
+  id_store uuid NOT NULL REFERENCES public.stores(id_store),
+  id_location uuid REFERENCES public.locations(id_location),
+  id_supplier uuid REFERENCES public.suppliers(id_supplier),
+  id_user uuid,
+  invoice_number text,
+  purchase_date timestamp with time zone DEFAULT now(),
+  received_at timestamp with time zone,
+  cancelled_at timestamp with time zone,
+  cancelled_by uuid,
+  payment_condition text DEFAULT 'CONTADO'::text,
+  payment_method text DEFAULT '01'::text,
+  payment_status text DEFAULT 'PAID'::text,
+  credit_days integer DEFAULT 0,
+  due_date timestamp with time zone,
+  subtotal numeric DEFAULT 0,
+  discount_amount numeric DEFAULT 0,
+  tax_amount numeric DEFAULT 0,
+  total_amount numeric DEFAULT 0,
+  paid_amount numeric DEFAULT 0,
+  balance_due numeric DEFAULT 0,
+  update_item_cost boolean DEFAULT true,
+  notes text,
+  purchase_status text DEFAULT 'RECEIVED'::text,
+  status character DEFAULT 'A'::bpchar,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT purchases_pkey PRIMARY KEY (id_purchase)
+);
+
+CREATE TABLE public.purchase_items (
+  id_purchase_item uuid NOT NULL DEFAULT gen_random_uuid(),
+  id_purchase uuid NOT NULL REFERENCES public.purchases(id_purchase),
+  id_item uuid NOT NULL REFERENCES public.items(id_item),
+  quantity numeric DEFAULT 1,
+  previous_cost numeric DEFAULT 0,
+  unit_cost numeric DEFAULT 0,
+  tax_percent numeric DEFAULT 8,
+  tax_amount numeric DEFAULT 0,
+  discount_amount numeric DEFAULT 0,
+  subtotal numeric DEFAULT 0,
+  total_cost numeric DEFAULT 0,
+  stock_before integer DEFAULT 0,
+  stock_after integer DEFAULT 0,
+  new_price1 numeric,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT purchase_items_pkey PRIMARY KEY (id_purchase_item)
+);
+
+CREATE TABLE public.purchase_payments (
+  id_payment uuid NOT NULL DEFAULT gen_random_uuid(),
+  id_purchase uuid NOT NULL REFERENCES public.purchases(id_purchase),
+  id_store uuid NOT NULL REFERENCES public.stores(id_store),
+  id_supplier uuid REFERENCES public.suppliers(id_supplier),
+  id_user uuid,
+  amount numeric DEFAULT 0,
+  payment_method text DEFAULT '03'::text,
+  reference text,
+  notes text,
+  payment_date timestamp with time zone DEFAULT now(),
+  status character DEFAULT 'A'::bpchar,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT purchase_payments_pkey PRIMARY KEY (id_payment)
 );

@@ -261,7 +261,7 @@ export interface Stock {
   location?: Location
 }
 
-export type MovimType = 'E' | 'S' | 'V' | 'I' | 'A' // Entrada|Salida|Venta|Inventario|Ajuste
+export type MovimType = 'E' | 'S' | 'V' | 'I' | 'A' | 'T' // Entrada|Salida|Venta|Inventario|Ajuste|Traspaso
 
 export interface Transaction {
   id_transaction: string
@@ -279,11 +279,16 @@ export interface Transaction {
   concept: string | null
   origin: string | null
   comments: string | null
+  stock_before?: number | null
+  stock_after?: number | null
+  id_purchase?: string | null
+  id_supplier?: string | null
   created_at: string
   // Relations
   item?: Item
   store?: Store
   location?: Location
+  supplier?: Supplier
 }
 
 // ── Inventory (Inventario Físico) ────────────────────────────
@@ -514,7 +519,7 @@ export interface ShippingAddress {
   created_at: string
 }
 
-// ── Suppliers ────────────────────────────────────────────────
+// ── Suppliers & Purchases (Compras / Cuentas por Pagar) ──────
 export interface Supplier {
   id_supplier: string
   supplier_name: string | null
@@ -535,6 +540,156 @@ export interface Supplier {
   created_at: string
 }
 
+export type PurchaseCondition = 'CONTADO' | 'CREDITO'
+export type PurchasePaymentStatus = 'PAID' | 'PENDING' | 'PARTIAL'
+export type PurchaseStatus = 'DRAFT' | 'RECEIVED' | 'CANCELLED'
+
+export interface PurchaseItem {
+  id_purchase_item: string
+  id_purchase: string
+  id_item: string
+  quantity: number
+  previous_cost: number
+  unit_cost: number
+  tax_percent: number
+  tax_amount: number
+  discount_amount: number
+  subtotal: number
+  total_cost: number
+  stock_before: number
+  stock_after: number
+  new_price1?: number | null
+  created_at?: string
+  // Relations
+  item?: Item
+}
+
+export interface PurchasePayment {
+  id_payment: string
+  id_purchase: string
+  id_store: string
+  id_supplier: string | null
+  id_user: string | null
+  amount: number
+  payment_method: string
+  reference: string | null
+  notes: string | null
+  payment_date: string
+  status: 'A' | 'I'
+  created_at: string
+  // Relations
+  user?: Profile
+  supplier?: Supplier
+}
+
+export interface Purchase {
+  id_purchase: string
+  purchase_number: number
+  id_store: string
+  id_location: string | null
+  id_supplier: string | null
+  id_user: string | null
+  invoice_number: string | null
+  purchase_date: string
+  received_at: string | null
+  cancelled_at: string | null
+  cancelled_by: string | null
+  payment_condition: PurchaseCondition
+  payment_method: string | null
+  payment_status: PurchasePaymentStatus
+  credit_days: number
+  due_date: string | null
+  subtotal: number
+  discount_amount: number
+  tax_amount: number
+  total_amount: number
+  paid_amount: number
+  balance_due: number
+  update_item_cost: boolean
+  notes: string | null
+  purchase_status: PurchaseStatus
+  status: 'A' | 'I'
+  created_at: string
+  updated_at: string
+  // Relations
+  supplier?: Supplier
+  location?: Location
+  store?: Store
+  user?: Profile
+  purchase_items?: PurchaseItem[]
+  purchase_payments?: PurchasePayment[]
+}
+
+export interface SupplierAccountSummary {
+  supplier: Supplier
+  totalPurchasesCount: number
+  totalPurchasedAmount: number
+  totalPaidAmount: number
+  totalBalanceDue: number
+  overdueCount: number
+  overdueAmount: number
+  availableCredit: number
+  pendingPurchases: Purchase[]
+}
+
+// ── Branch Transfers (Traspasos entre Sucursales) ────────────
+export type TransferMode = 'TRANSIT' | 'DIRECT'
+export type TransferStatus = 'IN_TRANSIT' | 'RECEIVED' | 'PARTIAL' | 'CANCELLED'
+export type TransferDiscrepancyResolution = 'RETURN_TO_ORIGIN' | 'REGISTER_DISCREPANCY'
+
+export interface BranchTransferItem {
+  id_transfer_item: string
+  id_transfer: string
+  id_item: string
+  quantity_sent: number
+  quantity_received: number
+  unit_cost: number
+  unit_price: number
+  stock_origin_before: number
+  stock_dest_before: number
+  notes: string | null
+  status: 'A' | 'I'
+  created_at: string
+  // Relations
+  item?: Item
+}
+
+export interface BranchTransfer {
+  id_transfer: string
+  folio: number
+  id_origin_store: string
+  id_origin_location: string | null
+  id_dest_store: string
+  id_dest_location: string | null
+  transfer_mode: TransferMode
+  status: TransferStatus
+  record_status: 'A' | 'I'
+  id_sent_by: string | null
+  sent_by_name: string | null
+  id_received_by: string | null
+  received_by_name: string | null
+  id_cancelled_by: string | null
+  cancelled_by_name: string | null
+  total_items: number
+  total_quantity_sent: number
+  total_quantity_received: number
+  total_cost: number
+  notes: string | null
+  reception_notes: string | null
+  cancellation_reason: string | null
+  sent_at: string
+  received_at: string | null
+  cancelled_at: string | null
+  created_at: string
+  updated_at: string
+  // Relations
+  origin_store?: Store
+  origin_location?: Location
+  dest_store?: Store
+  dest_location?: Location
+  transfer_items?: BranchTransferItem[]
+}
+
 // ── POS Cart (local state, not persisted) ────────────────────
 export interface CartItemLocal {
   item: Item
@@ -552,3 +707,5 @@ export interface RealtimePayload<T> {
   schema: string
   table: string
 }
+
+

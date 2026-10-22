@@ -2,12 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Boxes, ScanLine, ArrowLeftRight } from 'lucide-react'
+import { Boxes, ScanLine, ArrowLeftRight, Truck, Wrench, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const TABS = [
   { label: 'Stock Actual', href: '/inventario', icon: <Boxes size={15} /> },
+  { label: 'Ajustes', href: '/inventario/ajustes', icon: <Wrench size={15} /> },
+  { label: 'Kardex', href: '/inventario/kardex', icon: <BookOpen size={15} /> },
   { label: 'Captura (Físico)', href: '/inventario/fisico', icon: <ScanLine size={15} /> },
+  { label: 'Traspasos', href: '/inventario/traspasos', icon: <Truck size={15} /> },
   { label: 'Movimientos', href: '/inventario/movimientos', icon: <ArrowLeftRight size={15} /> },
 ]
 
@@ -15,7 +18,7 @@ export function InventarioTabs() {
   const pathname = usePathname()
 
   return (
-    <div className="flex items-center gap-1.5 p-1 glass rounded-2xl w-fit mb-6">
+    <div className="flex flex-wrap items-center gap-1.5 p-1 glass rounded-2xl w-fit">
       {TABS.map((tab) => {
         const isActive =
           tab.href === '/inventario'

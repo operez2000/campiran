@@ -658,11 +658,12 @@ export function PosClient() {
           .maybeSingle()
 
         if (stockEntry) {
-          const newCurrent = Math.max(0, (stockEntry.current ?? 0) - line.quantity)
+          const stockBefore = stockEntry.current ?? 0
+          const newCurrent = Math.max(0, stockBefore - line.quantity)
           await supabase
             .from('stocks')
             .update({
-              previous: stockEntry.current,
+              previous: stockBefore,
               current: newCurrent,
             })
             .eq('id_stock', stockEntry.id_stock)
@@ -679,6 +680,7 @@ export function PosClient() {
             reference: `VENTA-ORDEN-#${orderNumber}`,
             concept: 'Venta Punto de Venta (POS)',
             origin: 'POS',
+            comments: `[Saldo: ${stockBefore} → ${newCurrent}]`,
           })
         }
       }

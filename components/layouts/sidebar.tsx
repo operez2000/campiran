@@ -7,10 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { type UserRole } from '@/lib/types'
 import {
-  ShoppingCart, Package, Grid3X3, Users, Truck,
+  ShoppingCart, ShoppingBag, Package, Grid3X3, Users, Truck,
   BarChart3, Settings, ChevronRight, ScanLine, ArrowLeftRight,
   Boxes, Store, UserCog, Tags, Layers, Building2, MapPin,
-  SlidersHorizontal, Printer
+  SlidersHorizontal, Printer, Wrench, BookOpen
 } from 'lucide-react'
 
 interface SubNavItem {
@@ -35,13 +35,22 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['ADMIN', 'MANAGER', 'CASHIER'],
   },
   {
+    label: 'Compras',
+    href: '/compras',
+    icon: <ShoppingBag size={18} />,
+    roles: ['ADMIN', 'MANAGER'],
+  },
+  {
     label: 'Inventario',
     href: '/inventario',
     icon: <Package size={18} />,
     roles: ['ADMIN', 'MANAGER', 'ALMACENISTA'],
     children: [
       { label: 'Stock Actual', href: '/inventario', icon: <Boxes size={15} /> },
+      { label: 'Ajustes de Inventario', href: '/inventario/ajustes', icon: <Wrench size={15} /> },
+      { label: 'Kardex de Inventario', href: '/inventario/kardex', icon: <BookOpen size={15} /> },
       { label: 'Captura (Físico)', href: '/inventario/fisico', icon: <ScanLine size={15} /> },
+      { label: 'Traspasos', href: '/inventario/traspasos', icon: <Truck size={15} /> },
       { label: 'Movimientos', href: '/inventario/movimientos', icon: <ArrowLeftRight size={15} /> },
     ],
   },

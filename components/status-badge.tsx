@@ -31,6 +31,18 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   CASHIER:     { label: 'Cajero',       className: 'badge-active' },
   ALMACENISTA: { label: 'Almacenista',  className: 'badge-active' },
   PENDING:     { label: 'Pendiente',    className: 'badge-pending' },
+  // Purchases & Payments
+  RECEIVED:    { label: 'Recibida',     className: 'badge-active' },
+  DRAFT:       { label: 'Pendiente Recibir', className: 'badge-warning' },
+  CANCELLED:   { label: 'Cancelada',    className: 'badge-error' },
+  PAID:        { label: 'Pagada',       className: 'badge-active' },
+  PARTIAL:     { label: 'Abono Parcial',className: 'badge-warning' },
+  CONTADO:     { label: 'Contado',      className: 'badge-info' },
+  CREDITO:     { label: 'Crédito',      className: 'badge-warning' },
+  // Branch Transfers
+  IN_TRANSIT:  { label: 'En Tránsito',  className: 'badge-warning' },
+  TRANSIT:     { label: 'En Tránsito',  className: 'badge-info' },
+  DIRECT:      { label: 'Directo',      className: 'badge-active' },
 }
 
 interface StatusBadgeProps {

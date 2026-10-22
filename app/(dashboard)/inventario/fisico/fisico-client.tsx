@@ -533,6 +533,7 @@ export function FisicoClient() {
         reference: `INV-SESIÓN-${currentActive.id_session.slice(0, 8)}`,
         concept: 'Lectura de inventario físico',
         origin: 'Inventario Físico',
+        comments: `[Saldo: ${currentStock} → ${newPhysical}]`,
       })
 
       const locObj = locations.find((l) => l.id_location === locId)

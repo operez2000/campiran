@@ -9,12 +9,15 @@ import { GlassButton } from '@/components/glass-button'
 import { GlassInput } from '@/components/glass-input'
 import { StatusBadge } from '@/components/status-badge'
 import { InventarioTabs } from '@/components/inventario/inventario-tabs'
-import { type Stock, type Location } from '@/lib/types'
+import { AjusteInventarioModal } from '@/components/inventario/ajuste-modal'
+import { KardexModal } from '@/components/inventario/kardex-view'
+import { type Stock, type Location, type Item } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
   Boxes, AlertTriangle, TrendingDown, DollarSign,
-  Search, Filter, MapPin, RefreshCw, Layers, Edit3, X, Check
+  Search, Filter, MapPin, RefreshCw, Layers, Edit3, X, Check,
+  Wrench, BookOpen
 } from 'lucide-react'
 import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
 
@@ -34,6 +37,14 @@ export function StockClient() {
   const [editMin, setEditMin] = useState<number>(0)
   const [editMax, setEditMax] = useState<number>(0)
   const [savingEdit, setSavingEdit] = useState(false)
+
+  // Inventory adjustment & Kardex modals
+  const [ajusteModalOpen, setAjusteModalOpen] = useState(false)
+  const [ajusteItem, setAjusteItem] = useState<Item | null>(null)
+  const [ajusteLocationId, setAjusteLocationId] = useState<string | null>(null)
+  const [kardexModalOpen, setKardexModalOpen] = useState(false)
+  const [kardexItemId, setKardexItemId] = useState<string | null>(null)
+  const [kardexLocationId, setKardexLocationId] = useState<string>('all')
 
   const fetchLocations = useCallback(async () => {
     if (!storeId) return
@@ -389,6 +400,21 @@ export function StockClient() {
               <span>Solo bajo mínimo</span>
             </button>
 
+            {/* New Adjustment button */}
+            <GlassButton
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setAjusteItem(null)
+                setAjusteLocationId(selectedLocation !== 'all' ? selectedLocation : null)
+                setAjusteModalOpen(true)
+              }}
+              icon={<Wrench size={13} />}
+              className="h-8 px-3 text-xs"
+            >
+              Ajustar Inventario
+            </GlassButton>
+
             {/* Refresh button */}
             <GlassButton
               variant="ghost"
@@ -406,7 +432,12 @@ export function StockClient() {
 
       {/* Stock Table */}
       <GlassCard padding="none" className="overflow-hidden shadow-xl flex-1 min-h-0 flex flex-col">
-        <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 scroll-modern">
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Tabla de Existencias de Inventario"
+          className="overflow-x-auto overflow-y-auto flex-1 min-h-0 scroll-modern focus:outline-none"
+        >
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -517,10 +548,31 @@ export function StockClient() {
                         <TableActionMenu
                           items={[
                             {
+                              label: 'Ajustar Existencia',
+                              icon: <Wrench size={15} />,
+                              onClick: () => {
+                                setAjusteItem(item)
+                                setAjusteLocationId(stock.id_location ?? null)
+                                setAjusteModalOpen(true)
+                              },
+                              variant: 'primary',
+                            },
+                            {
+                              label: 'Consultar Kardex',
+                              icon: <BookOpen size={15} />,
+                              onClick: () => {
+                                setKardexItemId(item.id_item)
+                                setKardexLocationId(stock.id_location ?? 'all')
+                                setKardexModalOpen(true)
+                              },
+                              variant: 'indigo',
+                            },
+                            {
                               label: 'Editar Límites de Stock',
                               icon: <Edit3 size={15} />,
                               onClick: () => handleOpenEdit(stock),
-                              variant: 'primary',
+                              variant: 'default',
+                              separatorBefore: true,
                             },
                           ]}
                         />
@@ -689,6 +741,31 @@ export function StockClient() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Modal: Inventory Adjustment */}
+      <AjusteInventarioModal
+        open={ajusteModalOpen}
+        onClose={() => setAjusteModalOpen(false)}
+        preselectedItem={ajusteItem}
+        preselectedLocationId={ajusteLocationId}
+        onSuccess={() => {
+          fetchStocks()
+        }}
+      />
+
+      {/* Modal: Item Kardex */}
+      <KardexModal
+        open={kardexModalOpen}
+        onClose={() => setKardexModalOpen(false)}
+        itemId={kardexItemId}
+        locationId={kardexLocationId}
+        onOpenAdjustment={(it, locId) => {
+          setKardexModalOpen(false)
+          setAjusteItem(it ?? null)
+          setAjusteLocationId(locId ?? null)
+          setAjusteModalOpen(true)
+        }}
+      />
     </div>
   )
 }
