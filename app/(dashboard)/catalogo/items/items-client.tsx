@@ -302,51 +302,6 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
     [supabase]
   )
 
-  // Consulta a Supabase y al estado local para obtener con certeza el mayor código numérico consecutivo
-  const fetchNextItemCode = useCallback(async (): Promise<string> => {
-    let maxVal = 0n
-
-    // 1. Evaluar ítems cargados en memoria
-    for (const it of items) {
-      if (!it.code) continue
-      const trimmed = it.code.trim()
-      if (/^\d+$/.test(trimmed)) {
-        try {
-          const val = BigInt(trimmed)
-          if (val > maxVal) maxVal = val
-        } catch {}
-      }
-    }
-
-    // 2. Consultar directamente a Supabase los códigos más recientes para evitar desfases o colisiones
-    try {
-      const { data } = await supabase
-        .from('items')
-        .select('code')
-        .not('code', 'is', null)
-        .order('code', { ascending: false })
-        .limit(100)
-
-      if (data && Array.isArray(data)) {
-        for (const row of data) {
-          if (!row.code) continue
-          const trimmed = (row.code as string).trim()
-          if (/^\d+$/.test(trimmed)) {
-            try {
-              const val = BigInt(trimmed)
-              if (val > maxVal) maxVal = val
-            } catch {}
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Error al consultar códigos recientes en BD:', err)
-    }
-
-    const nextVal = maxVal + 1n
-    return nextVal.toString().padStart(14, '0')
-  }, [items, supabase])
-
 
   // 100% Realtime granular: actualiza ÚNICAMENTE el registro modificado en otra computadora
   useEffect(() => {
@@ -764,11 +719,14 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
     // Resolver códigos (código interno automático / inmutable, código de barras editable)
     let resolvedCode = formData.code.trim()
     let resolvedBarcode = formData.barcode.trim()
+    const originalProposedCode = resolvedCode
+    const wasBarcodeDefault = !resolvedBarcode || resolvedBarcode === originalProposedCode
+    let wasReassigned = false
 
     if (!editingItem) {
       if (!resolvedCode) {
-        resolvedCode = await fetchNextItemCode()
-        if (!resolvedBarcode) {
+        resolvedCode = calculateNextItemCode(items)
+        if (wasBarcodeDefault) {
           resolvedBarcode = resolvedCode
         }
       } else {
@@ -777,13 +735,22 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
           .from('items')
           .select('id_item')
           .eq('code', resolvedCode)
+          .eq('status', 'A')
           .maybeSingle()
 
         if (duplicate) {
-          const freshCode = await fetchNextItemCode()
-          const wasDefaultBarcode = resolvedBarcode === resolvedCode
+          wasReassigned = true
+          const { data: recentCodes } = await supabase
+            .from('items')
+            .select('code')
+            .not('code', 'is', null)
+            .order('code', { ascending: false })
+            .limit(50)
+
+          const combined = [...items, ...(recentCodes || [])]
+          const freshCode = calculateNextItemCode(combined)
           resolvedCode = freshCode
-          if (wasDefaultBarcode) {
+          if (wasBarcodeDefault) {
             resolvedBarcode = freshCode
           }
         }
@@ -855,20 +822,62 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
       )
       setModalOpen(false)
     } else {
-      const { data: createdItem, error } = await supabase
-        .from('items')
-        .insert([{ ...payload, status: 'A' }])
-        .select()
-        .single()
+      // Manejo de inserción con reintento automático contra colisiones de concurrencia
+      let insertSuccess = false
+      let insertAttempts = 0
+      let createdItem: Record<string, unknown> | null = null
 
-      if (error || !createdItem) {
+      while (!insertSuccess && insertAttempts < 4) {
+        insertAttempts++
+        payload.code = resolvedCode || null
+        payload.barcode = resolvedBarcode || null
+
+        const { data, error } = await supabase
+          .from('items')
+          .insert([{ ...payload, status: 'A' }])
+          .select()
+          .single()
+
+        if (!error && data) {
+          createdItem = data
+          insertSuccess = true
+        } else if (
+          error &&
+          (error.code === '23505' ||
+            error.message?.includes('duplicate key') ||
+            error.message?.includes('idx_items_code') ||
+            error.message?.includes('unique'))
+        ) {
+          // Colisión de concurrencia exacta: recalcular siguiente número libre y reintentar
+          wasReassigned = true
+          const { data: recentCodes } = await supabase
+            .from('items')
+            .select('code')
+            .not('code', 'is', null)
+            .order('code', { ascending: false })
+            .limit(50)
+
+          const combined = [...items, ...(recentCodes || [])]
+          const freshCode = calculateNextItemCode(combined)
+          resolvedCode = freshCode
+          if (wasBarcodeDefault) {
+            resolvedBarcode = freshCode
+          }
+        } else {
+          setSaving(false)
+          toast.error('Error al crear artículo: ' + (error?.message || ''))
+          return
+        }
+      }
+
+      if (!createdItem) {
         setSaving(false)
-        toast.error('Error al crear artículo: ' + (error?.message || ''))
+        toast.error('No se pudo asignar un código único disponible. Por favor intente nuevamente.')
         return
       }
 
-      await handleSyncImages(createdItem.id_item, formData.type)
-      const created = await fetchSingleItem(createdItem.id_item)
+      await handleSyncImages(createdItem.id_item as string, formData.type)
+      const created = await fetchSingleItem(createdItem.id_item as string)
       if (created) {
         setItems((prev) => {
           if (prev.some((i) => i.id_item === created.id_item)) {
@@ -878,6 +887,14 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
         })
       }
       setSaving(false)
+
+      if (wasReassigned) {
+        toast.info(
+          `Código interno asignado: ${resolvedCode} (el código ${originalProposedCode} fue registrado simultáneamente por otro usuario).`,
+          { duration: 7000 }
+        )
+      }
+
       toast.success(
         formData.type === 'S'
           ? 'Servicio creado exitosamente'
