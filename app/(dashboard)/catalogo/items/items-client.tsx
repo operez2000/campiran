@@ -89,15 +89,33 @@ function sortItemImages(images?: ItemImage[]): ItemImage[] {
  */
 function calculateNextItemCode(existingItems: Array<{ code?: string | null }>): string {
   let maxVal = 0n
+
+  // 1. Priorizar códigos existentes en formato oficial de 14 dígitos con ceros iniciales
   for (const it of existingItems) {
     if (!it.code) continue
     const trimmed = it.code.trim()
-    if (/^\d+$/.test(trimmed)) {
+    if (/^0+\d+$/.test(trimmed) && trimmed.length === 14) {
       try {
         const val = BigInt(trimmed)
         if (val > maxVal) maxVal = val
-      } catch {
-        // Ignorar excepciones de parsing
+      } catch {}
+    }
+  }
+
+  // 2. Si aún no hay registros de 14 dígitos con ceros a la izquierda, evaluar consecutivos numéricos generales
+  // (omitiendo códigos de 12 o 13 dígitos que típicamente son códigos de barras comerciales EAN/UPC)
+  if (maxVal === 0n) {
+    for (const it of existingItems) {
+      if (!it.code) continue
+      const trimmed = it.code.trim()
+      if (/^\d+$/.test(trimmed)) {
+        if (trimmed.length === 12 || (trimmed.length === 13 && !trimmed.startsWith('0'))) {
+          continue
+        }
+        try {
+          const val = BigInt(trimmed)
+          if (val > maxVal) maxVal = val
+        } catch {}
       }
     }
   }
@@ -105,6 +123,7 @@ function calculateNextItemCode(existingItems: Array<{ code?: string | null }>): 
   const nextVal = maxVal + 1n
   return nextVal.toString().padStart(14, '0')
 }
+
 
 
 export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
@@ -596,22 +615,8 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
     setItemImages([])
     setDeletedImageIds([])
     setModalOpen(true)
-
-    // Reconfirmar con la base de datos en segundo plano por si hubo registros concurrentes
-    fetchNextItemCode().then((latestCode) => {
-      if (latestCode && latestCode !== calculatedCode) {
-        setFormData((prev) => {
-          // Si el usuario aún no ha alterado manualmente el código de barras, actualizar ambos
-          const isBarcodeUntouched = !prev.barcode || prev.barcode === calculatedCode
-          return {
-            ...prev,
-            code: latestCode,
-            barcode: isBarcodeUntouched ? latestCode : prev.barcode,
-          }
-        })
-      }
-    })
   }
+
 
 
   // Open Edit Modal
@@ -865,7 +870,12 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
       await handleSyncImages(createdItem.id_item, formData.type)
       const created = await fetchSingleItem(createdItem.id_item)
       if (created) {
-        setItems((prev) => [created, ...prev])
+        setItems((prev) => {
+          if (prev.some((i) => i.id_item === created.id_item)) {
+            return prev.map((i) => (i.id_item === created.id_item ? created : i))
+          }
+          return [created, ...prev]
+        })
       }
       setSaving(false)
       toast.success(
@@ -1446,7 +1456,7 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-card max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-3 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-3 shrink-0">
                 <h3 className="text-base font-bold text-foreground flex items-center gap-2">
                   {formData.type === 'S' ? (
                     <>
