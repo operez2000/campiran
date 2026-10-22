@@ -192,10 +192,10 @@ export function PosClientModal({
                       <span className="text-sm font-bold text-foreground group-hover:text-emerald-400 transition-colors">
                         {publicoGeneralClient?.first_name || 'Público en General'}
                       </span>
-                      <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                      <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">
                         Menudeo · Lista #{publicoGeneralClient?.price_number || 1}
                       </span>
-                      <span className="px-1.5 py-0.2 rounded bg-zinc-800/80 border border-zinc-700/60 text-muted-foreground font-mono text-[10px]">
+                      <span className="px-1.5 py-0.2 rounded bg-indigo-500/10 dark:bg-white/[0.06] border border-indigo-500/25 dark:border-border/60 text-indigo-950 dark:text-foreground font-mono font-semibold text-[10px]">
                         RFC: {publicoGeneralClient?.rfc || 'XAXX010101000'}
                       </span>
                     </div>

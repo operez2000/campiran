@@ -90,12 +90,10 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
     }
   }, [])
 
-  // Initial load if no initialData
+  // Sync initialData and ensure deduplicated list from server
   useEffect(() => {
-    if (initialData.length === 0) {
-      fetchClients()
-    }
-  }, [fetchClients, initialData.length])
+    fetchClients()
+  }, [fetchClients])
 
   // Realtime subscription with unique channel name to prevent clashes
   useEffect(() => {
@@ -280,12 +278,28 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
       return
     }
 
+    const rfcClean = formData.rfc.trim().toUpperCase()
+    if (rfcClean) {
+      const duplicateRfcClient = clients.find(
+        (c) =>
+          c.id_client !== editingClient?.id_client &&
+          (c.rfc || '').trim().toUpperCase() === rfcClean
+      )
+      if (duplicateRfcClient) {
+        const dupName = `${duplicateRfcClient.first_name || ''} ${duplicateRfcClient.last_name || ''}`.trim()
+        toast.error(
+          `El RFC "${rfcClean}" ya está registrado con "${dupName}". El RFC es único y no debe repetirse.`
+        )
+        return
+      }
+    }
+
     setSaving(true)
 
     const payload = {
       first_name: formData.first_name.trim(),
       last_name: formData.last_name.trim() || null,
-      rfc: formData.rfc.trim() || null,
+      rfc: rfcClean || null,
       email: formData.email.trim() || null,
       phone: formData.phone.trim() || null,
       address: formData.address.trim() || null,
@@ -651,7 +665,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                 <tr>
                   <td colSpan={7} className="px-4 py-16 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
-                      <div className="w-14 h-14 rounded-2xl bg-zinc-800/50 border border-zinc-700/40 flex items-center justify-center text-muted-foreground mb-3">
+                      <div className="w-14 h-14 rounded-2xl bg-black/[0.04] dark:bg-white/[0.06] border border-border/50 flex items-center justify-center text-muted-foreground mb-3">
                         <Users size={28} />
                       </div>
                       <p className="text-base font-semibold text-foreground">No se encontraron clientes</p>
@@ -661,7 +675,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                       {search && (
                         <button
                           onClick={() => setSearch('')}
-                          className="mt-4 px-3 py-1.5 text-xs rounded-xl bg-white/10 hover:bg-white/15 text-foreground transition-all"
+                          className="mt-4 px-3 py-1.5 text-xs rounded-xl bg-black/[0.05] dark:bg-white/10 hover:bg-black/[0.08] dark:hover:bg-white/15 text-foreground transition-all"
                         >
                           Limpiar filtro
                         </button>
@@ -677,7 +691,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                   const isDefaultPos = isPublicoGeneralClient(client)
 
                   return (
-                    <tr key={client.id_client} className="hover:bg-white/[0.03] transition-colors group">
+                    <tr key={client.id_client} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors group">
                       {/* Acciones */}
                       <td className="w-20 px-4 py-4 text-center">
                         <TableActionMenu
@@ -728,16 +742,16 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                       {/* Cliente info with initials badge */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs flex-shrink-0 shadow-sm">
+                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold text-xs flex-shrink-0 shadow-sm">
                             {initials}
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold text-foreground group-hover:text-emerald-400 transition-colors block truncate">
+                              <span className="font-semibold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors block truncate">
                                 {fullName}
                               </span>
                               {isDefaultPos && (
-                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold shrink-0">
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold shrink-0">
                                   Predeterminado POS
                                 </span>
                               )}
@@ -762,14 +776,14 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                       {/* RFC */}
                       <td className="px-4 py-4">
                         {hasRfc ? (
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-800/60 border border-zinc-700/50 font-mono text-xs text-foreground font-medium">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/10 dark:bg-white/[0.06] border border-indigo-500/25 dark:border-border/60 font-mono text-xs text-indigo-950 dark:text-foreground font-semibold shadow-2xs">
                             <span>{client.rfc}</span>
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(client.rfc!)
                                 toast.success('RFC copiado al portapapeles')
                               }}
-                              className="text-muted-foreground hover:text-emerald-400 transition-colors"
+                              className="text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                               title="Copiar RFC"
                             >
                               <Copy size={11} />
@@ -1191,7 +1205,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
 
               <div className="flex-1 overflow-y-auto scroll-modern border border-border/30 rounded-xl">
                 <table className="w-full text-left text-xs">
-                  <thead className="sticky top-0 bg-zinc-900 border-b border-border/40 text-muted-foreground">
+                  <thead className="sticky top-0 glass-table-header bg-card/95 backdrop-blur-md border-b border-border/40 text-muted-foreground">
                     <tr>
                       <th className="px-3.5 py-2.5">Folio</th>
                       <th className="px-3.5 py-2.5">Fecha</th>
