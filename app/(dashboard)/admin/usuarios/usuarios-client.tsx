@@ -125,6 +125,16 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
     }
   }, [supabase, fetchData])
 
+  // Sync biometricsModalUser if profiles is updated via Realtime while modal is open
+  useEffect(() => {
+    if (biometricsModalUser && biometricsModalOpen) {
+      const updated = profiles.find((p) => p.id === biometricsModalUser.id)
+      if (updated && (updated.updated_at !== biometricsModalUser.updated_at || updated.biometrics !== biometricsModalUser.biometrics)) {
+        setBiometricsModalUser(updated)
+      }
+    }
+  }, [profiles, biometricsModalOpen, biometricsModalUser])
+
   const filteredProfiles = useMemo(() => {
     return profiles.filter((p) => {
       if (roleFilter !== 'ALL' && p.role !== roleFilter) return false
@@ -763,12 +773,12 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
       {/* Modal: Edit User Role & Store */}
       <AnimatePresence>
         {editingProfile && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-md w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto scroll-modern"
+              className="glass-card max-w-md w-full p-4 sm:p-6 space-y-4 max-h-[calc(100dvh-1rem)] sm:max-h-[90vh] overflow-y-auto scroll-modern"
             >
               <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
                 <h3 className="text-base font-bold text-foreground">Gestionar Usuario y Permisos</h3>

@@ -609,6 +609,15 @@ export async function saveUserBiometricsAction(data: {
     console.error('Error actualizando user_metadata:', authErr)
   }
 
+  // 3. Disparar evento Realtime en profiles y users para sincronización instantánea en toda la app
+  try {
+    const now = new Date().toISOString()
+    await adminClient.from('profiles').update({ updated_at: now }).eq('id', data.id_user)
+    await adminClient.from('users').update({ updated_at: now }).eq('id_user', data.id_user)
+  } catch {
+    // Continuar si alguna tabla no tiene la columna o id
+  }
+
   revalidatePath('/admin/usuarios')
   revalidatePath('/pos')
   return { success: true, savedDb }

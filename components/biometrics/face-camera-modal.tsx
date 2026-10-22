@@ -204,7 +204,7 @@ export function FaceCameraModal({
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md">
           {/* Backdrop click */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -218,37 +218,40 @@ export function FaceCameraModal({
           />
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="glass-card border-border/50 rounded-3xl max-w-md w-full p-6 relative z-10 overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto scroll-modern"
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
+            className="glass-card border-border/50 rounded-3xl max-w-md w-full relative z-10 overflow-hidden shadow-2xl max-h-[calc(100dvh-1rem)] sm:max-h-[88vh] flex flex-col"
           >
-            {/* Close Button */}
-            <button
-              onClick={() => {
-                stopWebcam()
-                onOpenChange(false)
-              }}
-              className="absolute top-4 right-4 z-30 p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
-            >
-              <X size={18} />
-            </button>
+            {/* Header (Shrink-0) */}
+            <div className="flex items-center justify-between gap-2.5 p-4 sm:p-5 pb-3 border-b border-border/30 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                  <ScanFace size={20} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground leading-tight truncate">{title}</h3>
+                  <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate">{description}</p>
+                </div>
+              </div>
 
-            {/* Header */}
-            <div className="flex items-center gap-2.5 mb-4 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 pb-2 bg-card/95 dark:bg-card/90 backdrop-blur-xl border-b border-border/30 z-20">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                <ScanFace size={20} />
-              </div>
-              <div className="pr-6">
-                <h3 className="text-base font-bold text-foreground leading-tight">{title}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-              </div>
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  stopWebcam()
+                  onOpenChange(false)
+                }}
+                className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
+              >
+                <X size={18} />
+              </button>
             </div>
 
-            {/* Camera Viewport */}
-            <div className="my-4 flex flex-col items-center justify-center">
+            {/* Camera Viewport (Scrollable body if needed, perfectly centered) */}
+            <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-5 flex flex-col items-center justify-center">
               {cameraError ? (
-                <div className="w-full py-8 px-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-center text-rose-400">
+                <div className="w-full py-6 px-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-center text-rose-400">
                   <AlertCircle size={32} className="mx-auto mb-2" />
                   <p className="text-sm font-semibold">Cámara no disponible</p>
                   <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
@@ -261,7 +264,7 @@ export function FaceCameraModal({
                   </div>
                 </div>
               ) : (
-                <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-emerald-500/40 shadow-2xl bg-black/40 flex items-center justify-center">
+                <div className="relative w-44 h-44 xs:w-52 xs:h-52 sm:w-60 sm:h-60 max-w-[65vw] max-h-[38dvh] aspect-square rounded-full overflow-hidden border-4 border-emerald-500/40 shadow-2xl bg-black/40 flex items-center justify-center shrink-0">
                   {/* Hidden canvas for snapshot */}
                   <canvas ref={canvasRef} className="hidden" />
 
@@ -288,15 +291,15 @@ export function FaceCameraModal({
                       {/* Face ID Scanner Overlay */}
                       <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
                         {/* Outer circular guide */}
-                        <div className="w-52 h-52 rounded-full border-2 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]" />
+                        <div className="w-[82%] h-[82%] rounded-full border-2 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]" />
 
                         {/* Dashed Reticle */}
-                        <div className="absolute w-44 h-44 rounded-full border-2 border-dashed border-emerald-400/60 animate-pulse" />
+                        <div className="absolute w-[70%] h-[70%] rounded-full border-2 border-dashed border-emerald-400/60 animate-pulse" />
 
                         {/* Laser scan line animation */}
                         <motion.div
                           animate={{
-                            y: [-80, 80, -80],
+                            y: [-55, 55, -55],
                             opacity: [0.3, 0.9, 0.3],
                           }}
                           transition={{
@@ -304,32 +307,32 @@ export function FaceCameraModal({
                             repeat: Infinity,
                             ease: 'easeInOut',
                           }}
-                          className="absolute w-44 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#10b981]"
+                          className="absolute w-[70%] h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#10b981]"
                         />
                       </div>
                     </>
                   )}
 
                   {/* Status pill overlay */}
-                  <div className="absolute bottom-3 px-3 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/10 text-[11px] font-medium text-emerald-400 flex items-center gap-1.5 shadow-lg">
+                  <div className="absolute bottom-2 px-2.5 py-0.5 rounded-full bg-black/75 backdrop-blur-md border border-white/10 text-[10px] sm:text-[11px] font-medium text-emerald-400 flex items-center gap-1.5 shadow-lg">
                     {capturedPhoto ? (
                       <>
-                        <CheckCircle2 size={13} />
-                        <span>Rostro detectado</span>
+                        <CheckCircle2 size={12} />
+                        <span>Rostro capturado</span>
                       </>
                     ) : isScanning ? (
                       <>
-                        <RefreshCw size={13} className="animate-spin" />
+                        <RefreshCw size={12} className="animate-spin" />
                         <span>Verificando...</span>
                       </>
                     ) : isStarting ? (
                       <>
-                        <RefreshCw size={13} className="animate-spin" />
+                        <RefreshCw size={12} className="animate-spin" />
                         <span>Iniciando cámara...</span>
                       </>
                     ) : (
                       <>
-                        <ScanFace size={13} />
+                        <ScanFace size={12} />
                         <span>Enfoca tu rostro</span>
                       </>
                     )}
@@ -338,8 +341,8 @@ export function FaceCameraModal({
               )}
             </div>
 
-            {/* Action Controls */}
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/20">
+            {/* Action Controls (Shrink-0, ALWAYS within viewport) */}
+            <div className="flex items-center justify-between sm:justify-end gap-2 p-3 sm:p-4 px-4 sm:px-5 border-t border-border/30 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
               <GlassButton
                 variant="ghost"
                 size="sm"
@@ -352,20 +355,21 @@ export function FaceCameraModal({
               </GlassButton>
 
               {capturedPhoto && !verifyMode ? (
-                <>
+                <div className="flex items-center gap-2">
                   <GlassButton variant="secondary" size="sm" onClick={handleRetake}>
-                    <RefreshCw size={14} className="mr-1.5" /> Repetir
+                    <RefreshCw size={13} className="mr-1.5" /> Repetir
                   </GlassButton>
-                  <GlassButton variant="primary" size="sm" onClick={handleConfirm}>
+                  <GlassButton variant="primary" size="sm" onClick={handleConfirm} className="shadow-lg shadow-emerald-500/20">
                     <CheckCircle2 size={14} className="mr-1.5" /> Guardar Foto
                   </GlassButton>
-                </>
+                </div>
               ) : (
                 <GlassButton
                   variant="primary"
                   size="sm"
                   disabled={!cameraActive || isStarting || !!cameraError || isScanning}
                   onClick={handleCapture}
+                  className="shadow-lg shadow-emerald-500/20"
                 >
                   <Camera size={14} className="mr-1.5" />
                   {isScanning
