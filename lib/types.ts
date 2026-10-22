@@ -441,6 +441,11 @@ export interface Order {
   notes?: string | null
   shipping_address: Record<string, unknown> | null
   created_at: string
+  cancelled_at?: string | null
+  cancelled_by?: string | null
+  cancelled_by_name?: string | null
+  cancellation_reason?: string | null
+  cancellation_auth_method?: 'pin' | 'webauthn' | 'face' | 'biometric' | null
   // Relations
   client?: Client
   store?: Store

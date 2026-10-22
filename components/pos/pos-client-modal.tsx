@@ -40,9 +40,26 @@ export function PosClientModal({
     }
   }, [open])
 
-  // Filter clients by search query
+  const isPublicoGeneral = (c?: Client | null) => {
+    if (!c) return false
+    const full = `${c.first_name || ''} ${c.last_name || ''}`
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+    return full === 'publico en general'
+  }
+
+  // Locate the database record for 'Público en General'
+  const publicoGeneralClient = useMemo(() => {
+    return clients.find((c) => isPublicoGeneral(c)) || null
+  }, [clients])
+
+  // Filter clients by search query (excluding Público en General when search is empty since it has the top quick card)
   const filteredClients = useMemo(() => {
-    if (!search.trim()) return clients
+    if (!search.trim()) {
+      return clients.filter((c) => !isPublicoGeneral(c))
+    }
     const q = search.toLowerCase()
     return clients.filter((c) => {
       const name = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase()
@@ -78,15 +95,15 @@ export function PosClientModal({
     } else if (e.key === 'Enter') {
       e.preventDefault()
       if (selectedIndex === 0 && !search.trim()) {
-        // Default: Público en General
-        handleSelect(null)
+        // Default: Público en General (database client record)
+        handleSelect(publicoGeneralClient)
       } else {
         const targetIndex = search.trim() ? selectedIndex : selectedIndex - 1
         const target = filteredClients[targetIndex]
         if (target) {
           handleSelect(target)
         } else {
-          handleSelect(null)
+          handleSelect(publicoGeneralClient)
         }
       }
     } else if (e.key === 'Escape' && !required) {
@@ -98,6 +115,9 @@ export function PosClientModal({
     onSelectClient(client)
     onOpenChange(false)
   }
+
+  const isPublicoCurrentlySelected =
+    selectedClient === null || isPublicoGeneral(selectedClient)
 
   return (
     <AnimatePresence>
@@ -156,9 +176,9 @@ export function PosClientModal({
             <div className="mb-3">
               <button
                 type="button"
-                onClick={() => handleSelect(null)}
+                onClick={() => handleSelect(publicoGeneralClient)}
                 className={`w-full p-3.5 rounded-2xl border transition-all text-left flex items-center justify-between group ${
-                  selectedClient === null && (!search || selectedIndex === 0)
+                  isPublicoCurrentlySelected && (!search || selectedIndex === 0)
                     ? 'border-emerald-500/70 bg-emerald-500/15 shadow-lg shadow-emerald-500/15'
                     : 'border-border/40 hover:border-emerald-500/40 hover:bg-white/[0.04]'
                 }`}
@@ -168,12 +188,15 @@ export function PosClientModal({
                     <User size={20} />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-bold text-foreground group-hover:text-emerald-400 transition-colors">
-                        Público en General
+                        {publicoGeneralClient?.first_name || 'Público en General'}
                       </span>
                       <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
-                        Lista #1 Base
+                        Menudeo · Lista #{publicoGeneralClient?.price_number || 1}
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded bg-zinc-800/80 border border-zinc-700/60 text-muted-foreground font-mono text-[10px]">
+                        RFC: {publicoGeneralClient?.rfc || 'XAXX010101000'}
                       </span>
                     </div>
                     <span className="text-xs text-muted-foreground block mt-0.5">

@@ -179,11 +179,27 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
     setCurrentPage(1)
   }, [search, statusFilter, typeFilter])
 
+  const isPublicoGeneralClient = useCallback((c: Client) => {
+    const full = `${c.first_name || ''} ${c.last_name || ''}`
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+    return full === 'publico en general'
+  }, [])
+
   const sortedClients = useMemo(() => {
     const list = [...filteredClients]
     if (!sortKey) return list
 
     return list.sort((a, b) => {
+      if (sortKey === 'name' && sortDirection === 'asc') {
+        const aIsDefault = isPublicoGeneralClient(a)
+        const bIsDefault = isPublicoGeneralClient(b)
+        if (aIsDefault && !bIsDefault) return -1
+        if (!aIsDefault && bIsDefault) return 1
+      }
+
       let aVal: string | number = ''
       let bVal: string | number = ''
 
@@ -220,7 +236,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
       if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
       return 0
     })
-  }, [filteredClients, sortKey, sortDirection])
+  }, [filteredClients, sortKey, sortDirection, isPublicoGeneralClient])
 
   const totalPages = Math.ceil(sortedClients.length / pageSize) || 1
   const paginatedClients = useMemo(() => {
@@ -319,12 +335,19 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
     setHistoryModalOpen(true)
     setLoadingOrders(true)
 
-    const { data } = await supabase
+    let query = supabase
       .from('orders')
       .select('*, store:stores(description)')
-      .eq('id_client', client.id_client)
       .order('created_at', { ascending: false })
       .limit(30)
+
+    if (isPublicoGeneralClient(client)) {
+      query = query.or(`id_client.eq.${client.id_client},id_client.is.null`)
+    } else {
+      query = query.eq('id_client', client.id_client)
+    }
+
+    const { data } = await query
 
     if (data) setClientOrders(data as Order[])
     setLoadingOrders(false)
@@ -332,9 +355,12 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
 
   // Helper for initials
   const getInitials = (first?: string | null, last?: string | null) => {
-    const f = first?.trim()[0] || ''
-    const l = last?.trim()[0] || ''
-    return (f + l).toUpperCase() || 'C'
+    const f = first?.trim() || ''
+    const l = last?.trim() || ''
+    if (f && l) return (f[0] + l[0]).toUpperCase()
+    const words = f.split(/\s+/).filter((w) => w.length > 2 || w === f)
+    if (words.length >= 2) return (words[0][0] + words[words.length - 1][0]).toUpperCase()
+    return (f[0] || 'C').toUpperCase()
   }
 
   return (
@@ -648,6 +674,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                   const fullName = `${client.first_name ?? ''} ${client.last_name ?? ''}`.trim() || 'Sin Nombre'
                   const initials = getInitials(client.first_name, client.last_name)
                   const hasRfc = !!client.rfc && client.rfc.trim() !== ''
+                  const isDefaultPos = isPublicoGeneralClient(client)
 
                   return (
                     <tr key={client.id_client} className="hover:bg-white/[0.03] transition-colors group">
@@ -680,16 +707,20 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                                   },
                                 ]
                               : []),
-                            {
-                              label: client.status === 'A' ? 'Desactivar Cliente' : 'Reactivar Cliente',
-                              icon: client.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />,
-                              onClick: () => {
-                                setClientToDelete(client)
-                                setDeleteConfirmOpen(true)
-                              },
-                              variant: client.status === 'A' ? 'danger' : 'primary',
-                              separatorBefore: true,
-                            },
+                            ...(!isDefaultPos
+                              ? [
+                                  {
+                                    label: client.status === 'A' ? 'Desactivar Cliente' : 'Reactivar Cliente',
+                                    icon: client.status === 'A' ? <Trash2 size={15} /> : <RotateCcw size={15} />,
+                                    onClick: () => {
+                                      setClientToDelete(client)
+                                      setDeleteConfirmOpen(true)
+                                    },
+                                    variant: (client.status === 'A' ? 'danger' : 'primary') as 'danger' | 'primary',
+                                    separatorBefore: true,
+                                  },
+                                ]
+                              : []),
                           ]}
                         />
                       </td>
@@ -701,9 +732,16 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                             {initials}
                           </div>
                           <div className="min-w-0">
-                            <span className="font-semibold text-foreground group-hover:text-emerald-400 transition-colors block truncate">
-                              {fullName}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-foreground group-hover:text-emerald-400 transition-colors block truncate">
+                                {fullName}
+                              </span>
+                              {isDefaultPos && (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold shrink-0">
+                                  Predeterminado POS
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 mt-0.5">
                               {client.branch && (
                                 <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground font-medium">

@@ -417,16 +417,25 @@ export function PosPaymentModal({
                       onChange={(e) => setSelectedMethod(e.target.value as SatPaymentCode)}
                       className="w-full glass-input px-2.5 py-2 text-xs text-foreground bg-transparent focus:outline-none"
                     >
-                      {SAT_PAYMENT_METHODS.map((m) => (
-                        <option
-                          key={m.code}
-                          value={m.code}
-                          className="bg-zinc-900 text-white"
-                          disabled={m.isCredit && !selectedClient}
-                        >
-                          {m.code} - {m.label} {m.isCredit && !selectedClient ? '(Solo cliente)' : ''}
-                        </option>
-                      ))}
+                      {SAT_PAYMENT_METHODS.map((m) => {
+                        const isPublico =
+                          !selectedClient ||
+                          `${selectedClient.first_name || ''} ${selectedClient.last_name || ''}`
+                            .trim()
+                            .toLowerCase()
+                            .normalize('NFD')
+                            .replace(/[\u0300-\u036f]/g, '') === 'publico en general'
+                        return (
+                          <option
+                            key={m.code}
+                            value={m.code}
+                            className="bg-zinc-900 text-white"
+                            disabled={m.isCredit && isPublico}
+                          >
+                            {m.code} - {m.label} {m.isCredit && isPublico ? '(Solo cliente)' : ''}
+                          </option>
+                        )
+                      })}
                     </select>
                   </div>
 

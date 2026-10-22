@@ -3,26 +3,15 @@
 import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { type CashShift, type Client } from '@/lib/types'
+import { ensurePublicoEnGeneralClient } from '../clientes/actions'
 
 /**
- * Obtiene la lista completa de clientes activos para el Punto de Venta.
- * Utiliza adminClient para garantizar la carga completa y evitar bloqueos por RLS.
+ * Obtiene la lista completa de clientes activos para el Punto de Venta,
+ * garantizando que el cliente predeterminado 'Público en General' exista en la BD.
  */
 export async function getPosClientsAction(): Promise<Client[]> {
-  const adminClient = createAdminClient()
-
   try {
-    const { data, error } = await adminClient
-      .from('clients')
-      .select('*')
-      .order('first_name', { ascending: true })
-
-    if (error) {
-      console.error('[getPosClientsAction] Error cargando clientes:', error.message)
-      return []
-    }
-
-    const list = (data || []) as Client[]
+    const list = await ensurePublicoEnGeneralClient()
     return list.filter((c) => c.status === 'A' || !c.status)
   } catch (err) {
     console.error('[getPosClientsAction] Excepción:', err)

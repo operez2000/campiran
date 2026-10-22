@@ -25,11 +25,12 @@ import {
   ShoppingCart, Search, Plus, Minus, Trash2, User,
   CreditCard, Banknote, ArrowRightLeft, Printer, CheckCircle2,
   X, Layers, ScanLine, DollarSign, Store as StoreIcon, ImageIcon,
-  Users, Lock, ShieldCheck, DoorClosed, RotateCcw
+  Users, Lock, ShieldCheck, DoorClosed, RotateCcw, History
 } from 'lucide-react'
 import { PosClientModal } from '@/components/pos/pos-client-modal'
 import { ShiftOpenModal } from '@/components/pos/shift-open-modal'
 import { PosPaymentModal, SAT_PAYMENT_METHODS } from '@/components/pos/pos-payment-modal'
+import { PosSalesHistoryModal } from '@/components/pos/pos-sales-history-modal'
 import { getActiveShiftAction, closeShiftAction, getPosClientsAction } from './shift-actions'
 import { printOrderReceipt } from '@/lib/qz-tray-service'
 
@@ -72,6 +73,9 @@ export function PosClient() {
   // Checkout & SAT Payment Modal
   const [paymentModalOpen, setPaymentModalOpen] = useState(false)
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false)
+
+  // Sales History & Cancellation Modal
+  const [salesHistoryModalOpen, setSalesHistoryModalOpen] = useState(false)
 
   // Completed Order for Ticket Receipt Modal
   const [completedOrder, setCompletedOrder] = useState<{
@@ -285,6 +289,26 @@ export function PosClient() {
       supabase.removeChannel(channel)
     }
   }, [supabase, fetchClients])
+
+  const publicoGeneralClient = useMemo(() => {
+    return (
+      clientsList.find((c) => {
+        const full = `${c.first_name || ''} ${c.last_name || ''}`
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+        return full === 'publico en general'
+      }) || null
+    )
+  }, [clientsList])
+
+  // If cashier selected Público en General before clientsList finished loading, bind the DB record
+  useEffect(() => {
+    if (isClientSelected && !selectedClient && publicoGeneralClient) {
+      setSelectedClient(publicoGeneralClient)
+    }
+  }, [isClientSelected, selectedClient, publicoGeneralClient])
 
   // Prompt client selector modal when shift is open and client is not yet selected
   const initialClientPromptDone = useRef(false)
@@ -570,10 +594,12 @@ export function PosClient() {
     setIsSubmittingOrder(true)
 
     try {
+      const resolvedClientId = selectedClient?.id_client ?? publicoGeneralClient?.id_client ?? null
+
       // 1. Insert order into `orders`
       const orderPayload: Record<string, unknown> = {
         id_store: storeId,
-        id_client: selectedClient?.id_client ?? null,
+        id_client: resolvedClientId,
         total_amount: total,
         tax_amount: taxAmount,
         status: 'completed',
@@ -614,7 +640,7 @@ export function PosClient() {
         // Retry without extended columns if schema isn't fully migrated
         const basicPayload = {
           id_store: storeId,
-          id_client: selectedClient?.id_client ?? null,
+          id_client: resolvedClientId,
           total_amount: total,
           tax_amount: taxAmount,
           status: 'completed',
@@ -855,6 +881,22 @@ export function PosClient() {
               <RotateCcw size={14} />
             </button>
           )}
+
+          {/* Botón Historial de Ventas / Cancelar Venta */}
+          <button
+            type="button"
+            onClick={() => setSalesHistoryModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl glass-input text-xs font-semibold text-foreground hover:border-indigo-500/50 hover:text-indigo-400 transition-all shadow-sm group"
+            title="Historial de ventas y cancelaciones autorizadas"
+          >
+            <div className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+              <History size={14} />
+            </div>
+            <div className="text-left hidden sm:block">
+              <span className="text-[10px] text-muted-foreground block leading-none">Ventas</span>
+              <span className="block leading-tight">Historial / Cancelar</span>
+            </div>
+          </button>
 
           {/* Close Shift Button */}
           {activeShift && (
@@ -1344,6 +1386,44 @@ export function PosClient() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Modal de Historial de Ventas y Cancelaciones */}
+      <PosSalesHistoryModal
+        open={salesHistoryModalOpen}
+        onOpenChange={setSalesHistoryModalOpen}
+        storeId={storeId || ''}
+        storeName={currentStore?.description || undefined}
+        currentUser={currentUser}
+        onStockUpdated={fetchCatalogAndStocks}
+        onReprintTicket={(order) => {
+          setCompletedOrder({
+            orderId: order.id_order,
+            orderNumber: order.order_number,
+            date: order.created_at,
+            items: (order.order_items || []).map((li) => ({
+              item: li.item || ({} as Item),
+              quantity: li.quantity,
+              unitPrice: li.unit_price,
+              totalPrice: li.total_price,
+              stockAvailable: 0,
+            })),
+            subtotal: Number(order.total_amount) - Number(order.tax_amount || 0),
+            tax: Number(order.tax_amount || 0),
+            total: Number(order.total_amount),
+            clientName: order.client
+              ? `${order.client.first_name || ''} ${order.client.last_name || ''}`.trim()
+              : 'Público en General',
+            primaryMethod: (order.payment_sat_code as SatPaymentCode) || '01',
+            payments: (order.payment_breakdown as PaymentBreakdownItem[]) || [],
+            cashReceivedMxn: Number(order.cash_received_mxn || 0),
+            cashReceivedUsd: Number(order.cash_received_usd || 0),
+            changeMxn: Number(order.change_mxn || 0),
+            changeUsd: Number(order.change_usd || 0),
+            exchangeRate: Number(order.exchange_rate || 19),
+            notes: order.notes || undefined,
+          })
+        }}
+      />
     </div>
   )
 }
