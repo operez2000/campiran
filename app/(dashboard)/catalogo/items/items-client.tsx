@@ -8,7 +8,7 @@ import { GlassButton } from '@/components/glass-button'
 import { GlassInput } from '@/components/glass-input'
 import { StatusBadge } from '@/components/status-badge'
 import { CatalogoTabs } from '@/components/catalogo/catalogo-tabs'
-import { type Item, type ItemClassification, type ItemImage, type Category, type Area, type Department } from '@/lib/types'
+import { type Item, type ItemClassification, type ItemImage, type Category, type Area, type Department, type Profile } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
@@ -22,6 +22,10 @@ import { TableActionMenu, TableColumnHeader, TablePagination } from '@/component
 import { useStore } from '@/components/providers/store-provider'
 import { LabelPrintModal } from '@/components/labels/label-print-modal'
 import { type LabelPrintQueueItem } from '@/lib/types'
+
+interface ItemsClientProps {
+  currentProfile?: Profile | null
+}
 
 interface ItemFormData {
   code: string
@@ -79,8 +83,57 @@ function sortItemImages(images?: ItemImage[]): ItemImage[] {
   })
 }
 
-export function ItemsClient() {
+/**
+ * Calcula el siguiente código interno consecutivo con formato de 14 dígitos rellenos con ceros a la izquierda.
+ * Ejemplo: Si el código numérico más alto es '00000000453082', devuelve '00000000453083'.
+ */
+function calculateNextItemCode(existingItems: Array<{ code?: string | null }>): string {
+  let maxVal = 0n
+  for (const it of existingItems) {
+    if (!it.code) continue
+    const trimmed = it.code.trim()
+    if (/^\d+$/.test(trimmed)) {
+      try {
+        const val = BigInt(trimmed)
+        if (val > maxVal) maxVal = val
+      } catch {
+        // Ignorar excepciones de parsing
+      }
+    }
+  }
+
+  const nextVal = maxVal + 1n
+  return nextVal.toString().padStart(14, '0')
+}
+
+
+export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
   const supabase = createClient()
+
+  const [profile, setProfile] = useState<Profile | null>(currentProfile ?? null)
+
+  useEffect(() => {
+    if (currentProfile) {
+      setProfile(currentProfile)
+      return
+    }
+    const loadProfile = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        if (data) setProfile(data as Profile)
+      }
+    }
+    loadProfile()
+  }, [currentProfile, supabase])
+
+  const isAdmin = profile?.role === 'ADMIN'
 
   const [items, setItems] = useState<Item[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -229,6 +282,52 @@ export function ItemsClient() {
     },
     [supabase]
   )
+
+  // Consulta a Supabase y al estado local para obtener con certeza el mayor código numérico consecutivo
+  const fetchNextItemCode = useCallback(async (): Promise<string> => {
+    let maxVal = 0n
+
+    // 1. Evaluar ítems cargados en memoria
+    for (const it of items) {
+      if (!it.code) continue
+      const trimmed = it.code.trim()
+      if (/^\d+$/.test(trimmed)) {
+        try {
+          const val = BigInt(trimmed)
+          if (val > maxVal) maxVal = val
+        } catch {}
+      }
+    }
+
+    // 2. Consultar directamente a Supabase los códigos más recientes para evitar desfases o colisiones
+    try {
+      const { data } = await supabase
+        .from('items')
+        .select('code')
+        .not('code', 'is', null)
+        .order('code', { ascending: false })
+        .limit(100)
+
+      if (data && Array.isArray(data)) {
+        for (const row of data) {
+          if (!row.code) continue
+          const trimmed = (row.code as string).trim()
+          if (/^\d+$/.test(trimmed)) {
+            try {
+              const val = BigInt(trimmed)
+              if (val > maxVal) maxVal = val
+            } catch {}
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error al consultar códigos recientes en BD:', err)
+    }
+
+    const nextVal = maxVal + 1n
+    return nextVal.toString().padStart(14, '0')
+  }, [items, supabase])
+
 
   // 100% Realtime granular: actualiza ÚNICAMENTE el registro modificado en otra computadora
   useEffect(() => {
@@ -443,6 +542,7 @@ export function ItemsClient() {
           bVal = (b.classification || 'REGULAR').toLowerCase()
           break
         case 'cost':
+          if (!isAdmin) break
           aVal = Number(a.cost || 0)
           bVal = Number(b.cost || 0)
           break
@@ -481,9 +581,13 @@ export function ItemsClient() {
   // Open Create Modal
   const handleOpenCreate = (targetType?: 'P' | 'S') => {
     const selectedType: 'P' | 'S' = targetType || (activeTab === 'S' ? 'S' : 'P')
+    const calculatedCode = calculateNextItemCode(items)
+
     setEditingItem(null)
     setFormData({
       ...INITIAL_FORM,
+      code: calculatedCode,
+      barcode: calculatedCode, // Por default el código de barras es igual al código interno
       type: selectedType,
       classification: 'REGULAR',
       unit: selectedType === 'S' ? 'Servicio' : 'Pza',
@@ -492,7 +596,23 @@ export function ItemsClient() {
     setItemImages([])
     setDeletedImageIds([])
     setModalOpen(true)
+
+    // Reconfirmar con la base de datos en segundo plano por si hubo registros concurrentes
+    fetchNextItemCode().then((latestCode) => {
+      if (latestCode && latestCode !== calculatedCode) {
+        setFormData((prev) => {
+          // Si el usuario aún no ha alterado manualmente el código de barras, actualizar ambos
+          const isBarcodeUntouched = !prev.barcode || prev.barcode === calculatedCode
+          return {
+            ...prev,
+            code: latestCode,
+            barcode: isBarcodeUntouched ? latestCode : prev.barcode,
+          }
+        })
+      }
+    })
   }
+
 
   // Open Edit Modal
   const handleOpenEdit = (item: Item) => {
@@ -505,8 +625,8 @@ export function ItemsClient() {
       type: (item.type as 'P' | 'S') || 'P',
       classification: (item.classification as ItemClassification) || 'REGULAR',
       unit: item.unit || 'Pza',
-      cost: Number(item.cost) || 0,
-      last_cost: Number(item.last_cost) || 0,
+      cost: isAdmin ? (Number(item.cost) || 0) : 0,
+      last_cost: isAdmin ? (Number(item.last_cost) || 0) : 0,
       price: Number(item.price) || 0,
       price1: Number(item.price1) || 0,
       price2: Number(item.price2) || 0,
@@ -636,16 +756,46 @@ export function ItemsClient() {
 
     setSaving(true)
 
-    const payload = {
-      code: formData.code.trim() || null,
-      barcode: formData.barcode.trim() || null,
+    // Resolver códigos (código interno automático / inmutable, código de barras editable)
+    let resolvedCode = formData.code.trim()
+    let resolvedBarcode = formData.barcode.trim()
+
+    if (!editingItem) {
+      if (!resolvedCode) {
+        resolvedCode = await fetchNextItemCode()
+        if (!resolvedBarcode) {
+          resolvedBarcode = resolvedCode
+        }
+      } else {
+        // Verificar si alguien más registró este código entretanto para prevenir duplicados
+        const { data: duplicate } = await supabase
+          .from('items')
+          .select('id_item')
+          .eq('code', resolvedCode)
+          .maybeSingle()
+
+        if (duplicate) {
+          const freshCode = await fetchNextItemCode()
+          const wasDefaultBarcode = resolvedBarcode === resolvedCode
+          resolvedCode = freshCode
+          if (wasDefaultBarcode) {
+            resolvedBarcode = freshCode
+          }
+        }
+      }
+    } else {
+      // En edición de producto existente, el código interno es estrictamente inmutable
+      resolvedCode = editingItem.code || formData.code.trim()
+    }
+
+    const payload: Record<string, unknown> = {
+      code: resolvedCode || null,
+      barcode: resolvedBarcode || null,
       description: formData.description.trim(),
       description_short: formData.description_short.trim() || null,
       type: formData.type,
       classification: formData.classification || 'REGULAR',
       unit: formData.unit.trim() || 'Pza',
-      cost: Number(formData.cost) || 0,
-      last_cost: Number(formData.last_cost) || 0,
       price: Number(formData.price) || 0,
       price1: Number(formData.price1) || 0,
       price2: Number(formData.price2) || 0,
@@ -657,6 +807,19 @@ export function ItemsClient() {
       id_department: formData.id_department || null,
       id_sat: formData.id_sat.trim() || null,
       unit_sat: formData.unit_sat.trim() || null,
+    }
+
+    if (isAdmin) {
+      payload.cost = Number(formData.cost) || 0
+      payload.last_cost = Number(formData.last_cost) || 0
+    } else if (editingItem) {
+      // Si el usuario no es ADMIN, mantener los costos originales del artículo
+      payload.cost = Number(editingItem.cost) || 0
+      payload.last_cost = Number(editingItem.last_cost) || 0
+    } else {
+      // Alta por usuario no-ADMIN: costo en 0
+      payload.cost = 0
+      payload.last_cost = 0
     }
 
     if (editingItem) {
@@ -997,14 +1160,16 @@ export function ItemsClient() {
                   onSort={handleSort}
                   align="center"
                 />
-                <TableColumnHeader
-                  title={activeTab === 'S' ? 'Costo Base' : 'Costo'}
-                  sortKey="cost"
-                  currentSortKey={sortKey}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                  align="right"
-                />
+                {isAdmin && (
+                  <TableColumnHeader
+                    title={activeTab === 'S' ? 'Costo Base' : 'Costo'}
+                    sortKey="cost"
+                    currentSortKey={sortKey}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    align="right"
+                  />
+                )}
                 <TableColumnHeader
                   title={activeTab === 'S' ? 'Tarifa 1 (Menudeo)' : 'P1 (Menudeo)'}
                   sortKey="price1"
@@ -1042,7 +1207,7 @@ export function ItemsClient() {
             <tbody className="divide-y divide-border/20">
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-16 text-center text-muted-foreground">
+                  <td colSpan={isAdmin ? 10 : 9} className="px-4 py-16 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-2.5" role="status" aria-live="polite">
                       <Loader2
                         size={28}
@@ -1054,7 +1219,7 @@ export function ItemsClient() {
                 </tr>
               ) : paginatedItems.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={isAdmin ? 10 : 9} className="px-4 py-12 text-center text-muted-foreground">
                     <p className="text-base font-medium">
                       {activeTab === 'S'
                         ? 'No se encontraron servicios'
@@ -1231,9 +1396,11 @@ export function ItemsClient() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3.5 text-right font-mono text-xs text-muted-foreground">
-                        {formatCurrency(Number(item.cost))}
-                      </td>
+                      {isAdmin && (
+                        <td className="px-4 py-3.5 text-right font-mono text-xs text-muted-foreground">
+                          {formatCurrency(Number(item.cost))}
+                        </td>
+                      )}
 
                       <td className="px-4 py-3.5 text-right font-mono text-xs font-bold text-emerald-400">
                         {formatCurrency(Number(item.price1 || item.price))}
@@ -1413,28 +1580,57 @@ export function ItemsClient() {
                 {/* Basic Identification */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Código Interno
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-muted-foreground block">
+                        Código Interno
+                      </label>
+                      <span className="text-[10px] text-emerald-400 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        Solo lectura
+                      </span>
+                    </div>
                     <GlassInput
-                      placeholder={formData.type === 'S' ? 'Ej. SRV-001' : 'Ej. ART-001'}
+                      placeholder="00000000000001"
                       value={formData.code}
-                      onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                      readOnly
+                      className="bg-black/25 text-muted-foreground cursor-not-allowed select-all font-mono tracking-wider border-dashed opacity-85 focus:ring-0 focus:border-white/10"
+                      title="El Código Interno es generado automáticamente y no se puede modificar"
                     />
+                    <p className="text-[10px] text-zinc-500 mt-1">
+                      {editingItem
+                        ? 'Código interno asignado al artículo (inmutable).'
+                        : 'Calculado automáticamente (consecutivo con 14 dígitos).'}
+                    </p>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                      {formData.type === 'S' ? 'Código de Barras (Opcional)' : 'Código de Barras'}
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-muted-foreground block">
+                        {formData.type === 'S' ? 'Código de Barras (Opcional)' : 'Código de Barras'}
+                      </label>
+                      {formData.barcode === formData.code && formData.code ? (
+                        <span className="text-[10px] text-zinc-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
+                          Default = Cód. Interno
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20">
+                          Personalizado
+                        </span>
+                      )}
+                    </div>
                     <GlassInput
                       placeholder={
                         formData.type === 'S'
-                          ? 'No requerido para servicios'
-                          : 'Escanee o ingrese código'
+                          ? 'No requerido para servicios (opcional)'
+                          : 'Escanee o ingrese código de barras'
                       }
                       value={formData.barcode}
                       onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                      className="font-mono tracking-wider"
                     />
+                    <p className="text-[10px] text-zinc-500 mt-1">
+                      {formData.type === 'S'
+                        ? 'Por defecto es igual al código interno. Puede modificarse si el servicio utiliza código de barras.'
+                        : 'Por defecto es igual al código interno. Puede escanear o escribir un código diferente.'}
+                    </p>
                   </div>
                 </div>
 
@@ -1537,20 +1733,24 @@ export function ItemsClient() {
                 {/* Costs, Prices and Commission */}
                 <div className="pt-2 border-t border-border/20">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">
-                    {formData.type === 'S' ? 'Tarifas, Costo y Comisión' : 'Precios y Costos'}
+                    {formData.type === 'S'
+                      ? (isAdmin ? 'Tarifas, Costo y Comisión' : 'Tarifas y Comisión')
+                      : (isAdmin ? 'Precios y Costos' : 'Precios de Venta')}
                   </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                        {formData.type === 'S' ? 'Costo Insumos' : 'Costo Compra'}
-                      </label>
-                      <GlassInput
-                        type="number"
-                        step="any"
-                        value={formData.cost}
-                        onChange={(e) => setFormData({ ...formData, cost: Number(e.target.value) })}
-                      />
-                    </div>
+                  <div className={`grid grid-cols-2 ${isAdmin ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-3`}>
+                    {isAdmin && (
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                          {formData.type === 'S' ? 'Costo Insumos' : 'Costo Compra'}
+                        </label>
+                        <GlassInput
+                          type="number"
+                          step="any"
+                          value={formData.cost}
+                          onChange={(e) => setFormData({ ...formData, cost: Number(e.target.value) })}
+                        />
+                      </div>
+                    )}
                     <div>
                       <label className="text-xs font-semibold text-emerald-400 block mb-1">
                         {formData.type === 'S' ? 'Tarifa 1 * (Menudeo)' : 'Precio 1 * (Menudeo)'}
