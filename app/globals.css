@@ -261,23 +261,19 @@ body {
 
 /* ── Table Utilities ─────────────────────────────────────── */
 .glass-table-header {
-  background: var(--card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: #ffffff;
 }
 .glass-table-header th {
   position: sticky;
   top: 0;
   z-index: 20;
-  background-color: var(--card);
+  background-color: #ffffff;
 }
 .dark .glass-table-header {
-  background: var(--card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: oklch(0.13 0.015 264);
 }
 .dark .glass-table-header th {
-  background-color: var(--card);
+  background-color: oklch(0.13 0.015 264);
 }
 
 .scrollable-table {

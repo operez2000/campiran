@@ -46,8 +46,8 @@ export function TableColumnHeader({
   return (
     <th
       className={cn(
-        'px-4 py-3.5 select-none transition-colors sticky top-0 z-20 bg-card/95 backdrop-blur-md',
-        isClickable && 'cursor-pointer group hover:bg-white/[0.04]',
+        'px-4 py-3.5 select-none transition-colors sticky top-0 z-20 bg-white dark:bg-card',
+        isClickable && 'cursor-pointer group hover:bg-neutral-50 dark:hover:bg-white/[0.04]',
         align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left',
         className
       )}
@@ -58,7 +58,7 @@ export function TableColumnHeader({
         <span
           className={cn(
             'transition-colors',
-            isSorted ? 'text-emerald-400 font-bold' : 'group-hover:text-foreground'
+            isSorted ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'group-hover:text-foreground'
           )}
         >
           {title || children}
@@ -69,7 +69,7 @@ export function TableColumnHeader({
             className={cn(
               'shrink-0 transition-all rounded p-0.5',
               isSorted
-                ? 'text-emerald-400 bg-emerald-500/10'
+                ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/15'
                 : 'text-muted-foreground/40 group-hover:text-muted-foreground'
             )}
             title={

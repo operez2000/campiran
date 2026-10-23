@@ -509,12 +509,12 @@ export function LabelPrintModal({
             {/* Tabla / Lista de Productos */}
             <div className="border border-border/60 dark:border-white/10 rounded-2xl overflow-hidden bg-card dark:bg-black/20 max-h-[320px] overflow-y-auto scroll-modern shadow-sm">
               <table className="w-full text-left text-xs">
-                <thead className="bg-muted/70 dark:bg-white/5 border-b border-border/60 dark:border-white/10 text-muted-foreground sticky top-0 backdrop-blur-md">
+                <thead className="bg-neutral-100 dark:bg-neutral-800/80 border-b border-border/60 dark:border-white/10 text-neutral-700 dark:text-neutral-200 sticky top-0 z-10 text-[11px] font-bold uppercase tracking-wider">
                   <tr>
-                    <th className="p-2.5 font-semibold">Producto</th>
-                    <th className="p-2.5 font-semibold">Código / Barras</th>
-                    <th className="p-2.5 font-semibold text-center">Etiquetas</th>
-                    <th className="p-2.5 font-semibold text-right">Quitar</th>
+                    <th className="p-2.5">Producto</th>
+                    <th className="p-2.5">Código / Barras</th>
+                    <th className="p-2.5 text-center">Etiquetas</th>
+                    <th className="p-2.5 text-right">Quitar</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40 dark:divide-white/5">

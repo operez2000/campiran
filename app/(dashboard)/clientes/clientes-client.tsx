@@ -602,7 +602,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
           <table className="w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                <th className="w-20 px-4 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
+                <th className="w-20 px-4 py-3.5 text-center sticky top-0 z-20 bg-white dark:bg-card">
                   Acciones
                 </th>
                 <TableColumnHeader
