@@ -178,10 +178,10 @@ export function LabelPrintModal({
           const price = getProductPrice(item)
           const barcodeSvg = activeConfig.include_barcode
             ? generateBarcodeSvg(barcodeValue, {
-                height: 38,
-                showText: true,
-                fontSize: 9,
-                barWidth: 1.3,
+                height: 52,
+                showText: false,
+                barWidth: 1,
+                quietZone: 4,
               })
             : ''
 
@@ -214,19 +214,19 @@ export function LabelPrintModal({
             <style>
               @page {
                 size: ${cols > 1 ? `${totalRowWidth}${unit}` : `${labelW}${unit}`} ${labelH}${unit};
-                margin: 0;
+                margin: 0 !important;
               }
               *, *:before, *:after {
                 box-sizing: border-box;
                 margin: 0;
                 padding: 0;
               }
-              body {
+              html, body {
+                margin: 0 !important;
+                padding: 0 !important;
                 background: #fff;
                 color: #000;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                margin: 0;
-                padding: 0;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
               }
@@ -240,7 +240,7 @@ export function LabelPrintModal({
               .label-box {
                 width: ${labelW}${unit};
                 height: ${labelH}${unit};
-                padding: 2mm;
+                padding: 1.5mm 1mm;
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
@@ -250,6 +250,9 @@ export function LabelPrintModal({
                 border: 0.2mm solid #ddd;
               }
               @media print {
+                @page {
+                  margin: 0 !important;
+                }
                 .label-box {
                   border: none;
                 }
@@ -262,11 +265,12 @@ export function LabelPrintModal({
                 font-weight: 600;
                 color: #333;
                 border-bottom: 0.2mm solid #eee;
-                padding-bottom: 0.5mm;
+                padding-bottom: 0.3mm;
+                width: 100%;
               }
               .company-name {
                 text-transform: uppercase;
-                max-width: 65%;
+                max-width: 75%;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
@@ -280,23 +284,29 @@ export function LabelPrintModal({
                 font-weight: 700;
                 text-align: center;
                 text-transform: uppercase;
-                margin: 0.5mm 0;
-                line-height: 1.1;
+                margin: 0.3mm 0;
+                line-height: 1.15;
+                width: 100%;
                 display: -webkit-box;
                 -webkit-line-clamp: 2;
                 -webkit-box-orient: vertical;
                 overflow: hidden;
+                word-break: break-word;
               }
               .barcode-container {
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                margin: 0.5mm 0;
+                margin: 0.3mm 0;
                 overflow: hidden;
+                width: 100%;
+                flex: 1;
               }
               .barcode-container svg {
-                max-width: 100%;
-                max-height: calc(${labelH}${unit} * 0.45);
+                width: 100%;
+                max-width: 98%;
+                max-height: calc(${labelH}${unit} * 0.58);
+                shape-rendering: crispEdges;
               }
               .item-price {
                 display: flex;
@@ -304,7 +314,8 @@ export function LabelPrintModal({
                 align-items: baseline;
                 gap: 1.5mm;
                 border-top: 0.2mm solid #eee;
-                padding-top: 0.5mm;
+                padding-top: 0.3mm;
+                width: 100%;
               }
               .price-lbl {
                 font-size: 7pt;
@@ -381,35 +392,35 @@ export function LabelPrintModal({
         pdf.setFontSize(7)
         pdf.setFont('helvetica', 'bold')
         if (activeConfig.include_store_name) {
-          pdf.text(companyName.toUpperCase().slice(0, 20), 2, 3.5)
+          pdf.text(companyName.toUpperCase().slice(0, 25), 1.2, 3.2)
         }
         if (activeConfig.include_code && item.code) {
-          pdf.text(`CÓD: ${item.code}`, widthMm - 2, 3.5, { align: 'right' })
+          pdf.text(`CÓD: ${item.code}`, widthMm - 1.2, 3.2, { align: 'right' })
         }
 
-        // Descripción
+        // Descripción (expandida horizontalmente un ~20%)
         if (activeConfig.include_item_name && item.description) {
           pdf.setFontSize(8)
           pdf.setFont('helvetica', 'bold')
-          const lines = pdf.splitTextToSize(item.description.toUpperCase(), widthMm - 4)
-          pdf.text(lines.slice(0, 2), widthMm / 2, 7.5, { align: 'center' })
+          const lines = pdf.splitTextToSize(item.description.toUpperCase(), widthMm - 2.4)
+          pdf.text(lines.slice(0, 2), widthMm / 2, 7.2, { align: 'center' })
         }
 
         // Código de barras (Convertir SVG a DataURL en canvas offscreen)
         if (activeConfig.include_barcode) {
           const barcodeSvg = generateBarcodeSvg(barcodeValue, {
-            height: 35,
-            showText: true,
-            fontSize: 9,
-            barWidth: 1.5,
+            height: 52,
+            showText: false,
+            barWidth: 1,
+            quietZone: 4,
           })
 
           const imgData = await svgToPngDataUrl(barcodeSvg)
           if (imgData) {
-            const barW = Math.min(widthMm - 6, 45)
-            const barH = Math.min(heightMm * 0.45, 16)
+            const barW = Math.min(widthMm - 2.4, 48)
+            const barH = Math.min(heightMm * 0.54, 18)
             const posX = (widthMm - barW) / 2
-            const posY = heightMm * 0.38
+            const posY = heightMm * 0.32
             pdf.addImage(imgData, 'PNG', posX, posY, barW, barH)
           }
         }
@@ -421,7 +432,7 @@ export function LabelPrintModal({
           pdf.text(
             `PRECIO: $${Number(price).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             widthMm / 2,
-            heightMm - 2,
+            heightMm - 1.5,
             { align: 'center' }
           )
         }
@@ -696,6 +707,7 @@ function svgToPngDataUrl(svgString: string): Promise<string> {
         canvas.height = img.height * 2
         const ctx = canvas.getContext('2d')
         if (ctx) {
+          ctx.imageSmoothingEnabled = false
           ctx.fillStyle = '#ffffff'
           ctx.fillRect(0, 0, canvas.width, canvas.height)
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height)

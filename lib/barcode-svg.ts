@@ -74,6 +74,7 @@ export interface BarcodeSvgOptions {
   textMargin?: number
   color?: string
   background?: string
+  quietZone?: number // Módulos de margen lateral
 }
 
 /**
@@ -83,16 +84,15 @@ export function generateBarcodeSvg(data: string, options?: BarcodeSvgOptions): s
   const cleanData = (data || '000000').trim()
   const { modules } = encodeCode128B(cleanData)
 
-  const barWidth = options?.barWidth ?? 2
+  const barWidth = options?.barWidth ?? 1
   const barHeight = options?.height ?? 50
-  const showText = options?.showText ?? true
+  const showText = options?.showText ?? false
   const fontSize = options?.fontSize ?? 12
   const textMargin = options?.textMargin ?? 4
   const color = options?.color ?? '#000000'
   const background = options?.background ?? 'transparent'
+  const quietZone = options?.quietZone ?? 5
 
-  // Quiet zones (márgenes laterales estándar: 10 módulos)
-  const quietZone = 10
   const totalModules = modules.length + quietZone * 2
   const svgWidth = totalModules * barWidth
   const totalHeight = barHeight + (showText ? fontSize + textMargin + 2 : 0)
@@ -108,21 +108,21 @@ export function generateBarcodeSvg(data: string, options?: BarcodeSvgOptions): s
     } else if (!isBar && currentStart !== null) {
       const rectX = (currentStart + quietZone) * barWidth
       const rectW = (i - currentStart) * barWidth
-      rects.push(`<rect x="${rectX}" y="0" width="${rectW}" height="${barHeight}" fill="${color}" />`)
+      rects.push(`<rect x="${rectX}" y="0" width="${rectW}" height="${barHeight}" fill="${color}" shape-rendering="crispEdges" />`)
       currentStart = null
     }
   }
   if (currentStart !== null) {
     const rectX = (currentStart + quietZone) * barWidth
     const rectW = (modules.length - currentStart) * barWidth
-    rects.push(`<rect x="${rectX}" y="0" width="${rectW}" height="${barHeight}" fill="${color}" />`)
+    rects.push(`<rect x="${rectX}" y="0" width="${rectW}" height="${barHeight}" fill="${color}" shape-rendering="crispEdges" />`)
   }
 
   const textElement = showText
     ? `<text x="${svgWidth / 2}" y="${barHeight + fontSize + textMargin}" text-anchor="middle" font-family="monospace, monospace" font-size="${fontSize}" font-weight="600" fill="${color}">${escapeXml(cleanData)}</text>`
     : ''
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${totalHeight}" width="${options?.width || '100%'}" height="${options?.height ? `${totalHeight}px` : '100%'}" style="background-color: ${background}; display: block; margin: 0 auto;">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${totalHeight}" width="${options?.width || '100%'}" height="${options?.height ? `${totalHeight}px` : '100%'}" shape-rendering="crispEdges" style="background-color: ${background}; display: block; margin: 0 auto; shape-rendering: crispEdges;">
   ${rects.join('\n  ')}
   ${textElement}
 </svg>`

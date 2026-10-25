@@ -88,7 +88,7 @@ function sortItemImages(images?: ItemImage[]): ItemImage[] {
  * Ejemplo: Si el código numérico más alto es '00000000453082', devuelve '00000000453083'.
  */
 function calculateNextItemCode(existingItems: Array<{ code?: string | null }>): string {
-  let maxVal = 0n
+  let maxVal = BigInt(0)
 
   // 1. Priorizar códigos existentes en formato oficial de 14 dígitos con ceros iniciales
   for (const it of existingItems) {
@@ -104,7 +104,7 @@ function calculateNextItemCode(existingItems: Array<{ code?: string | null }>): 
 
   // 2. Si aún no hay registros de 14 dígitos con ceros a la izquierda, evaluar consecutivos numéricos generales
   // (omitiendo códigos de 12 o 13 dígitos que típicamente son códigos de barras comerciales EAN/UPC)
-  if (maxVal === 0n) {
+  if (maxVal === BigInt(0)) {
     for (const it of existingItems) {
       if (!it.code) continue
       const trimmed = it.code.trim()
@@ -120,7 +120,7 @@ function calculateNextItemCode(existingItems: Array<{ code?: string | null }>): 
     }
   }
 
-  const nextVal = maxVal + 1n
+  const nextVal = maxVal + BigInt(1)
   return nextVal.toString().padStart(14, '0')
 }
 

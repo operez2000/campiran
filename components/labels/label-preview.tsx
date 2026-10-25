@@ -37,13 +37,13 @@ export function LabelPreview({
   // Generar SVG del código de barras
   const barcodeSvg = useMemo(() => {
     if (!config.include_barcode) return ''
-    // Ajustar altura del código de barras proporcional al alto de la etiqueta
-    const barHeight = Math.max(18, Math.min(48, Math.round(heightMm * 1.5)))
+    // Ajustar altura del código de barras más alta para cubrir el espacio sin texto
+    const barHeight = Math.max(26, Math.min(65, Math.round(heightMm * 2.2)))
     return generateBarcodeSvg(barcodeValue, {
       height: barHeight,
-      showText: true,
-      fontSize: 10,
-      barWidth: 1.5,
+      showText: false,
+      barWidth: 1,
+      quietZone: 4,
     })
   }, [barcodeValue, config.include_barcode, heightMm])
 
@@ -57,7 +57,7 @@ export function LabelPreview({
         width: `${pxWidth}px`,
         height: `${pxHeight}px`,
       }}
-      className={`relative bg-white text-black rounded-lg border border-neutral-300 shadow-md p-2 flex flex-col justify-between overflow-hidden select-none font-sans ${className}`}
+      className={`relative bg-white text-black rounded-lg border border-neutral-300 shadow-md py-1.5 px-1 flex flex-col justify-between overflow-hidden select-none font-sans ${className}`}
     >
       {/* Header: Empresa o Código */}
       <div className="flex items-center justify-between text-[10px] leading-tight text-neutral-600 font-semibold border-b border-neutral-200 pb-0.5">
