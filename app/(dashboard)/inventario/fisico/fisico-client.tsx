@@ -15,12 +15,16 @@ import {
 } from '@/lib/types'
 import { formatDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
+import Link from 'next/link'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { GlassInput } from '@/components/glass-input'
+import { InventarioTabs } from '@/components/inventario/inventario-tabs'
+import { resetStoreInventoryAction } from './actions'
 import {
   ScanLine, Search, Plus, Minus, Check, AlertCircle,
   FileText, History, CheckCircle2, MapPin, X,
-  RefreshCw, Camera
+  RefreshCw, Camera, RotateCcw, AlertTriangle, ClipboardCheck
 } from 'lucide-react'
 
 // Normalize user object whether it comes from users (id_user, user_name) or profiles (id, full_name)
@@ -132,6 +136,11 @@ export function FisicoClient() {
   // Close session confirm dialog
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false)
   const [closingSession, setClosingSession] = useState(false)
+
+  // Reset stocks to zero dialog
+  const [resetModalOpen, setResetModalOpen] = useState(false)
+  const [resetConfirmText, setResetConfirmText] = useState('')
+  const [isResetting, setIsResetting] = useState(false)
 
   // Helper to ensure focus stays in barcode input
   const focusScannerInput = useCallback(() => {
@@ -481,26 +490,44 @@ export function FisicoClient() {
 
       const item = itemData as Item
 
-      // 2. Get current system stock for this item & store & location
+      // 2. Get current system stock & pre_inventory_stock for this item & store & location
       const { data: stockData } = await supabase
         .from('stocks')
-        .select('current')
+        .select('id_stock, current, pre_inventory_stock')
         .eq('id_item', item.id_item)
         .eq('id_store', storeId)
         .eq('id_location', locId)
         .maybeSingle()
 
-      const currentStock = stockData?.current ?? 0
+      const currentStockInDb = Number(stockData?.current ?? 0)
+      const preInvStock = Number(stockData?.pre_inventory_stock ?? 0)
+      const newStockInDb = currentStockInDb + quantity
 
-      // 3. Calculate accumulated physical stock in this session for this item
-      const existingReadings = readings.filter(
-        (r) => r.id_item === item.id_item && r.id_location === locId
-      )
-      const prevPhysicalSum = existingReadings.reduce((acc, r) => acc + (r.quantity ?? 0), 0)
-      const newPhysical = prevPhysicalSum + quantity
-      const newDiff = newPhysical - currentStock
+      // 3. Increment stock in DB immediately in real time with each scan
+      if (stockData?.id_stock) {
+        await supabase
+          .from('stocks')
+          .update({
+            previous: currentStockInDb,
+            current: newStockInDb,
+          })
+          .eq('id_stock', stockData.id_stock)
+      } else {
+        await supabase.from('stocks').insert({
+          id_item: item.id_item,
+          id_store: storeId,
+          id_location: locId,
+          current: newStockInDb,
+          initial: 0,
+          previous: 0,
+          pre_inventory_stock: 0,
+        })
+      }
 
-      // 4. Insert reading into inventory_readings
+      // 4. Calculate variance against pre_inventory_stock (baseline before zero-reset)
+      const newDiff = newStockInDb - preInvStock
+
+      // 5. Insert reading into inventory_readings
       const { error: readingError } = await supabase.from('inventory_readings').insert({
         id_session: currentActive.id_session,
         id_item: item.id_item,
@@ -508,8 +535,8 @@ export function FisicoClient() {
         id_location: locId,
         id_user: currentUser?.id ?? null,
         quantity: quantity,
-        stock_before: currentStock,
-        stock_physical: newPhysical,
+        stock_before: preInvStock,
+        stock_physical: newStockInDb,
         stock_diff: newDiff,
       })
 
@@ -519,7 +546,7 @@ export function FisicoClient() {
         return
       }
 
-      // 5. Register in transactions (movim_type = 'I')
+      // 6. Register in transactions (movim_type = 'I')
       await supabase.from('transactions').insert({
         id_store: storeId,
         id_location: locId,
@@ -531,19 +558,19 @@ export function FisicoClient() {
         cost: item.cost ?? 0,
         price: item.price ?? 0,
         reference: `INV-SESIÓN-${currentActive.id_session.slice(0, 8)}`,
-        concept: 'Lectura de inventario físico',
+        concept: 'Lectura de inventario físico (incremento en tiempo real)',
         origin: 'Inventario Físico',
-        comments: `[Saldo: ${currentStock} → ${newPhysical}]`,
+        comments: `[Exist. Previa: ${preInvStock} | Saldo: ${currentStockInDb} → ${newStockInDb}]`,
       })
 
       const locObj = locations.find((l) => l.id_location === locId)
 
-      // 6. Set last scanned item banner & play feedback sound
+      // 7. Set last scanned item banner & play feedback sound
       playScanFeedback(true)
       setLastScanned({
         item,
-        stockBefore: currentStock,
-        stockPhysical: newPhysical,
+        stockBefore: preInvStock,
+        stockPhysical: newStockInDb,
         stockDiff: newDiff,
         locationName: locObj?.description ?? undefined,
       })
@@ -926,6 +953,41 @@ export function FisicoClient() {
     )
   }, [catalogItems, searchFilter])
 
+  const canResetStock = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER'
+
+  const handleConfirmResetToZero = async () => {
+    if (!storeId) {
+      toast.error('Selecciona una sucursal para operar')
+      return
+    }
+
+    if (resetConfirmText.trim().toUpperCase() !== 'CONFIRMAR') {
+      toast.error('Debes escribir la palabra "CONFIRMAR" para proceder')
+      return
+    }
+
+    setIsResetting(true)
+    try {
+      const res = await resetStoreInventoryAction(storeId)
+      if (res.success) {
+        toast.success(res.message)
+        setResetModalOpen(false)
+        setResetConfirmText('')
+        if (activeSession?.id_session) {
+          await fetchReadings(activeSession.id_session)
+        }
+      } else {
+        toast.error(res.message)
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al reiniciar existencias'
+      toast.error(msg)
+    } finally {
+      setIsResetting(false)
+      focusScannerInput()
+    }
+  }
+
   return (
     <div
       onClick={handleWorkspaceClick}
@@ -934,7 +996,7 @@ export function FisicoClient() {
       <div className="dashboard-bg" />
 
       {/* ── TOP MOBILE-FIRST APP BAR ────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-2 px-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
             <ScanLine size={20} className="animate-pulse" />
@@ -942,7 +1004,7 @@ export function FisicoClient() {
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <h1 className="font-bold text-base sm:text-lg text-foreground truncate leading-tight">
-                Inventario Físico
+                Captura de Inventario Físico
               </h1>
               {activeSession && (
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
@@ -959,8 +1021,36 @@ export function FisicoClient() {
           </div>
         </div>
 
-        {/* Action Buttons (Compact Mobile Bar) */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        {/* Action Buttons */}
+        <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+          {/* Link to Consulta de Inventario */}
+          <Link href="/inventario/consulta">
+            <button
+              type="button"
+              className="px-2.5 py-1.5 rounded-xl glass hover:bg-white/10 text-muted-foreground hover:text-foreground text-xs font-semibold flex items-center gap-1.5 transition-all"
+              title="Ir a Consulta y Comparativa de Inventario"
+            >
+              <ClipboardCheck size={14} className="text-emerald-400" />
+              <span>Consulta & Excel</span>
+            </button>
+          </Link>
+
+          {/* Reset stock to zero option */}
+          {canResetStock && (
+            <button
+              type="button"
+              onClick={() => {
+                setResetConfirmText('')
+                setResetModalOpen(true)
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition-all"
+              title="Dejar en cero la existencia de la sucursal"
+            >
+              <RotateCcw size={14} />
+              <span>Poner a Cero</span>
+            </button>
+          )}
+
           {activeSession ? (
             <>
               <button
@@ -987,7 +1077,7 @@ export function FisicoClient() {
                 title="Finalizar y sincronizar inventario"
               >
                 <CheckCircle2 size={14} />
-                <span className="hidden sm:inline">Cerrar</span>
+                <span className="hidden sm:inline">Cerrar Sesión</span>
               </button>
             </>
           ) : (
@@ -1014,6 +1104,9 @@ export function FisicoClient() {
           )}
         </div>
       </div>
+
+      {/* Module Navigation Tabs */}
+      <InventarioTabs />
 
       {/* ── HERO SCANNING CARD (MOBILE PROTAGONIST) ────────────────────── */}
       <GlassCard padding="sm" variant="emerald" className="border-emerald-500/30 shadow-lg space-y-3">
@@ -1677,6 +1770,90 @@ export function FisicoClient() {
                   </div>
                 </div>
               )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── MODAL: CONFIRM RESET STOCK TO ZERO ─────────────────────────── */}
+      <AnimatePresence>
+        {resetModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card max-w-lg w-full p-6 space-y-4 border-rose-500/40 shadow-2xl"
+            >
+              <div className="flex items-center gap-3 border-b border-border/40 pb-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                  <AlertTriangle size={22} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">
+                    Poner Existencias a Cero
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Sucursal: <strong className="text-foreground">{currentStore?.description}</strong>
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-xs text-foreground/90 leading-relaxed">
+                <p className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300">
+                  ⚠️ <strong>Acción crítica para Inventario Físico:</strong>
+                  <br />
+                  1. La existencia actual de <strong>todos los artículos</strong> en esta sucursal será respaldada en el campo <code>Existencia Previa</code>.
+                  <br />
+                  2. La existencia actual (<code>stocks.current</code>) quedará en <strong>0</strong> para iniciar el conteo físico con escáner.
+                  <br />
+                  3. Las diferencias se calcularán contra la existencia previa a medida que vayas escaneando.
+                </p>
+
+                <p className="text-muted-foreground">
+                  Para confirmar que deseas continuar con el reinicio de existencias de esta sucursal, escribe la palabra <strong className="text-foreground font-mono">CONFIRMAR</strong> a continuación:
+                </p>
+
+                <GlassInput
+                  value={resetConfirmText}
+                  onChange={(e) => setResetConfirmText(e.target.value)}
+                  placeholder="Escribe CONFIRMAR aquí..."
+                  className="w-full font-mono text-center uppercase tracking-widest text-sm"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
+                <GlassButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setResetModalOpen(false)
+                    setResetConfirmText('')
+                    focusScannerInput()
+                  }}
+                  disabled={isResetting}
+                >
+                  Cancelar
+                </GlassButton>
+                <GlassButton
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={handleConfirmResetToZero}
+                  disabled={resetConfirmText.trim().toUpperCase() !== 'CONFIRMAR' || isResetting}
+                >
+                  {isResetting ? (
+                    <span className="flex items-center gap-1.5">
+                      <RefreshCw size={14} className="animate-spin" />
+                      Procesando...
+                    </span>
+                  ) : (
+                    'Confirmar y Dejar en Cero'
+                  )}
+                </GlassButton>
+              </div>
             </motion.div>
           </div>
         )}

@@ -251,6 +251,9 @@ export interface Stock {
   initial: number
   previous: number
   current: number
+  pre_inventory_stock?: number
+  last_inventory_reset_at?: string | null
+  last_inventory_reset_by?: string | null
   maximum: number
   minimum: number
   reorder_point: number

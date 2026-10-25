@@ -553,9 +553,27 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
   }, [sortedItems, currentPage, pageSize])
 
   // Open Create Modal
-  const handleOpenCreate = (targetType?: 'P' | 'S') => {
+  const handleOpenCreate = async (targetType?: 'P' | 'S') => {
     const selectedType: 'P' | 'S' = targetType || (activeTab === 'S' ? 'S' : 'P')
-    const calculatedCode = calculateNextItemCode(items)
+
+    // Consultar directamente los códigos más recientes en BD para asegurar el mayor consecutivo global real
+    let combinedItems: Array<{ code?: string | null }> = items
+    try {
+      const { data: recentCodes } = await supabase
+        .from('items')
+        .select('code')
+        .not('code', 'is', null)
+        .order('code', { ascending: false })
+        .limit(30)
+
+      if (recentCodes && recentCodes.length > 0) {
+        combinedItems = [...items, ...(recentCodes as Array<{ code: string }>)]
+      }
+    } catch (err) {
+      console.error('Error al consultar códigos recientes en BD:', err)
+    }
+
+    const calculatedCode = calculateNextItemCode(combinedItems)
 
     setEditingItem(null)
     setFormData({
@@ -754,6 +772,9 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
             resolvedBarcode = freshCode
           }
         }
+      }
+      if (!resolvedBarcode) {
+        resolvedBarcode = resolvedCode
       }
     } else {
       // En edición de producto existente, el código interno es estrictamente inmutable
@@ -1631,7 +1652,7 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-xs font-semibold text-muted-foreground block">
-                        {formData.type === 'S' ? 'Código de Barras (Opcional)' : 'Código de Barras'}
+                        Código de Barras
                       </label>
                       {formData.barcode === formData.code && formData.code ? (
                         <span className="text-[10px] text-zinc-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
@@ -1644,19 +1665,13 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                       )}
                     </div>
                     <GlassInput
-                      placeholder={
-                        formData.type === 'S'
-                          ? 'No requerido para servicios (opcional)'
-                          : 'Escanee o ingrese código de barras'
-                      }
+                      placeholder="Escanee o ingrese código de barras"
                       value={formData.barcode}
                       onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
                       className="font-mono tracking-wider"
                     />
                     <p className="text-[10px] text-zinc-500 mt-1">
-                      {formData.type === 'S'
-                        ? 'Por defecto es igual al código interno. Puede modificarse si el servicio utiliza código de barras.'
-                        : 'Por defecto es igual al código interno. Puede escanear o escribir un código diferente.'}
+                      Por defecto es igual al código interno. Puede escanear o escribir un código diferente.
                     </p>
                   </div>
                 </div>

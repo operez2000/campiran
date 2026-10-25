@@ -2,14 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Boxes, ScanLine, ArrowLeftRight, Truck, Wrench, BookOpen } from 'lucide-react'
+import { Boxes, ScanLine, ArrowLeftRight, Truck, Wrench, BookOpen, ClipboardCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const TABS = [
   { label: 'Stock Actual', href: '/inventario', icon: <Boxes size={15} /> },
+  { label: 'Captura (Físico)', href: '/inventario/fisico', icon: <ScanLine size={15} /> },
+  { label: 'Consulta Físico', href: '/inventario/consulta', icon: <ClipboardCheck size={15} /> },
   { label: 'Ajustes', href: '/inventario/ajustes', icon: <Wrench size={15} /> },
   { label: 'Kardex', href: '/inventario/kardex', icon: <BookOpen size={15} /> },
-  { label: 'Captura (Físico)', href: '/inventario/fisico', icon: <ScanLine size={15} /> },
   { label: 'Traspasos', href: '/inventario/traspasos', icon: <Truck size={15} /> },
   { label: 'Movimientos', href: '/inventario/movimientos', icon: <ArrowLeftRight size={15} /> },
 ]
