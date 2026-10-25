@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 
 import { HeaderAttendanceButton } from '@/components/attendance/header-attendance-button'
+import Link from 'next/link'
+import { useCompany } from '@/components/providers/company-provider'
 
 import { UserAvatar } from '@/components/user-avatar'
 
@@ -33,10 +35,16 @@ export function Header({
   const router = useRouter()
   const supabase = createClient()
   const { currentStore, setStore, storeId } = useStore()
+  const { logoUrl, tradeName } = useCompany()
+  const [logoError, setLogoError] = useState(false)
   const [dark, setDark] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [storeMenuOpen, setStoreMenuOpen] = useState(false)
   const [stores, setStores] = useState<Store[]>([])
+
+  useEffect(() => {
+    setLogoError(false)
+  }, [logoUrl])
 
   // Close menus on click outside or escape key
   useEffect(() => {
@@ -157,16 +165,34 @@ export function Header({
       {/* Logo (Visible on mobile, OR on desktop when desktop sidebar is hidden) */}
       <div
         className={cn(
-          'items-center gap-2.5 mr-2 transition-all duration-300',
+          'items-center gap-2.5 mr-2 transition-all duration-300 min-w-0',
           isDesktopOpen ? 'flex lg:hidden' : 'flex'
         )}
       >
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0">
-          <span className="text-white font-bold text-sm">C</span>
-        </div>
-        <span className="font-bold text-base text-[var(--foreground)]">
-          Campiran
-        </span>
+        <Link href="/pos" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity min-w-0">
+          {logoUrl && !logoError ? (
+            <div className="w-8 h-8 rounded-xl overflow-hidden bg-white/10 dark:bg-white/5 border border-white/10 flex items-center justify-center shadow-md flex-shrink-0 p-0.5">
+              <img
+                src={logoUrl}
+                alt={tradeName || 'Logo'}
+                className="w-full h-full object-contain"
+                onError={() => setLogoError(true)}
+              />
+            </div>
+          ) : (
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0">
+              <span className="text-white font-bold text-sm">C</span>
+            </div>
+          )}
+          <div className="min-w-0">
+            <span className="font-bold text-sm sm:text-base text-[var(--foreground)] leading-none block truncate">
+              {tradeName || 'Campiran'}
+            </span>
+            <span className="text-[10px] text-[var(--muted)] leading-none mt-0.5 block truncate">
+              POS + Inventario
+            </span>
+          </div>
+        </Link>
       </div>
 
       {/* Store selector (ADMIN only) */}

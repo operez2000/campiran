@@ -11,6 +11,7 @@ import { ConfiguracionTabs } from '@/components/configuracion/configuracion-tabs
 import { processLogoImage, type ProcessedImageResult } from '@/lib/image-compressor'
 import { updateCompanySettingsAction } from '../actions'
 import { type CompanySettings, type UserRole } from '@/lib/types'
+import { useCompany } from '@/components/providers/company-provider'
 import { toast } from 'sonner'
 import {
   Building2, UploadCloud, Save, CheckCircle2, ShieldCheck,
@@ -38,6 +39,7 @@ interface EmpresaClientProps {
 export function EmpresaClient({ initialCompany, userRole }: EmpresaClientProps) {
   const supabase = createClient()
   const isAdmin = userRole === 'ADMIN'
+  const { setLogoUrl, setTradeName } = useCompany()
 
   const [company, setCompany] = useState<CompanySettings>(initialCompany)
   const [saving, setSaving] = useState(false)
@@ -61,6 +63,12 @@ export function EmpresaClient({ initialCompany, userRole }: EmpresaClientProps) 
           setCompany(updated)
           if (!processedLogo) {
             setLogoPreview(updated.logo_url)
+          }
+          if (updated.logo_url !== undefined) {
+            setLogoUrl(updated.logo_url)
+          }
+          if (updated.trade_name) {
+            setTradeName(updated.trade_name)
           }
         }
       })
@@ -174,6 +182,10 @@ export function EmpresaClient({ initialCompany, userRole }: EmpresaClientProps) 
 
       setCompany(updated)
       setProcessedLogo(null)
+      setLogoUrl(updated.logo_url)
+      if (updated.trade_name) {
+        setTradeName(updated.trade_name)
+      }
       toast.success('Datos de la empresa guardados exitosamente')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)

@@ -8,16 +8,47 @@ import { type Profile } from '@/lib/types'
 import { X, PanelLeftClose } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+import Link from 'next/link'
 import { UserAvatar } from '@/components/user-avatar'
 import { getRoleLabel } from '@/lib/utils'
 import { StoreGeoGuard } from '@/components/providers/store-geo-guard'
+import { CompanyProvider, useCompany } from '@/components/providers/company-provider'
 
 interface DashboardLayoutProps {
   profile: Profile
+  initialLogoUrl?: string | null
+  initialTradeName?: string
   children: React.ReactNode
 }
 
-export function DashboardLayout({ profile, children }: DashboardLayoutProps) {
+export function DashboardLayout({
+  profile,
+  initialLogoUrl = null,
+  initialTradeName = 'Campiran',
+  children,
+}: DashboardLayoutProps) {
+  return (
+    <CompanyProvider initialLogoUrl={initialLogoUrl} initialTradeName={initialTradeName}>
+      <DashboardLayoutContent profile={profile}>
+        {children}
+      </DashboardLayoutContent>
+    </CompanyProvider>
+  )
+}
+
+function DashboardLayoutContent({
+  profile,
+  children,
+}: {
+  profile: Profile
+  children: React.ReactNode
+}) {
+  const { logoUrl, tradeName } = useCompany()
+  const [logoError, setLogoError] = useState(false)
+
+  useEffect(() => {
+    setLogoError(false)
+  }, [logoUrl])
   const [mobileOpen, setMobileOpen] = useState(false)
   const [desktopOpen, setDesktopOpen] = useState(true)
 
@@ -83,15 +114,31 @@ export function DashboardLayout({ profile, children }: DashboardLayoutProps) {
         <div className="w-64 flex flex-col h-full flex-shrink-0">
           {/* Logo area with collapse button */}
           <div className="h-16 flex items-center justify-between px-5 border-b border-[var(--border)]">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
-                <span className="text-white font-bold">C</span>
+            <Link
+              href="/pos"
+              className="flex items-center gap-3 min-w-0 hover:opacity-90 transition-opacity"
+            >
+              {logoUrl && !logoError ? (
+                <div className="w-9 h-9 rounded-2xl overflow-hidden bg-white/10 dark:bg-white/5 border border-white/10 flex items-center justify-center shadow-md shadow-emerald-500/10 flex-shrink-0 p-1">
+                  <img
+                    src={logoUrl}
+                    alt={tradeName || 'Logo'}
+                    className="w-full h-full object-contain"
+                    onError={() => setLogoError(true)}
+                  />
+                </div>
+              ) : (
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25 flex-shrink-0">
+                  <span className="text-white font-bold">C</span>
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="font-bold text-[var(--foreground)] leading-none truncate">
+                  {tradeName || 'Campiran'}
+                </p>
+                <p className="text-xs text-[var(--muted)] mt-0.5 truncate">POS + Inventario</p>
               </div>
-              <div>
-                <p className="font-bold text-[var(--foreground)] leading-none">Campiran</p>
-                <p className="text-xs text-[var(--muted)] mt-0.5">POS + Inventario</p>
-              </div>
-            </div>
+            </Link>
             <button
               onClick={toggleDesktop}
               className="p-1.5 rounded-xl btn-ghost text-muted-foreground hover:text-foreground transition-colors"
@@ -152,12 +199,32 @@ export function DashboardLayout({ profile, children }: DashboardLayoutProps) {
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
             >
               <div className="h-16 flex items-center justify-between px-5 border-b border-[var(--border)]">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                    <span className="text-white font-bold">C</span>
+                <Link
+                  href="/pos"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 min-w-0 hover:opacity-90 transition-opacity"
+                >
+                  {logoUrl && !logoError ? (
+                    <div className="w-9 h-9 rounded-2xl overflow-hidden bg-white/10 dark:bg-white/5 border border-white/10 flex items-center justify-center shadow-md flex-shrink-0 p-1">
+                      <img
+                        src={logoUrl}
+                        alt={tradeName || 'Logo'}
+                        className="w-full h-full object-contain"
+                        onError={() => setLogoError(true)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-bold">C</span>
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-bold text-[var(--foreground)] leading-none truncate">
+                      {tradeName || 'Campiran'}
+                    </p>
+                    <p className="text-xs text-[var(--muted)] mt-0.5 truncate">POS + Inventario</p>
                   </div>
-                  <p className="font-bold text-[var(--foreground)]">Campiran</p>
-                </div>
+                </Link>
                 <button
                   onClick={() => setMobileOpen(false)}
                   className="p-2 rounded-xl btn-ghost"

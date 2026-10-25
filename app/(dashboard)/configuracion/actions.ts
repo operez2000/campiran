@@ -130,6 +130,7 @@ export async function updateCompanySettingsAction(
   }
 
   revalidatePath('/configuracion/empresa')
+  revalidatePath('/', 'layout')
   return result
 }
 
