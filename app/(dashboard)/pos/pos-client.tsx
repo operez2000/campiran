@@ -1427,15 +1427,22 @@ export function PosClient() {
       {/* Modal 4: Completed Ticket Receipt Preview with SAT breakdown & Bilingual Change */}
       <AnimatePresence>
         {completedOrder && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white text-zinc-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 print:shadow-none print:m-0 print:p-2 max-h-[90vh] overflow-y-auto scroll-modern"
+              className="bg-white text-zinc-900 rounded-2xl sm:rounded-3xl max-w-sm w-full shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden print:max-h-none print:overflow-visible print:shadow-none print:m-0 print:p-2"
             >
-              {/* Thermal ticket layout */}
-              <div className="text-center border-b border-dashed border-zinc-300 pb-3 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-white z-20 shadow-xs">
+              {/* Thermal ticket layout - Fixed Header */}
+              <div className="relative text-center border-b border-dashed border-zinc-300 px-4 py-3 sm:px-6 sm:py-4 bg-white shrink-0 z-10">
+                <button
+                  type="button"
+                  onClick={() => setCompletedOrder(null)}
+                  className="absolute right-3 top-3 p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors print:hidden"
+                >
+                  <X size={18} />
+                </button>
                 <h2 className="font-black text-xl tracking-tight text-zinc-950">CAMPIRAN POS</h2>
                 <p className="text-xs text-zinc-600 mt-0.5">{currentStore?.description ?? 'Matriz'}</p>
                 <p className="text-[11px] text-zinc-500 font-mono mt-1">
@@ -1456,113 +1463,118 @@ export function PosClient() {
                 )}
               </div>
 
-              {/* Items Table */}
-              <div className="space-y-1.5 text-xs font-mono border-b border-dashed border-zinc-300 pb-3">
-                {completedOrder.items.map((it) => (
-                  <div key={it.item.id_item} className="flex justify-between items-start">
-                    <div className="flex-1 pr-2">
-                      <p className="font-semibold text-zinc-900 leading-tight">
-                        {it.item.description}
-                      </p>
-                      <p className="text-[10px] text-zinc-500">
-                        {it.quantity} × {formatCurrency(it.unitPrice)}
-                      </p>
-                    </div>
-                    <span className="font-bold">{formatCurrency(it.totalPrice)}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Totals & SAT Payments Breakdown */}
-              <div className="space-y-1 text-xs font-mono border-b border-dashed border-zinc-300 pb-3">
-                <div className="flex justify-between text-zinc-600">
-                  <span>Subtotal:</span>
-                  <span>{formatCurrency(completedOrder.subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-zinc-600">
-                  <span>IVA:</span>
-                  <span>{formatCurrency(completedOrder.tax)}</span>
-                </div>
-                <div className="flex justify-between font-bold text-sm text-zinc-950 pt-1">
-                  <span>TOTAL:</span>
-                  <span>{formatCurrency(completedOrder.total)}</span>
-                </div>
-
-                {/* SAT Payment Breakdown */}
-                <div className="pt-2 mt-2 border-t border-dashed border-zinc-200">
-                  <div className="flex justify-between font-semibold text-zinc-800 text-[11px]">
-                    <span>Forma Pago SAT:</span>
-                    <span>
-                      [{completedOrder.primaryMethod}]{' '}
-                      {SAT_PAYMENT_METHODS.find((m) => m.code === completedOrder.primaryMethod)?.label}
-                    </span>
-                  </div>
-
-                  {completedOrder.payments.map((p, i) => (
-                    <div key={i} className="flex justify-between text-zinc-600 text-[10px]">
-                      <span>
-                        • SAT {p.method} ({p.currency}):
-                      </span>
-                      <span>
-                        {formatCurrency(p.amountMxn)}{' '}
-                        {p.currency === 'USD' && `($${p.amountUsd?.toFixed(2)} USD)`}
-                      </span>
+              {/* Scrollable Receipt Body */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
+                {/* Items Table */}
+                <div className="space-y-1.5 text-xs font-mono border-b border-dashed border-zinc-300 pb-3">
+                  {completedOrder.items.map((it) => (
+                    <div key={it.item.id_item} className="flex justify-between items-start">
+                      <div className="flex-1 pr-2">
+                        <p className="font-semibold text-zinc-900 leading-tight">
+                          {it.item.description}
+                        </p>
+                        <p className="text-[10px] text-zinc-500">
+                          {it.quantity} × {formatCurrency(it.unitPrice)}
+                        </p>
+                      </div>
+                      <span className="font-bold">{formatCurrency(it.totalPrice)}</span>
                     </div>
                   ))}
+                </div>
 
-                  {/* Change in BOTH MXN and USD */}
-                  {completedOrder.changeMxn > 0 && (
-                    <div className="pt-1.5 mt-1 border-t border-zinc-200 text-zinc-950 font-bold">
-                      <div className="flex justify-between text-xs">
-                        <span>CAMBIO ENTREGADO:</span>
-                        <span>{formatCurrency(completedOrder.changeMxn)}</span>
-                      </div>
-                      <div className="flex justify-between text-[11px] text-emerald-700">
-                        <span>Equiv. en Dólares (USD):</span>
-                        <span>${completedOrder.changeUsd.toFixed(2)} USD</span>
-                      </div>
+                {/* Totals & SAT Payments Breakdown */}
+                <div className="space-y-1 text-xs font-mono border-b border-dashed border-zinc-300 pb-3">
+                  <div className="flex justify-between text-zinc-600">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(completedOrder.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-600">
+                    <span>IVA:</span>
+                    <span>{formatCurrency(completedOrder.tax)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-sm text-zinc-950 pt-1">
+                    <span>TOTAL:</span>
+                    <span>{formatCurrency(completedOrder.total)}</span>
+                  </div>
+
+                  {/* SAT Payment Breakdown */}
+                  <div className="pt-2 mt-2 border-t border-dashed border-zinc-200">
+                    <div className="flex justify-between font-semibold text-zinc-800 text-[11px]">
+                      <span>Forma Pago SAT:</span>
+                      <span>
+                        [{completedOrder.primaryMethod}]{' '}
+                        {SAT_PAYMENT_METHODS.find((m) => m.code === completedOrder.primaryMethod)?.label}
+                      </span>
                     </div>
-                  )}
+
+                    {completedOrder.payments.map((p, i) => (
+                      <div key={i} className="flex justify-between text-zinc-600 text-[10px]">
+                        <span>
+                          • SAT {p.method} ({p.currency}):
+                        </span>
+                        <span>
+                          {formatCurrency(p.amountMxn)}{' '}
+                          {p.currency === 'USD' && `($${p.amountUsd?.toFixed(2)} USD)`}
+                        </span>
+                      </div>
+                    ))}
+
+                    {/* Change in BOTH MXN and USD */}
+                    {completedOrder.changeMxn > 0 && (
+                      <div className="pt-1.5 mt-1 border-t border-zinc-200 text-zinc-950 font-bold">
+                        <div className="flex justify-between text-xs">
+                          <span>CAMBIO ENTREGADO:</span>
+                          <span>{formatCurrency(completedOrder.changeMxn)}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] text-emerald-700">
+                          <span>Equiv. en Dólares (USD):</span>
+                          <span>${completedOrder.changeUsd.toFixed(2)} USD</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Observaciones de la Venta (impresión en ticket) */}
+                {completedOrder.notes && (
+                  <div className="border-b border-dashed border-zinc-300 pb-2.5 text-left">
+                    <p className="text-[10px] font-bold text-zinc-700 uppercase tracking-wide">
+                      Observaciones:
+                    </p>
+                    <p className="text-[11px] text-zinc-800 font-mono mt-0.5 whitespace-pre-wrap bg-zinc-50 p-2 rounded-lg border border-zinc-200">
+                      {completedOrder.notes}
+                    </p>
+                  </div>
+                )}
+
+                <div className="text-center text-[10px] text-zinc-500">
+                  <p>¡Gracias por su compra!</p>
+                  <p className="mt-0.5">Campiran POS · Sistema de Ventas en la Nube</p>
                 </div>
               </div>
 
-              {/* Observaciones de la Venta (impresión en ticket) */}
-              {completedOrder.notes && (
-                <div className="border-b border-dashed border-zinc-300 pb-2.5 text-left">
-                  <p className="text-[10px] font-bold text-zinc-700 uppercase tracking-wide">
-                    Observaciones:
-                  </p>
-                  <p className="text-[11px] text-zinc-800 font-mono mt-0.5 whitespace-pre-wrap bg-zinc-50 p-2 rounded-lg border border-zinc-200">
-                    {completedOrder.notes}
-                  </p>
-                </div>
-              )}
-
-              <div className="text-center text-[10px] text-zinc-500">
-                <p>¡Gracias por su compra!</p>
-                <p className="mt-0.5">Campiran POS · Sistema de Ventas en la Nube</p>
-              </div>
-
-              {/* Modal Actions */}
-              <div className="flex items-center gap-2 pt-2 print:hidden">
+              {/* Fixed Footer Actions */}
+              <div className="p-3 sm:p-4 border-t border-zinc-200 shrink-0 bg-white z-10 flex flex-col-reverse sm:flex-row gap-2 print:hidden">
                 <button
-                  onClick={handlePrintTicket}
-                  disabled={printingWithQz}
-                  className="flex-1 py-2.5 rounded-xl bg-zinc-900 text-white text-xs font-bold hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  <Printer size={15} className={printingWithQz ? 'animate-spin' : ''} />
-                  <span>{printingWithQz ? 'Imprimiendo...' : 'Imprimir Ticket'}</span>
-                </button>
-                <button
+                  type="button"
                   onClick={() => {
                     setCompletedOrder(null)
                     setIsClientSelected(false)
                     initialClientPromptDone.current = false
                     setClientModalOpen(true)
                   }}
-                  className="flex-1 py-2.5 rounded-xl border border-zinc-300 text-zinc-800 text-xs font-bold hover:bg-zinc-100 transition-colors"
+                  className="flex-1 py-2.5 px-3 rounded-xl border border-zinc-300 text-zinc-800 text-xs font-bold hover:bg-zinc-100 transition-colors"
                 >
                   Nueva Venta
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrintTicket}
+                  disabled={printingWithQz}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-zinc-900 text-white text-xs font-bold hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  <Printer size={15} className={printingWithQz ? 'animate-spin' : ''} />
+                  <span>{printingWithQz ? 'Imprimiendo...' : 'Imprimir Ticket'}</span>
                 </button>
               </div>
             </motion.div>

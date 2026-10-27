@@ -875,44 +875,35 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
       {/* ── Modal: Create / Edit Client ─────────────────────────── */}
       <AnimatePresence>
         {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col shadow-2xl"
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="glass-card max-w-2xl w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+              {/* Header Fijo */}
+              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
                     <Users size={18} />
                   </div>
-                  <h3 className="text-base font-bold text-foreground">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground truncate">
                     {editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}
                   </h3>
                 </div>
-                <div className="flex items-center gap-2">
-                  <GlassButton
-                    type="submit"
-                    form="client-form"
-                    variant="primary"
-                    size="sm"
-                    disabled={saving}
-                  >
-                    <Check size={14} className="mr-1" />
-                    {saving ? 'Guardando...' : editingClient ? 'Actualizar Cliente' : 'Guardar Cliente'}
-                  </GlassButton>
-                  <button
-                    type="button"
-                    onClick={() => setModalOpen(false)}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
+                >
+                  <X size={18} />
+                </button>
               </div>
 
-              <form id="client-form" onSubmit={handleSave} className="space-y-4 overflow-y-auto scroll-modern pr-1">
+              {/* Cuerpo desplazable */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6">
+                <form id="client-form" onSubmit={handleSave} className="space-y-4">
                 {/* Bloque: Identificación */}
                 <div>
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-2">
@@ -1150,22 +1141,32 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border/40">
-                  <GlassButton
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setModalOpen(false)}
-                  >
-                    Cancelar
-                  </GlassButton>
-                  <GlassButton type="submit" variant="primary" size="sm" disabled={saving}>
-                    <Check size={14} className="mr-1" />
-                    {saving ? 'Guardando...' : editingClient ? 'Actualizar Cliente' : 'Guardar Cliente'}
-                  </GlassButton>
-                </div>
-              </form>
+                </form>
+              </div>
+
+              {/* Footer Fijo */}
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <GlassButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setModalOpen(false)}
+                  className="w-full sm:w-auto"
+                >
+                  Cancelar
+                </GlassButton>
+                <GlassButton
+                  type="submit"
+                  form="client-form"
+                  variant="primary"
+                  size="sm"
+                  disabled={saving}
+                  className="w-full sm:w-auto"
+                >
+                  <Check size={14} className="mr-1" />
+                  {saving ? 'Guardando...' : editingClient ? 'Actualizar Cliente' : 'Guardar Cliente'}
+                </GlassButton>
+              </div>
             </motion.div>
           </div>
         )}
@@ -1174,87 +1175,105 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
       {/* ── Modal: Client Purchases History ─────────────────────── */}
       <AnimatePresence>
         {historyModalOpen && historyClient && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-2xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col shadow-2xl"
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="glass-card max-w-2xl w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+              {/* Header Fijo */}
+              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
                     <ShoppingBag size={18} />
                   </div>
-                  <div>
-                    <h3 className="text-base font-bold text-foreground">
+                  <div className="min-w-0">
+                    <h3 className="text-sm sm:text-base font-bold text-foreground truncate">
                       Historial de Compras
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-xs text-muted-foreground truncate">
                       Cliente: <strong className="text-foreground">{historyClient.first_name} {historyClient.last_name || ''}</strong>
                     </p>
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setHistoryModalOpen(false)}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto scroll-modern border border-border/30 rounded-xl">
-                <table className="w-full text-left text-xs">
-                  <thead className="sticky top-0 glass-table-header bg-card/95 backdrop-blur-md border-b border-border/40 text-muted-foreground">
-                    <tr>
-                      <th className="px-3.5 py-2.5">Folio</th>
-                      <th className="px-3.5 py-2.5">Fecha</th>
-                      <th className="px-3.5 py-2.5">Método de Pago</th>
-                      <th className="px-3.5 py-2.5 text-right">Total</th>
-                      <th className="px-3.5 py-2.5 text-center">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/20">
-                    {loadingOrders ? (
+              {/* Cuerpo desplazable */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6">
+                <div className="border border-border/30 rounded-xl overflow-hidden">
+                  <table className="w-full text-left text-xs">
+                    <thead className="sticky top-0 glass-table-header bg-card/95 backdrop-blur-md border-b border-border/40 text-muted-foreground">
                       <tr>
-                        <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
-                          Cargando órdenes...
-                        </td>
+                        <th className="px-3.5 py-2.5">Folio</th>
+                        <th className="px-3.5 py-2.5">Fecha</th>
+                        <th className="px-3.5 py-2.5">Método de Pago</th>
+                        <th className="px-3.5 py-2.5 text-right">Total</th>
+                        <th className="px-3.5 py-2.5 text-center">Estado</th>
                       </tr>
-                    ) : clientOrders.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-3 py-10 text-center text-muted-foreground">
-                          <p className="text-sm font-medium">Este cliente aún no registra compras</p>
-                          <p className="text-xs text-muted-foreground/70 mt-1">
-                            Las compras realizadas en el Punto de Venta aparecerán aquí.
-                          </p>
-                        </td>
-                      </tr>
-                    ) : (
-                      clientOrders.map((order) => (
-                        <tr key={order.id_order} className="hover:bg-white/[0.05] transition-colors">
-                          <td className="px-3.5 py-2.5 font-mono font-bold text-emerald-400">
-                            #{order.order_number}
-                          </td>
-                          <td className="px-3.5 py-2.5 text-muted-foreground">
-                            {formatDateTime(order.created_at)}
-                          </td>
-                          <td className="px-3.5 py-2.5 uppercase font-mono text-[11px] text-muted-foreground">
-                            {order.payment_method || 'Efectivo'}
-                          </td>
-                          <td className="px-3.5 py-2.5 text-right font-mono font-bold text-foreground">
-                            {formatCurrency(Number(order.total_amount))}
-                          </td>
-                          <td className="px-3.5 py-2.5 text-center">
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
-                              Completada
-                            </span>
+                    </thead>
+                    <tbody className="divide-y divide-border/20">
+                      {loadingOrders ? (
+                        <tr>
+                          <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
+                            Cargando órdenes...
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : clientOrders.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-3 py-10 text-center text-muted-foreground">
+                            <p className="text-sm font-medium">Este cliente aún no registra compras</p>
+                            <p className="text-xs text-muted-foreground/70 mt-1">
+                              Las compras realizadas en el Punto de Venta aparecerán aquí.
+                            </p>
+                          </td>
+                        </tr>
+                      ) : (
+                        clientOrders.map((order) => (
+                          <tr key={order.id_order} className="hover:bg-white/[0.05] transition-colors">
+                            <td className="px-3.5 py-2.5 font-mono font-bold text-emerald-400">
+                              #{order.order_number}
+                            </td>
+                            <td className="px-3.5 py-2.5 text-muted-foreground">
+                              {formatDateTime(order.created_at)}
+                            </td>
+                            <td className="px-3.5 py-2.5 uppercase font-mono text-[11px] text-muted-foreground">
+                              {order.payment_method || 'Efectivo'}
+                            </td>
+                            <td className="px-3.5 py-2.5 text-right font-mono font-bold text-foreground">
+                              {formatCurrency(Number(order.total_amount))}
+                            </td>
+                            <td className="px-3.5 py-2.5 text-center">
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                                Completada
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Footer Fijo */}
+              <div className="flex items-center justify-end border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <GlassButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setHistoryModalOpen(false)}
+                  className="w-full sm:w-auto"
+                >
+                  Cerrar
+                </GlassButton>
               </div>
             </motion.div>
           </div>
@@ -1264,35 +1283,43 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
       {/* ── Modal: Delete / Deactivate Confirm ─────────────────── */}
       <AnimatePresence>
         {deleteConfirmOpen && clientToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-md w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto scroll-modern"
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="glass-card max-w-md w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
-                <h3 className="text-base font-bold text-foreground">
+              {/* Header Fijo */}
+              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <h3 className="text-sm sm:text-base font-bold text-foreground truncate pr-2">
                   {clientToDelete.status === 'A' ? '¿Desactivar Cliente?' : '¿Reactivar Cliente?'}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setDeleteConfirmOpen(false)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
                 >
                   <X size={18} />
                 </button>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {clientToDelete.status === 'A'
-                  ? `El cliente "${clientToDelete.first_name} ${clientToDelete.last_name || ''}" será desactivado de forma lógica. Podrá reactivarlo en cualquier momento desde el filtro de Inactivos.`
-                  : `El cliente "${clientToDelete.first_name} ${clientToDelete.last_name || ''}" volverá a estar disponible para ventas y cotizaciones.`}
-              </p>
-              <div className="flex items-center justify-end gap-2.5 pt-2">
+
+              {/* Cuerpo */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {clientToDelete.status === 'A'
+                    ? `El cliente "${clientToDelete.first_name} ${clientToDelete.last_name || ''}" será desactivado de forma lógica. Podrá reactivarlo en cualquier momento desde el filtro de Inactivos.`
+                    : `El cliente "${clientToDelete.first_name} ${clientToDelete.last_name || ''}" volverá a estar disponible para ventas y cotizaciones.`}
+                </p>
+              </div>
+
+              {/* Footer Fijo */}
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
                 <GlassButton
                   variant="ghost"
                   size="sm"
                   onClick={() => setDeleteConfirmOpen(false)}
+                  className="w-full sm:w-auto"
                 >
                   Cancelar
                 </GlassButton>
@@ -1301,6 +1328,7 @@ export function ClientesClient({ initialData = [] }: { initialData?: Client[] })
                   size="sm"
                   onClick={handleConfirmDelete}
                   disabled={deleting}
+                  className="w-full sm:w-auto"
                 >
                   {deleting ? 'Procesando...' : clientToDelete.status === 'A' ? 'Desactivar' : 'Reactivar'}
                 </GlassButton>

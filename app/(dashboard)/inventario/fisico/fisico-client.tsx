@@ -1486,14 +1486,14 @@ export function FisicoClient() {
       {/* ── MODAL: CAMERA SCANNER (MOBILE WEBCAM) ───────────────────────── */}
       <AnimatePresence>
         {cameraModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-sm w-full p-4 space-y-3 relative overflow-hidden max-h-[90vh] overflow-y-auto scroll-modern"
+              className="glass-card max-w-sm w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between pb-2 border-b border-white/10 shrink-0 sticky -top-4 -mx-4 px-4 pt-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
+              <div className="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-3.5 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
                 <div className="flex items-center gap-2">
                   <Camera size={18} className="text-emerald-400" />
                   <h3 className="text-sm font-bold text-foreground">Escáner de Cámara</h3>
@@ -1501,33 +1501,37 @@ export function FisicoClient() {
                 <button
                   type="button"
                   onClick={stopCamera}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              {/* Camera Viewport with targeting box */}
-              <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-white/20">
-                <video
-                  ref={videoRef}
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                />
-                {/* Targeting reticle */}
-                <div className="absolute inset-8 border-2 border-emerald-400/80 rounded-2xl pointer-events-none flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-                  <div className="w-full h-0.5 bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse" />
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 space-y-3">
+                {/* Camera Viewport with targeting box */}
+                <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-white/20">
+                  <video
+                    ref={videoRef}
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Targeting reticle */}
+                  <div className="absolute inset-8 border-2 border-emerald-400/80 rounded-2xl pointer-events-none flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                    <div className="w-full h-0.5 bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse" />
+                  </div>
                 </div>
+
+                <p className="text-center text-xs text-muted-foreground">
+                  Apunte la cámara hacia el código de barras o código QR
+                </p>
               </div>
 
-              <p className="text-center text-xs text-muted-foreground">
-                Apunte la cámara hacia el código de barras o código QR
-              </p>
-
-              <GlassButton variant="ghost" size="sm" onClick={stopCamera} className="w-full">
-                Cancelar
-              </GlassButton>
+              <div className="p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                <GlassButton variant="ghost" size="sm" onClick={stopCamera} className="w-full">
+                  Cancelar
+                </GlassButton>
+              </div>
             </motion.div>
           </div>
         )}
@@ -1536,14 +1540,14 @@ export function FisicoClient() {
       {/* ── MODAL: SEARCH ITEM BY DESCRIPTION ──────────────────────────── */}
       <AnimatePresence>
         {searchModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/70 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-xl w-full p-4 space-y-3 max-h-[85vh] flex flex-col"
+              className="glass-card max-w-xl w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-2.5 shrink-0 sticky -top-4 -mx-4 px-4 pt-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
+              <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
                 <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
                   <Search size={18} className="text-emerald-400" />
                   Buscar Artículo por Descripción
@@ -1554,51 +1558,67 @@ export function FisicoClient() {
                     setSearchModalOpen(false)
                     focusScannerInput()
                   }}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              <div className="relative">
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder="Escriba descripción, código o código de barras..."
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  className="glass-input w-full pl-9 pr-3 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-emerald-400"
-                />
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-3">
+                <div className="relative">
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Escriba descripción, código o código de barras..."
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    className="glass-input w-full pl-9 pr-3 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-emerald-400"
+                  />
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                </div>
+
+                <div className="overflow-hidden border border-border/30 rounded-xl divide-y divide-border/20">
+                  {loadingCatalog ? (
+                    <div className="p-8 text-center text-muted-foreground text-xs">Cargando catálogo...</div>
+                  ) : filteredCatalogItems.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground text-xs">No se encontraron productos coincidentes</div>
+                  ) : (
+                    filteredCatalogItems.map((item) => (
+                      <div
+                        key={item.id_item}
+                        onClick={() => handleSelectItemFromSearch(item)}
+                        className="p-3 hover:bg-emerald-500/10 active:bg-emerald-500/20 cursor-pointer transition-colors flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-foreground text-xs sm:text-sm truncate">
+                            {item.description}
+                          </div>
+                          <div className="flex items-center gap-2 font-mono text-[11px] text-muted-foreground mt-0.5">
+                            {item.code && <span>Cód: {item.code}</span>}
+                            {item.barcode && <span className="text-emerald-400">CB: {item.barcode}</span>}
+                          </div>
+                        </div>
+                        <span className="shrink-0 px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-semibold">
+                          Seleccionar
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto scroll-modern border border-border/30 rounded-xl divide-y divide-border/20">
-                {loadingCatalog ? (
-                  <div className="p-8 text-center text-muted-foreground text-xs">Cargando catálogo...</div>
-                ) : filteredCatalogItems.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground text-xs">No se encontraron productos coincidentes</div>
-                ) : (
-                  filteredCatalogItems.map((item) => (
-                    <div
-                      key={item.id_item}
-                      onClick={() => handleSelectItemFromSearch(item)}
-                      className="p-3 hover:bg-emerald-500/10 active:bg-emerald-500/20 cursor-pointer transition-colors flex items-center justify-between gap-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-foreground text-xs sm:text-sm truncate">
-                          {item.description}
-                        </div>
-                        <div className="flex items-center gap-2 font-mono text-[11px] text-muted-foreground mt-0.5">
-                          {item.code && <span>Cód: {item.code}</span>}
-                          {item.barcode && <span className="text-emerald-400">CB: {item.barcode}</span>}
-                        </div>
-                      </div>
-                      <span className="shrink-0 px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs font-semibold">
-                        Seleccionar
-                      </span>
-                    </div>
-                  ))
-                )}
+              <div className="flex items-center justify-end p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                <GlassButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchModalOpen(false)
+                    focusScannerInput()
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  Cerrar
+                </GlassButton>
               </div>
             </motion.div>
           </div>
@@ -1608,14 +1628,14 @@ export function FisicoClient() {
       {/* ── MODAL: CONFIRM CLOSE SESSION ───────────────────────────────── */}
       <AnimatePresence>
         {confirmCloseOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-sm w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto scroll-modern"
+              className="glass-card max-w-sm w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-2.5 shrink-0 sticky -top-5 -mx-5 px-5 pt-5 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
+              <div className="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-3.5 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
                 <div className="flex items-center gap-2.5 text-amber-400">
                   <AlertCircle size={22} />
                   <h3 className="text-base font-bold text-foreground">¿Cerrar Inventario?</h3>
@@ -1626,15 +1646,22 @@ export function FisicoClient() {
                     setConfirmCloseOpen(false)
                     focusScannerInput()
                   }}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Al confirmar, las existencias del sistema serán ajustadas para igualar el conteo físico ({readings.length} lecturas). Esta acción no se puede deshacer.
-              </p>
-              <div className="flex items-center justify-end gap-2 pt-1">
+
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-5 text-xs text-muted-foreground leading-relaxed space-y-2">
+                <p>
+                  Al confirmar, las existencias del sistema serán ajustadas para igualar el conteo físico ({readings.length} lecturas).
+                </p>
+                <p className="font-semibold text-foreground/90">
+                  Esta acción no se puede deshacer.
+                </p>
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
                 <GlassButton
                   variant="ghost"
                   size="sm"
@@ -1642,6 +1669,7 @@ export function FisicoClient() {
                     setConfirmCloseOpen(false)
                     focusScannerInput()
                   }}
+                  className="w-full sm:w-auto"
                 >
                   Cancelar
                 </GlassButton>
@@ -1650,6 +1678,7 @@ export function FisicoClient() {
                   size="sm"
                   onClick={handleCloseSession}
                   disabled={closingSession}
+                  className="w-full sm:w-auto"
                 >
                   {closingSession ? 'Sincronizando...' : 'Confirmar Cierre'}
                 </GlassButton>
@@ -1662,14 +1691,14 @@ export function FisicoClient() {
       {/* ── MODAL: PAST SESSIONS HISTORY ──────────────────────────────── */}
       <AnimatePresence>
         {showHistoryModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/70 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-3xl w-full p-4 sm:p-5 space-y-3 max-h-[85vh] flex flex-col"
+              className="glass-card max-w-3xl w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-2.5 shrink-0 sticky -top-4 sm:-top-5 -mx-4 sm:-mx-5 px-4 sm:px-5 pt-4 sm:pt-5 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
+              <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
                 <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
                   <History size={18} className="text-emerald-400" />
                   Historial de Inventarios Cerrados
@@ -1681,95 +1710,122 @@ export function FisicoClient() {
                     setSelectedPastSession(null)
                     focusScannerInput()
                   }}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              {!selectedPastSession ? (
-                <div className="flex-1 overflow-y-auto scroll-modern border border-border/30 rounded-xl divide-y divide-border/20">
-                  {pastSessions.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground text-xs">
-                      No hay inventarios cerrados en esta sucursal
-                    </div>
-                  ) : (
-                    pastSessions.map((s) => (
-                      <div
-                        key={s.id_session}
-                        onClick={() => handleSelectPastSession(s)}
-                        className="p-3 hover:bg-white/[0.03] active:bg-white/[0.05] cursor-pointer transition-colors flex items-center justify-between gap-2"
-                      >
-                        <div className="min-w-0">
-                          <span className="font-mono font-bold text-emerald-400 text-xs">
-                            #{s.id_session.slice(0, 8).toUpperCase()}
-                          </span>
-                          <div className="text-[11px] text-muted-foreground">
-                            Cerrado: {s.closed_at ? formatDateTime(s.closed_at) : '—'}
-                          </div>
-                          <div className="text-[11px] text-foreground/80 truncate">
-                            {s.user?.full_name ?? s.user?.email ?? 'Auditor'}
-                          </div>
-                        </div>
-                        <span className="shrink-0 text-xs text-emerald-400 font-semibold px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20">
-                          Ver Detalle
-                        </span>
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-3">
+                {!selectedPastSession ? (
+                  <div className="overflow-hidden border border-border/30 rounded-xl divide-y divide-border/20">
+                    {pastSessions.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground text-xs">
+                        No hay inventarios cerrados en esta sucursal
                       </div>
-                    ))
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3 flex-1 flex flex-col overflow-hidden">
-                  <div className="flex items-center justify-between bg-white/[0.03] p-2.5 rounded-xl border border-white/5">
-                    <span className="text-xs font-mono font-bold text-foreground">
-                      Folio #{selectedPastSession.id_session.slice(0, 8).toUpperCase()}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <GlassButton
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleExportPDF(selectedPastSession, pastSessionReadings)}
-                        className="text-xs py-1 px-2.5"
-                      >
-                        <FileText size={14} className="mr-1" />
-                        PDF
-                      </GlassButton>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPastSession(null)}
-                        className="text-xs text-muted-foreground hover:text-foreground underline px-1"
-                      >
-                        Volver
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto scroll-modern border border-border/30 rounded-xl divide-y divide-border/20">
-                    {loadingPastReadings ? (
-                      <div className="p-8 text-center text-muted-foreground text-xs">Cargando lecturas...</div>
                     ) : (
-                      pastSessionReadings.map((r) => {
-                        const diff = r.stock_diff ?? 0
-                        return (
-                          <div key={r.id_reading} className="p-2.5 text-xs space-y-1">
-                            <div className="font-semibold text-foreground">{r.item?.description}</div>
-                            <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                              <span>{r.item?.barcode || r.item?.code || '—'}</span>
-                              <div className="flex items-center gap-2">
-                                <span>Sist: {r.stock_before}</span>
-                                <span className="text-emerald-400 font-bold">Fís: {r.stock_physical}</span>
-                                <span className={diff === 0 ? 'text-muted-foreground' : diff > 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                                  Dif: {diff > 0 ? `+${diff}` : diff}
-                                </span>
-                              </div>
+                      pastSessions.map((s) => (
+                        <div
+                          key={s.id_session}
+                          onClick={() => handleSelectPastSession(s)}
+                          className="p-3 hover:bg-white/[0.03] active:bg-white/[0.05] cursor-pointer transition-colors flex items-center justify-between gap-2"
+                        >
+                          <div className="min-w-0">
+                            <span className="font-mono font-bold text-emerald-400 text-xs">
+                              #{s.id_session.slice(0, 8).toUpperCase()}
+                            </span>
+                            <div className="text-[11px] text-muted-foreground">
+                              Cerrado: {s.closed_at ? formatDateTime(s.closed_at) : '—'}
+                            </div>
+                            <div className="text-[11px] text-foreground/80 truncate">
+                              {s.user?.full_name ?? s.user?.email ?? 'Auditor'}
                             </div>
                           </div>
-                        )
-                      })
+                          <span className="shrink-0 text-xs text-emerald-400 font-semibold px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20">
+                            Ver Detalle
+                          </span>
+                        </div>
+                      ))
                     )}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between bg-white/[0.03] p-2.5 rounded-xl border border-white/5">
+                      <span className="text-xs font-mono font-bold text-foreground">
+                        Folio #{selectedPastSession.id_session.slice(0, 8).toUpperCase()}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <GlassButton
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleExportPDF(selectedPastSession, pastSessionReadings)}
+                          className="text-xs py-1 px-2.5"
+                        >
+                          <FileText size={14} className="mr-1" />
+                          PDF
+                        </GlassButton>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPastSession(null)}
+                          className="text-xs text-muted-foreground hover:text-foreground underline px-1"
+                        >
+                          Volver a lista
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden border border-border/30 rounded-xl divide-y divide-border/20">
+                      {loadingPastReadings ? (
+                        <div className="p-8 text-center text-muted-foreground text-xs">Cargando lecturas...</div>
+                      ) : (
+                        pastSessionReadings.map((r) => {
+                          const diff = r.stock_diff ?? 0
+                          return (
+                            <div key={r.id_reading} className="p-2.5 text-xs space-y-1">
+                              <div className="font-semibold text-foreground">{r.item?.description}</div>
+                              <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+                                <span>{r.item?.barcode || r.item?.code || '—'}</span>
+                                <div className="flex items-center gap-2">
+                                  <span>Sist: {r.stock_before}</span>
+                                  <span className="text-emerald-400 font-bold">Fís: {r.stock_physical}</span>
+                                  <span className={diff === 0 ? 'text-muted-foreground' : diff > 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                                    Dif: {diff > 0 ? `+${diff}` : diff}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                {selectedPastSession ? (
+                  <GlassButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedPastSession(null)}
+                    className="text-xs"
+                  >
+                    Volver a lista
+                  </GlassButton>
+                ) : <div />}
+                <GlassButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowHistoryModal(false)
+                    setSelectedPastSession(null)
+                    focusScannerInput()
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  Cerrar
+                </GlassButton>
+              </div>
             </motion.div>
           </div>
         )}
@@ -1778,28 +1834,41 @@ export function FisicoClient() {
       {/* ── MODAL: CONFIRM RESET STOCK TO ZERO ─────────────────────────── */}
       <AnimatePresence>
         {resetModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-lg w-full p-6 space-y-4 border-rose-500/40 shadow-2xl"
+              className="glass-card max-w-lg w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl border-rose-500/40 shadow-2xl"
             >
-              <div className="flex items-center gap-3 border-b border-border/40 pb-3">
-                <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
-                  <AlertTriangle size={22} />
+              <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                    <AlertTriangle size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold text-foreground">
+                      Poner Existencias a Cero
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground">
+                      Sucursal: <strong className="text-foreground">{currentStore?.description}</strong>
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-foreground">
-                    Poner Existencias a Cero
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Sucursal: <strong className="text-foreground">{currentStore?.description}</strong>
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetModalOpen(false)
+                    setResetConfirmText('')
+                    focusScannerInput()
+                  }}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                >
+                  <X size={18} />
+                </button>
               </div>
 
-              <div className="space-y-3 text-xs text-foreground/90 leading-relaxed">
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-3 text-xs text-foreground/90 leading-relaxed">
                 <p className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300">
                   ⚠️ <strong>Acción crítica para Inventario Físico:</strong>
                   <br />
@@ -1823,7 +1892,7 @@ export function FisicoClient() {
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
                 <GlassButton
                   type="button"
                   variant="ghost"
@@ -1834,6 +1903,7 @@ export function FisicoClient() {
                     focusScannerInput()
                   }}
                   disabled={isResetting}
+                  className="w-full sm:w-auto"
                 >
                   Cancelar
                 </GlassButton>
@@ -1843,9 +1913,10 @@ export function FisicoClient() {
                   size="sm"
                   onClick={handleConfirmResetToZero}
                   disabled={resetConfirmText.trim().toUpperCase() !== 'CONFIRMAR' || isResetting}
+                  className="w-full sm:w-auto"
                 >
                   {isResetting ? (
-                    <span className="flex items-center gap-1.5">
+                    <span className="flex items-center gap-1.5 justify-center">
                       <RefreshCw size={14} className="animate-spin" />
                       Procesando...
                     </span>

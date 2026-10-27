@@ -652,78 +652,69 @@ export function StockClient() {
       {/* Modal: Edit Min/Max limits */}
       <AnimatePresence>
         {editingStock && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-md w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto scroll-modern"
+              className="glass-card max-w-md w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
-                <h3 className="text-base font-bold text-foreground">
+              <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                <h3 className="text-sm sm:text-base font-bold text-foreground">
                   Ajustar Niveles de Stock
                 </h3>
-                <div className="flex items-center gap-2">
-                  <GlassButton
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    onClick={handleSaveEdit}
-                    disabled={savingEdit}
-                  >
-                    <Check size={14} className="mr-1.5" />
-                    {savingEdit ? 'Guardando...' : 'Guardar Cambios'}
-                  </GlassButton>
-                  <button
-                    type="button"
-                    onClick={() => setEditingStock(null)}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                  >
-                    <X size={16} />
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingStock(null)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground">
+                    {editingStock.item?.description}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    Código: {editingStock.item?.code ?? 'N/A'} | Ubicación:{' '}
+                    {editingStock.location?.description ?? 'Sin asignar'}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">
+                      Stock Mínimo
+                    </label>
+                    <GlassInput
+                      type="number"
+                      min={0}
+                      value={editMin}
+                      onChange={(e) => setEditMin(Number(e.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">
+                      Stock Máximo
+                    </label>
+                    <GlassInput
+                      type="number"
+                      min={0}
+                      value={editMax}
+                      onChange={(e) => setEditMax(Number(e.target.value))}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-foreground">
-                  {editingStock.item?.description}
-                </p>
-                <p className="text-xs text-muted-foreground font-mono">
-                  Código: {editingStock.item?.code ?? 'N/A'} | Ubicación:{' '}
-                  {editingStock.location?.description ?? 'Sin asignar'}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">
-                    Stock Mínimo
-                  </label>
-                  <GlassInput
-                    type="number"
-                    min={0}
-                    value={editMin}
-                    onChange={(e) => setEditMin(Number(e.target.value))}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">
-                    Stock Máximo
-                  </label>
-                  <GlassInput
-                    type="number"
-                    min={0}
-                    value={editMax}
-                    onChange={(e) => setEditMax(Number(e.target.value))}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-4">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
                 <GlassButton
                   variant="ghost"
                   size="sm"
                   onClick={() => setEditingStock(null)}
+                  className="w-full sm:w-auto"
                 >
                   Cancelar
                 </GlassButton>
@@ -732,6 +723,7 @@ export function StockClient() {
                   size="sm"
                   onClick={handleSaveEdit}
                   disabled={savingEdit}
+                  className="w-full sm:w-auto"
                 >
                   <Check size={14} className="mr-1.5" />
                   {savingEdit ? 'Guardando...' : 'Guardar Cambios'}

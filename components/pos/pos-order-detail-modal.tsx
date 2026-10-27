@@ -46,32 +46,32 @@ export function PosOrderDetailModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.94, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 15 }}
-          className="glass-card border-border/50 rounded-3xl max-w-2xl w-full p-6 relative overflow-hidden shadow-2xl max-h-[92vh] overflow-y-auto scroll-modern print:m-0 print:p-4 print:shadow-none print:border-none"
+          className="glass-card border-border/50 rounded-2xl sm:rounded-3xl max-w-2xl w-full relative overflow-hidden shadow-2xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col print:m-0 print:p-4 print:shadow-none print:border-none"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-border/20 pb-4 mb-4 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 print:static print:p-0">
-            <div className="flex items-center gap-3">
+          {/* Header Fijo */}
+          <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10 print:static print:p-0">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
               <div
-                className={`w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0 ${
+                className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0 ${
                   isCancelled
                     ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/25'
                     : 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/25'
                 }`}
               >
-                {isCancelled ? <ShieldAlert size={22} /> : <FileText size={22} />}
+                {isCancelled ? <ShieldAlert size={20} /> : <FileText size={20} />}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold text-foreground">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground truncate">
                     Detalle de Venta #{order.order_number}
                   </h3>
                   <span
-                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                       isCancelled
                         ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
                         : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
@@ -80,7 +80,7 @@ export function PosOrderDetailModal({
                     {isCancelled ? 'CANCELADA' : 'COMPLETADA'}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 truncate">
                   <Calendar size={12} />
                   {formatDateTime(order.created_at)}
                 </p>
@@ -90,13 +90,14 @@ export function PosOrderDetailModal({
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="p-2 rounded-xl glass-input text-muted-foreground hover:text-foreground transition-colors print:hidden"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0 print:hidden"
             >
               <X size={18} />
             </button>
           </div>
 
-          <div className="space-y-4">
+          {/* Cuerpo desplazable */}
+          <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
             {/* Banner de Cancelación si aplica */}
             {isCancelled && (
               <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-xs space-y-2 text-rose-300">
@@ -264,8 +265,8 @@ export function PosOrderDetailModal({
             </div>
           </div>
 
-          {/* Footer Actions */}
-          <div className="flex items-center justify-between gap-3 mt-6 border-t border-border/20 pt-4 print:hidden">
+          {/* Footer Fijo */}
+          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10 print:hidden">
             <div>
               {!isCancelled && onInitiateCancel && (
                 <GlassButton
@@ -276,7 +277,7 @@ export function PosOrderDetailModal({
                     onOpenChange(false)
                     onInitiateCancel(order)
                   }}
-                  className="gap-1.5"
+                  className="w-full sm:w-auto gap-1.5"
                 >
                   <RotateCcw size={15} />
                   <span>Cancelar Esta Venta</span>
@@ -284,13 +285,13 @@ export function PosOrderDetailModal({
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <GlassButton type="button" variant="secondary" size="sm" onClick={handlePrint}>
+            <div className="flex flex-col-reverse sm:flex-row items-center gap-2">
+              <GlassButton type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+                Cerrar
+              </GlassButton>
+              <GlassButton type="button" variant="secondary" size="sm" onClick={handlePrint} className="w-full sm:w-auto">
                 <Printer size={15} className="mr-1.5" />
                 Imprimir Comprobante
-              </GlassButton>
-              <GlassButton type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-                Cerrar
               </GlassButton>
             </div>
           </div>

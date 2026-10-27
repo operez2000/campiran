@@ -32,7 +32,7 @@ import {
   Tag, Plus, Search, CheckCircle2, Trash2, Edit3, Store as StoreIcon,
   HelpCircle, RefreshCw, Check, Star, Sliders, Layers, Eye, Printer
 } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from '@/components/ui/dialog'
 
 interface EtiquetasClientProps {
   initialConfigs: BranchLabelConfig[]
@@ -693,8 +693,8 @@ export function EtiquetasClient({
 
       {/* Modal Crear / Editar Plantilla de Etiquetas */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="glass border-white/20 rounded-3xl max-w-4xl p-6 max-h-[90vh] overflow-y-auto scroll-modern">
-          <DialogHeader className="mb-4 pr-8">
+        <DialogContent className="glass border-white/20 rounded-2xl sm:rounded-3xl max-w-4xl">
+          <DialogHeader className="pr-8">
             <DialogTitle className="text-xl font-black text-foreground flex items-center gap-2">
               <Tag className="w-5 h-5 text-emerald-400" />
               {editingConfig ? 'Editar Plantilla de Etiqueta' : 'Nueva Plantilla de Etiqueta'}
@@ -704,8 +704,9 @@ export function EtiquetasClient({
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSave} className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <DialogBody>
+            <form id="label-config-form" onSubmit={handleSave} className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Columna Izquierda: Formulario de Parámetros (7 cols) */}
               <div className="lg:col-span-7 space-y-4">
                 {/* Nombre de la Plantilla */}
@@ -1096,36 +1097,41 @@ export function EtiquetasClient({
               </div>
             </div>
 
-            {/* Botones Guardar / Cancelar */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
-              <GlassButton
-                type="button"
-                variant="ghost"
-                onClick={() => setModalOpen(false)}
-                disabled={saving}
-              >
-                Cancelar
-              </GlassButton>
-              <GlassButton
-                type="submit"
-                variant="primary"
-                disabled={saving}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20"
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4 mr-2" />
-                    {editingConfig ? 'Actualizar Plantilla' : 'Guardar Plantilla'}
-                  </>
-                )}
-              </GlassButton>
-            </div>
-          </form>
+            </form>
+          </DialogBody>
+
+          <DialogFooter>
+            <GlassButton
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setModalOpen(false)}
+              disabled={saving}
+              className="w-full sm:w-auto"
+            >
+              Cancelar
+            </GlassButton>
+            <GlassButton
+              form="label-config-form"
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={saving}
+              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20"
+            >
+              {saving ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  {editingConfig ? 'Actualizar Plantilla' : 'Guardar Plantilla'}
+                </>
+              )}
+            </GlassButton>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

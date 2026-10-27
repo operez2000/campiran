@@ -430,22 +430,22 @@ export function ImageCropModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-70 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md select-none overflow-y-auto">
+      <div className="fixed inset-0 z-70 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md select-none">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           transition={{ duration: 0.2 }}
-          className="glass-card max-w-md w-full p-4 sm:p-5 flex flex-col items-center gap-3 my-auto"
+          className="glass-card max-w-md w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
         >
-          {/* Header */}
-          <div className="w-full flex items-center justify-between border-b border-border/40 pb-2.5">
+          {/* Fixed Header */}
+          <div className="w-full flex items-center justify-between px-4 py-3 sm:px-5 sm:py-3.5 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 shrink-0">
                 <Crop size={17} />
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5 truncate">
                   Recortar y Girar
                   {queueTotal > 1 && (
                     <span className="text-[11px] font-normal text-muted-foreground">
@@ -457,20 +457,23 @@ export function ImageCropModal({
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold tracking-wider uppercase">
                 1:1 Cuadrado
               </span>
               <button
                 type="button"
                 onClick={onCancel}
-                className="p-1 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                 title="Cerrar"
               >
                 <X size={18} />
               </button>
             </div>
           </div>
+
+          {/* Scrollable Body */}
+          <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-5 flex flex-col items-center gap-3">
 
           {/* Área interactiva de recorte con marcas móviles */}
           <div className="w-full flex items-center justify-center py-1">
@@ -655,8 +658,10 @@ export function ImageCropModal({
             </div>
           </div>
 
-          {/* Footer Actions */}
-          <div className="w-full flex items-center justify-between gap-2 pt-1 border-t border-border/40">
+          </div>
+
+          {/* Fixed Footer Actions */}
+          <div className="w-full flex items-center justify-between gap-2 p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
             <div className="flex items-center gap-1.5">
               {queueTotal > 1 && onSkip ? (
                 <>

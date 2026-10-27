@@ -808,35 +808,29 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
       {/* Modal: Edit User Role & Store */}
       <AnimatePresence>
         {editingProfile && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-md">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-md w-full p-4 sm:p-6 space-y-4 max-h-[calc(100dvh-1rem)] sm:max-h-[90vh] overflow-y-auto scroll-modern"
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="glass-card max-w-md w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
-                <h3 className="text-base font-bold text-foreground">Gestionar Usuario y Permisos</h3>
-                <div className="flex items-center gap-2">
-                  <GlassButton
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={saving}
-                  >
-                    <Check size={14} className="mr-1" />
-                    {saving ? 'Guardando...' : 'Aplicar Cambios'}
-                  </GlassButton>
-                  <button
-                    type="button"
-                    onClick={() => setEditingProfile(null)}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+              {/* Header Fijo */}
+              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <h3 className="text-sm sm:text-base font-bold text-foreground truncate pr-2">
+                  Gestionar Usuario y Permisos
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setEditingProfile(null)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
+                >
+                  <X size={18} />
+                </button>
               </div>
+
+              {/* Cuerpo desplazable */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
 
               {/* User Avatar & Identity Header */}
               <div className="p-3 rounded-2xl glass border border-white/5 flex items-center gap-3 bg-white/[0.02]">
@@ -1135,12 +1129,14 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border/40">
+              {/* Footer Fijo */}
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
                 <GlassButton
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => setEditingProfile(null)}
+                  className="w-full sm:w-auto"
                 >
                   Cancelar
                 </GlassButton>
@@ -1150,6 +1146,7 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                   size="sm"
                   onClick={handleSave}
                   disabled={saving}
+                  className="w-full sm:w-auto"
                 >
                   <Check size={14} className="mr-1" />
                   {saving ? 'Guardando...' : 'Aplicar Cambios'}
@@ -1163,40 +1160,31 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
       {/* Modal: Create User */}
       <AnimatePresence>
         {isCreateOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto scroll-modern"
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="glass-card max-w-lg w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
-                <div className="flex items-center gap-2">
-                  <UserPlus className="text-emerald-500" size={20} />
-                  <h3 className="text-base font-bold text-foreground">Crear Nuevo Usuario</h3>
+              {/* Header Fijo */}
+              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <div className="flex items-center gap-2 min-w-0 pr-2">
+                  <UserPlus className="text-emerald-500 shrink-0" size={20} />
+                  <h3 className="text-sm sm:text-base font-bold text-foreground truncate">Crear Nuevo Usuario</h3>
                 </div>
-                <div className="flex items-center gap-2">
-                  <GlassButton
-                    type="submit"
-                    form="create-user-form"
-                    variant="primary"
-                    size="sm"
-                    disabled={creating}
-                  >
-                    <Check size={14} className="mr-1" />
-                    {creating ? 'Creando...' : 'Registrar Usuario'}
-                  </GlassButton>
-                  <button
-                    type="button"
-                    onClick={() => setIsCreateOpen(false)}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCreateOpen(false)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
+                >
+                  <X size={18} />
+                </button>
               </div>
 
-              <form id="create-user-form" onSubmit={handleCreateUser} className="space-y-4">
+              {/* Cuerpo desplazable */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6">
+                <form id="create-user-form" onSubmit={handleCreateUser} className="space-y-4">
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground block mb-1">
                     Nombre Completo *
@@ -1427,26 +1415,32 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border/40">
-                  <GlassButton
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsCreateOpen(false)}
-                  >
-                    Cancelar
-                  </GlassButton>
-                  <GlassButton
-                    type="submit"
-                    variant="primary"
-                    size="sm"
-                    disabled={creating}
-                  >
-                    <Check size={14} className="mr-1" />
-                    {creating ? 'Creando Usuario...' : 'Registrar Usuario'}
-                  </GlassButton>
-                </div>
-              </form>
+                </form>
+              </div>
+
+              {/* Footer Fijo */}
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <GlassButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsCreateOpen(false)}
+                  className="w-full sm:w-auto"
+                >
+                  Cancelar
+                </GlassButton>
+                <GlassButton
+                  type="submit"
+                  form="create-user-form"
+                  variant="primary"
+                  size="sm"
+                  disabled={creating}
+                  className="w-full sm:w-auto"
+                >
+                  <Check size={14} className="mr-1" />
+                  {creating ? 'Creando Usuario...' : 'Registrar Usuario'}
+                </GlassButton>
+              </div>
             </motion.div>
           </div>
         )}

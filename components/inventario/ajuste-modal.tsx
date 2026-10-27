@@ -546,55 +546,42 @@ export function AjusteInventarioModal({
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ duration: 0.2 }}
-            className="glass-card w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden p-0 border border-border/60 shadow-2xl"
+            className="glass-card w-full max-w-4xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden p-0 border border-border/60 shadow-2xl rounded-2xl sm:rounded-3xl"
           >
-            {/* Sticky Header */}
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border/40 bg-card/95 backdrop-blur-xl shrink-0">
-              <div className="flex items-center gap-3 min-w-0">
+            {/* Header Fijo */}
+            <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 bg-card/95 backdrop-blur-xl shrink-0 z-10">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500/20 to-emerald-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
                   <Wrench size={20} />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-base sm:text-lg font-bold text-foreground truncate">
+                  <h2 className="text-sm sm:text-lg font-bold text-foreground truncate">
                     Registrar Ajuste de Inventario
                   </h2>
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className="text-[11px] text-muted-foreground truncate">
                     Sucursal:{' '}
                     <span className="font-semibold text-emerald-400">
                       {currentStore?.description ?? 'Sucursal Activa'}
                     </span>{' '}
-                    · Afectación inmediata en Stock y Kardex
+                    · Stock y Kardex
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                <GlassButton
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  onClick={handleApplyAdjustment}
-                  loading={saving}
-                  disabled={saving || summary.validLinesCount === 0 || summary.hasNegativeAfter}
-                  icon={<Check size={15} />}
-                >
-                  Aplicar Ajuste
-                </GlassButton>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
-                  aria-label="Cerrar modal"
-                >
-                  <X size={18} />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
+                aria-label="Cerrar modal"
+              >
+                <X size={18} />
+              </button>
             </div>
 
             {/* Scrollable Body */}
@@ -977,8 +964,8 @@ export function AjusteInventarioModal({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-                <GlassButton type="button" variant="ghost" size="sm" onClick={onClose}>
+              <div className="flex flex-col-reverse sm:flex-row items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-end">
+                <GlassButton type="button" variant="ghost" size="sm" onClick={onClose} className="w-full sm:w-auto">
                   Cancelar
                 </GlassButton>
                 <GlassButton
@@ -989,6 +976,7 @@ export function AjusteInventarioModal({
                   loading={saving}
                   disabled={saving || summary.validLinesCount === 0 || summary.hasNegativeAfter}
                   icon={<Check size={15} />}
+                  className="w-full sm:w-auto font-bold"
                 >
                   Confirmar y Aplicar Ajuste
                 </GlassButton>

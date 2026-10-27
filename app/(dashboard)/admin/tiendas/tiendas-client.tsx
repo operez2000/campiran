@@ -577,39 +577,30 @@ export function TiendasClient() {
       {/* Modal: Create / Edit Store */}
       <AnimatePresence>
         {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-lg w-full p-6 space-y-4 max-h-[92vh] overflow-y-auto scroll-modern"
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="glass-card max-w-lg w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
-                <h3 className="text-base font-bold text-foreground">
+              {/* Header Fijo */}
+              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <h3 className="text-sm sm:text-base font-bold text-foreground truncate pr-2">
                   {editingStore ? 'Editar Sucursal' : 'Nueva Sucursal'}
                 </h3>
-                <div className="flex items-center gap-2">
-                  <GlassButton
-                    type="submit"
-                    form="store-form"
-                    variant="primary"
-                    size="sm"
-                    disabled={saving}
-                  >
-                    <Check size={14} className="mr-1" />
-                    {saving ? 'Guardando...' : editingStore ? 'Actualizar' : 'Guardar'}
-                  </GlassButton>
-                  <button
-                    type="button"
-                    onClick={() => setModalOpen(false)}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
+                >
+                  <X size={18} />
+                </button>
               </div>
 
-              <form id="store-form" onSubmit={handleSave} className="space-y-4">
+              {/* Cuerpo desplazable */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6">
+                <form id="store-form" onSubmit={handleSave} className="space-y-4">
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground block mb-1">
                     Nombre / Descripción *
@@ -837,21 +828,32 @@ export function TiendasClient() {
                   </p>
                 </div>
 
-                <div className="flex items-center justify-end gap-2.5 pt-2">
-                  <GlassButton
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setModalOpen(false)}
-                  >
-                    Cancelar
-                  </GlassButton>
-                  <GlassButton type="submit" variant="primary" size="sm" disabled={saving}>
-                    <Check size={14} className="mr-1" />
-                    {saving ? 'Guardando...' : editingStore ? 'Actualizar' : 'Guardar'}
-                  </GlassButton>
-                </div>
-              </form>
+                </form>
+              </div>
+
+              {/* Footer Fijo */}
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <GlassButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setModalOpen(false)}
+                  className="w-full sm:w-auto"
+                >
+                  Cancelar
+                </GlassButton>
+                <GlassButton
+                  type="submit"
+                  form="store-form"
+                  variant="primary"
+                  size="sm"
+                  disabled={saving}
+                  className="w-full sm:w-auto"
+                >
+                  <Check size={14} className="mr-1" />
+                  {saving ? 'Guardando...' : editingStore ? 'Actualizar' : 'Guardar'}
+                </GlassButton>
+              </div>
             </motion.div>
           </div>
         )}
@@ -860,35 +862,43 @@ export function TiendasClient() {
       {/* Modal: Delete Confirm */}
       <AnimatePresence>
         {deleteConfirmOpen && storeToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-md w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto scroll-modern"
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="glass-card max-w-md w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
-                <h3 className="text-base font-bold text-foreground">
+              {/* Header Fijo */}
+              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <h3 className="text-sm sm:text-base font-bold text-foreground truncate pr-2">
                   {storeToDelete.status === 'A' ? '¿Desactivar Sucursal?' : '¿Reactivar Sucursal?'}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setDeleteConfirmOpen(false)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
                 >
                   <X size={18} />
                 </button>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {storeToDelete.status === 'A'
-                  ? `La sucursal "${storeToDelete.description}" se marcará como inactiva.`
-                  : `La sucursal "${storeToDelete.description}" volverá a estar disponible.`}
-              </p>
-              <div className="flex items-center justify-end gap-2.5 pt-2">
+
+              {/* Cuerpo */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {storeToDelete.status === 'A'
+                    ? `La sucursal "${storeToDelete.description}" se marcará como inactiva.`
+                    : `La sucursal "${storeToDelete.description}" volverá a estar disponible.`}
+                </p>
+              </div>
+
+              {/* Footer Fijo */}
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
                 <GlassButton
                   variant="ghost"
                   size="sm"
                   onClick={() => setDeleteConfirmOpen(false)}
+                  className="w-full sm:w-auto"
                 >
                   Cancelar
                 </GlassButton>
@@ -897,6 +907,7 @@ export function TiendasClient() {
                   size="sm"
                   onClick={handleConfirmDelete}
                   disabled={deleting}
+                  className="w-full sm:w-auto"
                 >
                   {deleting ? 'Procesando...' : storeToDelete.status === 'A' ? 'Desactivar' : 'Reactivar'}
                 </GlassButton>

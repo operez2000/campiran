@@ -157,30 +157,32 @@ export function ShiftOpenModal({
     <>
       <AnimatePresence>
         {open && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.94, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 15 }}
-              className="glass-card border-border/50 rounded-3xl max-w-lg w-full p-6 relative overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto scroll-modern"
+              className="glass-card border-border/50 rounded-2xl sm:rounded-3xl max-w-lg w-full relative overflow-hidden shadow-2xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col"
             >
-              {/* Header */}
-              <div className="flex items-center gap-3 mb-5 border-b border-border/20 pb-4 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 shrink-0">
-                  <Lock size={22} />
+              {/* Header Fijo */}
+              <div className="flex items-center gap-3 border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 shrink-0">
+                  <Lock size={20} />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-foreground">
+                <div className="min-w-0 pr-2">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground truncate">
                     Apertura de Caja y Jornada
                   </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-[11px] text-muted-foreground truncate">
                     Sucursal: <span className="font-semibold text-emerald-400">{storeName}</span> · Cajero:{' '}
                     <span className="font-semibold text-foreground">{user?.full_name || user?.email}</span>
                   </p>
                 </div>
               </div>
 
-              {step === 'auth' ? (
+              {/* Cuerpo desplazable */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
+                {step === 'auth' ? (
                 /* PASO 1: Validación Biométrica */
                 <div className="space-y-4">
                   <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-start gap-2.5">
@@ -394,14 +396,32 @@ export function ShiftOpenModal({
                     />
                   </div>
 
-                  {/* Botón de Apertura */}
-                  <div className="pt-2">
+                  </div>
+                </div>
+              )}
+              </div>
+
+              {/* Footer Fijo */}
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                {step === 'funds' ? (
+                  <>
                     <GlassButton
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setStep('auth')}
+                      disabled={submitting}
+                      className="w-full sm:w-auto"
+                    >
+                      Volver
+                    </GlassButton>
+                    <GlassButton
+                      type="button"
                       variant="primary"
                       size="md"
-                      className="w-full justify-center"
                       disabled={submitting}
                       onClick={handleOpenShift}
+                      className="w-full sm:w-auto font-bold"
                     >
                       {submitting ? (
                         <>
@@ -415,9 +435,13 @@ export function ShiftOpenModal({
                         </>
                       )}
                     </GlassButton>
-                  </div>
-                </div>
-              )}
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground w-full text-center sm:text-right py-1">
+                    Selecciona un método biométrico o ingresa tu PIN para continuar
+                  </p>
+                )}
+              </div>
             </motion.div>
           </div>
         )}

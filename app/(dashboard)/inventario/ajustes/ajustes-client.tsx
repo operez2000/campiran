@@ -1131,32 +1131,34 @@ export function AjustesClient() {
       {/* Modal: Adjustment Voucher Detail */}
       <AnimatePresence>
         {detailAdjustment && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-lg w-full p-6 space-y-4 border border-border/60 shadow-2xl"
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="glass-card max-w-lg w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden border border-border/60 shadow-2xl rounded-2xl sm:rounded-3xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                <div>
-                  <h3 className="text-base font-bold text-foreground">
+              {/* Header Fijo */}
+              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <div className="min-w-0 pr-2">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground truncate">
                     Póliza de Ajuste de Inventario
                   </h3>
-                  <p className="text-xs font-mono text-amber-400">
+                  <p className="text-xs font-mono text-amber-400 truncate">
                     Folio: {detailAdjustment.reference || detailAdjustment.id_transaction.slice(0, 8)}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setDetailAdjustment(null)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
                 >
-                  <X size={16} />
+                  <X size={18} />
                 </button>
               </div>
 
-              <div className="space-y-3 text-xs sm:text-sm">
+              {/* Cuerpo desplazable */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-3 text-xs sm:text-sm">
                 <div className="p-3 rounded-2xl glass border border-border/40">
                   <p className="text-xs text-muted-foreground">Artículo Ajustado</p>
                   <p className="font-bold text-foreground text-base">
@@ -1237,7 +1239,8 @@ export function AjustesClient() {
                 )}
               </div>
 
-              <div className="flex items-center justify-between gap-2 pt-2">
+              {/* Footer Fijo */}
+              <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
                 <GlassButton
                   type="button"
                   variant="secondary"
@@ -1248,16 +1251,18 @@ export function AjustesClient() {
                     handleOpenItemKardex(itemId)
                   }}
                   icon={<BookOpen size={14} />}
+                  className="w-full sm:w-auto"
                 >
                   Ver en Kardex
                 </GlassButton>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col-reverse sm:flex-row items-center gap-2 w-full sm:w-auto">
                   <GlassButton
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => setDetailAdjustment(null)}
+                    className="w-full sm:w-auto"
                   >
                     Cerrar
                   </GlassButton>
@@ -1267,6 +1272,7 @@ export function AjustesClient() {
                     size="sm"
                     onClick={() => handlePrintVoucherPDF(detailAdjustment)}
                     icon={<Printer size={14} />}
+                    className="w-full sm:w-auto"
                   >
                     Imprimir Póliza PDF
                   </GlassButton>

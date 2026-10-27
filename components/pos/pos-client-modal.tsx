@@ -122,7 +122,7 @@ export function PosClientModal({
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md">
           {/* Backdrop click (disabled if required) */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -138,39 +138,43 @@ export function PosClientModal({
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            className="glass-card border-border/50 rounded-3xl max-w-xl w-full p-6 relative z-10 overflow-hidden shadow-2xl flex flex-col max-h-[88vh]"
+            className="glass-card border-border/50 rounded-2xl sm:rounded-3xl max-w-xl w-full relative z-10 overflow-hidden shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh]"
           >
-            {/* Close Button (only if not required) */}
-            {!required && (
-              <button
-                onClick={() => onOpenChange(false)}
-                className="absolute top-4 right-4 z-30 p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
-              >
-                <X size={18} />
-              </button>
-            )}
-
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-4 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 pb-2 bg-card/95 dark:bg-card/90 backdrop-blur-xl border-b border-border/30 z-20">
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 shrink-0">
-                <Users size={22} />
-              </div>
-              <div className="pr-6">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold text-foreground">
-                    Seleccionar Cliente para Venta
-                  </h3>
-                  {required && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold">
-                      Obligatorio
-                    </span>
-                  )}
+            {/* Header Fijo */}
+            <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 shrink-0">
+                  <Users size={20} />
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Selecciona el cliente del ticket para aplicar su lista de precios o elige Público en General
-                </p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-foreground truncate">
+                      Seleccionar Cliente
+                    </h3>
+                    {required && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold shrink-0">
+                        Obligatorio
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    Elige el cliente para aplicar su lista de precios
+                  </p>
+                </div>
               </div>
+              {!required && (
+                <button
+                  type="button"
+                  onClick={() => onOpenChange(false)}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
+                >
+                  <X size={18} />
+                </button>
+              )}
             </div>
+
+            {/* Cuerpo desplazable */}
+            <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-3">
 
             {/* Default Quick Option: Público en General */}
             <div className="mb-3">
@@ -337,13 +341,18 @@ export function PosClientModal({
               )}
             </div>
 
-            {/* Footer */}
-            <div className="pt-3 mt-2 border-t border-border/20 flex items-center justify-between text-xs text-muted-foreground">
-              <span>Usa las flechas [↑/↓] y presiona [Enter] para seleccionar</span>
-              {!required && (
-                <GlassButton variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+            </div>
+            </div>
+
+            {/* Footer Fijo */}
+            <div className="flex items-center justify-between gap-2 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10 text-xs text-muted-foreground">
+              <span className="hidden sm:inline">Usa las flechas [↑/↓] y [Enter] para seleccionar</span>
+              {!required ? (
+                <GlassButton variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="w-full sm:w-auto ml-auto">
                   Cerrar
                 </GlassButton>
+              ) : (
+                <span className="text-[11px] text-amber-400">Selección de cliente obligatoria</span>
               )}
             </div>
           </motion.div>

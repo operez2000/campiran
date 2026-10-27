@@ -1100,28 +1100,40 @@ export function ConsultaInventarioClient() {
       {/* ── MODAL: CONFIRM RESET STOCK TO ZERO ─────────────────────────── */}
       <AnimatePresence>
         {resetModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-lg w-full p-6 space-y-4 border-rose-500/40 shadow-2xl"
+              className="glass-card max-w-lg w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl border-rose-500/40 shadow-2xl"
             >
-              <div className="flex items-center gap-3 border-b border-border/40 pb-3">
-                <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
-                  <AlertTriangle size={22} />
+              <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                    <AlertTriangle size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold text-foreground">
+                      Poner Existencias a Cero
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground">
+                      Sucursal: <strong className="text-foreground">{currentStore?.description}</strong>
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-foreground">
-                    Poner Existencias a Cero
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Sucursal: <strong className="text-foreground">{currentStore?.description}</strong>
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetModalOpen(false)
+                    setResetConfirmText('')
+                  }}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                >
+                  <X size={18} />
+                </button>
               </div>
 
-              <div className="space-y-3 text-xs text-foreground/90 leading-relaxed">
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-3 text-xs text-foreground/90 leading-relaxed">
                 <p className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300">
                   ⚠️ <strong>Acción crítica para Inventario Físico:</strong>
                   <br />
@@ -1145,7 +1157,7 @@ export function ConsultaInventarioClient() {
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
                 <GlassButton
                   type="button"
                   variant="ghost"
@@ -1155,6 +1167,7 @@ export function ConsultaInventarioClient() {
                     setResetConfirmText('')
                   }}
                   disabled={isResetting}
+                  className="w-full sm:w-auto"
                 >
                   Cancelar
                 </GlassButton>
@@ -1164,9 +1177,10 @@ export function ConsultaInventarioClient() {
                   size="sm"
                   onClick={handleConfirmResetToZero}
                   disabled={resetConfirmText.trim().toUpperCase() !== 'CONFIRMAR' || isResetting}
+                  className="w-full sm:w-auto"
                 >
                   {isResetting ? (
-                    <span className="flex items-center gap-1.5">
+                    <span className="flex items-center gap-1.5 justify-center">
                       <RefreshCw size={14} className="animate-spin" />
                       Procesando...
                     </span>

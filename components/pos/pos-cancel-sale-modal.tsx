@@ -208,42 +208,42 @@ export function PosCancelSaleModal({
   return (
     <>
       <AnimatePresence>
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md">
           <motion.div
             initial={{ opacity: 0, scale: 0.94, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 15 }}
-            className="glass-card border-border/50 rounded-3xl max-w-xl w-full p-6 relative overflow-hidden shadow-2xl max-h-[92vh] overflow-y-auto scroll-modern"
+            className="glass-card border-border/50 rounded-2xl sm:rounded-3xl max-w-xl w-full relative overflow-hidden shadow-2xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col"
           >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-border/20 pb-4 mb-4 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-white shadow-lg shadow-rose-500/25 shrink-0">
-                  <ShieldAlert size={22} />
+            {/* Header Fijo */}
+            <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-white shadow-lg shadow-rose-500/25 shrink-0">
+                  <ShieldAlert size={20} />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                    Cancelación de Venta
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2 truncate">
+                    <span>Cancelación de Venta</span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 font-mono">
                       #{order.order_number}
                     </span>
                   </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Autorización obligatoria por <strong className="text-foreground">ADMIN</strong> o{' '}
-                    <strong className="text-foreground">MANAGER</strong>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    Autorización por <strong className="text-foreground">ADMIN</strong> o <strong className="text-foreground">MANAGER</strong>
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="p-2 rounded-xl glass-input text-muted-foreground hover:text-foreground transition-colors"
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-4">
+            {/* Cuerpo desplazable */}
+            <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
               {/* Resumen de la Venta a Cancelar */}
               <div className="p-3.5 rounded-2xl bg-white/5 border border-border/40 space-y-2 text-xs">
                 <div className="flex items-center justify-between">
@@ -539,13 +539,16 @@ export function PosCancelSaleModal({
               </div>
             </div>
 
-            {/* Footer Actions */}
-            <div className="flex items-center justify-end gap-2.5 mt-5 border-t border-border/20 pt-4">
+            </div>
+
+            {/* Footer Fijo */}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
               <GlassButton
                 type="button"
                 variant="ghost"
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
+                className="w-full sm:w-auto"
               >
                 Cerrar
               </GlassButton>
@@ -554,7 +557,7 @@ export function PosCancelSaleModal({
                 variant="danger"
                 disabled={isSubmitting || !selectedManagerId}
                 onClick={handleConfirmCancellation}
-                className="gap-2"
+                className="w-full sm:w-auto gap-2"
               >
                 <RotateCcw size={16} />
                 {isSubmitting ? 'Cancelando Venta...' : 'Autorizar Cancelación y Reintegrar'}

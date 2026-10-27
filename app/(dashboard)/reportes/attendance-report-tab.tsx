@@ -26,7 +26,7 @@ import * as XLSX from 'xlsx'
 import {
   Clock, Store as StoreIcon, Users, Calendar, Search, RefreshCw,
   FileText, FileSpreadsheet, AlertCircle, ArrowUpRight,
-  Eye, CheckCircle2, ChevronRight, Filter, Sparkles
+  Eye, CheckCircle2, ChevronRight, Filter, Sparkles, X
 } from 'lucide-react'
 
 interface AttendanceReportTabProps {
@@ -833,112 +833,113 @@ export function AttendanceReportTab({
       {/* Modal de Desglose de Turnos del Día */}
       <AnimatePresence>
         {selectedSummary && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="w-full max-w-lg"
+              className="glass-card border border-emerald-500/30 rounded-2xl sm:rounded-3xl max-w-lg w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden shadow-2xl"
             >
-              <GlassCard variant="default" padding="lg" className="border-emerald-500/30 shadow-2xl max-h-[90vh] overflow-y-auto scroll-modern">
-                <div className="flex items-center justify-between pb-3 border-b border-[var(--border)] shrink-0 sticky -top-6 -mx-6 px-6 pt-2 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
-                  <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-500">
-                      <Clock size={20} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-base text-foreground">
-                        Desglose de Jornada — {selectedSummary.date}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">{selectedSummary.userName}</p>
-                    </div>
+              {/* Header fijo */}
+              <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-500 shrink-0">
+                    <Clock size={20} />
                   </div>
-
-                  <button
-                    onClick={() => setSelectedSummary(null)}
-                    className="p-1.5 rounded-lg btn-ghost text-muted-foreground hover:text-foreground"
-                  >
-                    ✕
-                  </button>
+                  <div>
+                    <h3 className="font-bold text-base text-foreground">
+                      Desglose de Jornada — {selectedSummary.date}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">{selectedSummary.userName}</p>
+                  </div>
                 </div>
 
-                <div className="py-4 space-y-3">
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-muted-foreground">
-                      Total Acumulado del Día:
-                    </span>
-                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-base">
-                      {selectedSummary.totalHoursFormatted} ({selectedSummary.totalMinutes} min)
-                    </span>
-                  </div>
+                <button
+                  onClick={() => setSelectedSummary(null)}
+                  className="p-1.5 rounded-lg btn-ghost text-muted-foreground hover:text-foreground"
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-                  <div className="space-y-2 max-h-64 overflow-y-auto scroll-modern pr-1">
-                    {selectedSummary.records.map((rec, i) => {
-                      const inTime = new Date(rec.check_in).toLocaleTimeString('es-MX', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true,
-                      })
-                      const outTime = rec.check_out
-                        ? new Date(rec.check_out).toLocaleTimeString('es-MX', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true,
-                          })
-                        : 'En curso'
+              {/* Contenido scrolleable */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-3">
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    Total Acumulado del Día:
+                  </span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-base">
+                    {selectedSummary.totalHoursFormatted} ({selectedSummary.totalMinutes} min)
+                  </span>
+                </div>
 
-                      const minutes =
-                        rec.status === 'open'
-                          ? Math.round(
-                              (new Date().getTime() - new Date(rec.check_in).getTime()) / 60000
-                            )
-                          : Number(rec.total_minutes || 0)
+                <div className="space-y-2">
+                  {selectedSummary.records.map((rec, i) => {
+                    const inTime = new Date(rec.check_in).toLocaleTimeString('es-MX', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true,
+                    })
+                    const outTime = rec.check_out
+                      ? new Date(rec.check_out).toLocaleTimeString('es-MX', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true,
+                        })
+                      : 'En curso'
 
-                      return (
-                        <div
-                          key={rec.id_attendance || i}
-                          className="p-3 rounded-xl glass border border-[var(--border)] flex items-center justify-between text-xs"
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 font-mono font-semibold text-foreground">
-                              <span className="text-emerald-500">Entrada: {inTime}</span>
-                              <span>→</span>
-                              <span className={rec.status === 'open' ? 'text-amber-500' : 'text-rose-500'}>
-                                Salida: {outTime}
-                              </span>
-                            </div>
-                            <div className="text-[11px] text-muted-foreground flex items-center gap-2">
-                              <span>
-                                Método:{' '}
-                                {rec.auth_method === 'webauthn'
-                                  ? 'Touch ID / Sensor Biométrico'
-                                  : rec.auth_method === 'face'
-                                  ? 'Face ID / Facial'
-                                  : rec.auth_method === 'pin'
-                                  ? 'PIN Quiosco'
-                                  : 'Sesión Web'}
-                              </span>
-                              {rec.notes && <span>· Nota: {rec.notes}</span>}
-                            </div>
-                          </div>
+                    const minutes =
+                      rec.status === 'open'
+                        ? Math.round(
+                            (new Date().getTime() - new Date(rec.check_in).getTime()) / 60000
+                          )
+                        : Number(rec.total_minutes || 0)
 
-                          <div className="text-right">
-                            <span className="font-bold text-foreground">
-                              {Math.floor(minutes / 60)}h {minutes % 60}m
+                    return (
+                      <div
+                        key={rec.id_attendance || i}
+                        className="p-3 rounded-xl glass border border-[var(--border)] flex items-center justify-between text-xs"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 font-mono font-semibold text-foreground">
+                            <span className="text-emerald-500">Entrada: {inTime}</span>
+                            <span>→</span>
+                            <span className={rec.status === 'open' ? 'text-amber-500' : 'text-rose-500'}>
+                              Salida: {outTime}
                             </span>
                           </div>
+                          <div className="text-[11px] text-muted-foreground flex items-center gap-2">
+                            <span>
+                              Método:{' '}
+                              {rec.auth_method === 'webauthn'
+                                ? 'Touch ID / Sensor Biométrico'
+                                : rec.auth_method === 'face'
+                                ? 'Face ID / Facial'
+                                : rec.auth_method === 'pin'
+                                ? 'PIN Quiosco'
+                                : 'Sesión Web'}
+                            </span>
+                            {rec.notes && <span>· Nota: {rec.notes}</span>}
+                          </div>
                         </div>
-                      )
-                    })}
-                  </div>
-                </div>
 
-                <div className="flex justify-end pt-2 border-t border-[var(--border)]">
-                  <GlassButton variant="ghost" size="sm" onClick={() => setSelectedSummary(null)}>
-                    Cerrar
-                  </GlassButton>
+                        <div className="text-right">
+                          <span className="font-bold text-foreground">
+                            {Math.floor(minutes / 60)}h {minutes % 60}m
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              </GlassCard>
+              </div>
+
+              {/* Footer fijo */}
+              <div className="flex justify-end p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                <GlassButton variant="ghost" size="sm" onClick={() => setSelectedSummary(null)} className="w-full sm:w-auto">
+                  Cerrar
+                </GlassButton>
+              </div>
             </motion.div>
           </div>
         )}

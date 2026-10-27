@@ -12,7 +12,7 @@ import { DEFAULT_LABEL_CONFIG, toMm } from '@/lib/label-presets'
 import { generateBarcodeSvg } from '@/lib/barcode-svg'
 import { LabelPreview } from './label-preview'
 import { GlassButton } from '@/components/glass-button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from '@/components/ui/dialog'
 import { Printer, FileDown, Plus, Minus, Trash2, Tag, RefreshCw, SlidersHorizontal, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import jsPDF from 'jspdf'
@@ -450,8 +450,8 @@ export function LabelPrintModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass border-white/20 rounded-3xl max-w-5xl p-6 max-h-[92vh] overflow-y-auto scroll-modern">
-        <DialogHeader className="mb-4 pr-8">
+      <DialogContent className="glass border-white/20 rounded-2xl sm:rounded-3xl max-w-5xl">
+        <DialogHeader className="pr-8">
           <DialogTitle className="text-xl font-black text-foreground flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Printer className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -466,7 +466,8 @@ export function LabelPrintModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <DialogBody className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Lado Izquierdo: Lista de Productos en Cola (7 cols) */}
           <div className="lg:col-span-7 space-y-4">
             {/* Selector de Plantilla */}
@@ -673,10 +674,60 @@ export function LabelPrintModal({
                     Descargar como PDF
                   </>
                 )}
-              </GlassButton>
+              </div>
             </div>
           </div>
-        </div>
+        </DialogBody>
+
+        <DialogFooter>
+          <GlassButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            className="w-full sm:w-auto"
+          >
+            Cerrar
+          </GlassButton>
+          <GlassButton
+            variant="secondary"
+            size="sm"
+            onClick={handleDownloadPdf}
+            disabled={generatingPdf || queue.length === 0}
+            className="w-full sm:w-auto"
+          >
+            {generatingPdf ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" />
+                Generando PDF...
+              </>
+            ) : (
+              <>
+                <FileDown className="w-3.5 h-3.5 mr-2" />
+                Descargar como PDF
+              </>
+            )}
+          </GlassButton>
+          <GlassButton
+            variant="primary"
+            size="sm"
+            onClick={handleBrowserPrint}
+            disabled={printing || queue.length === 0}
+            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-600/30"
+          >
+            {printing ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                Abriendo impresión...
+              </>
+            ) : (
+              <>
+                <Printer className="w-4 h-4 mr-2" />
+                Imprimir {totalLabels} {totalLabels === 1 ? 'Etiqueta' : 'Etiquetas'}
+              </>
+            )}
+          </GlassButton>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

@@ -263,37 +263,39 @@ export function AttendanceKioskModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="w-full max-w-md relative"
+          className="w-full max-w-md flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl border border-emerald-500/30 shadow-2xl bg-card/95 dark:bg-card/90 backdrop-blur-xl"
         >
-          <GlassCard variant="default" padding="lg" className="border-emerald-500/30 shadow-2xl max-h-[92vh] overflow-y-auto scroll-modern">
-            {/* Header & Close */}
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)] shrink-0 sticky -top-6 -mx-6 px-6 pt-2 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
-                  <Clock size={22} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg text-foreground">Quiosco de Asistencia</h3>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <StoreIcon size={12} className="text-emerald-500" />
-                    {store?.description || 'Sucursal no asignada'}
-                  </p>
-                </div>
+          {/* Fixed Header & Close */}
+          <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0">
+                <Clock size={22} />
               </div>
-
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-lg btn-ghost text-muted-foreground hover:text-foreground"
-                aria-label="Cerrar quiosco"
-              >
-                <X size={18} />
-              </button>
+              <div className="min-w-0">
+                <h3 className="font-bold text-base sm:text-lg text-foreground truncate">Quiosco de Asistencia</h3>
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5 truncate">
+                  <StoreIcon size={12} className="text-emerald-500 shrink-0" />
+                  {store?.description || 'Sucursal no asignada'}
+                </p>
+              </div>
             </div>
+
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+              aria-label="Cerrar quiosco"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Scrollable Body */}
+          <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
 
             {/* Live Digital Clock */}
             <div className="my-4 p-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 text-center">
@@ -489,28 +491,30 @@ export function AttendanceKioskModal({
                   className="text-xs h-9"
                 />
               </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-1">
-                <GlassButton
-                  variant="ghost"
-                  onClick={onClose}
-                  className="flex-1"
-                  disabled={submitting}
-                >
-                  Cerrar
-                </GlassButton>
-                <GlassButton
-                  variant="primary"
-                  onClick={handleSubmitPin}
-                  className="flex-[2] bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20"
-                  disabled={submitting || pin.length === 0}
-                >
-                  {submitting ? 'Procesando...' : 'Registrar con PIN'}
-                </GlassButton>
-              </div>
             </div>
-          </GlassCard>
+          </div>
+
+          {/* Fixed Footer Action Buttons */}
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+            <GlassButton
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="w-full sm:w-auto"
+              disabled={submitting}
+            >
+              Cerrar
+            </GlassButton>
+            <GlassButton
+              variant="primary"
+              size="sm"
+              onClick={handleSubmitPin}
+              className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20"
+              disabled={submitting || pin.length === 0}
+            >
+              {submitting ? 'Procesando...' : 'Registrar con PIN'}
+            </GlassButton>
+          </div>
         </motion.div>
       </div>
 

@@ -1202,32 +1202,34 @@ export function KardexView({
       {/* Transaction Detail Modal */}
       <AnimatePresence>
         {detailRow && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-lg w-full p-6 space-y-4 border border-border/60 shadow-2xl"
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="glass-card max-w-lg w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden border border-border/60 shadow-2xl rounded-2xl sm:rounded-3xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                <div>
-                  <h3 className="text-base font-bold text-foreground">
+              {/* Header Fijo */}
+              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <div className="min-w-0 pr-2">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground truncate">
                     Detalle de Registro en Kardex
                   </h3>
-                  <p className="text-xs text-muted-foreground font-mono">
+                  <p className="text-xs text-muted-foreground font-mono truncate">
                     ID: {detailRow.id_transaction.slice(0, 12).toUpperCase()}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setDetailRow(null)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
                 >
-                  <X size={16} />
+                  <X size={18} />
                 </button>
               </div>
 
-              <div className="space-y-3 text-xs sm:text-sm">
+              {/* Cuerpo desplazable */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-3 text-xs sm:text-sm">
                 <div className="p-3 rounded-2xl glass border border-border/40">
                   <p className="text-xs text-muted-foreground">Artículo</p>
                   <p className="font-bold text-foreground text-base">
@@ -1310,12 +1312,14 @@ export function KardexView({
                 )}
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              {/* Footer Fijo */}
+              <div className="flex items-center justify-end border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
                 <GlassButton
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => setDetailRow(null)}
+                  className="w-full sm:w-auto"
                 >
                   Cerrar
                 </GlassButton>
@@ -1346,43 +1350,52 @@ export function KardexModal({
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
           <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 10 }}
+            initial={{ opacity: 0, scale: 0.96, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 10 }}
-            className="glass-card w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden p-0 border border-border/60 shadow-2xl"
+            className="glass-card w-full max-w-6xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden p-0 border border-border/60 shadow-2xl rounded-2xl sm:rounded-3xl"
           >
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/40 bg-card/95 backdrop-blur-xl shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 flex items-center justify-center">
+            {/* Header Fijo */}
+            <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 bg-card/95 backdrop-blur-xl shrink-0 z-10">
+              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0">
                   <BookOpen size={18} />
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-foreground">
-                    Kardex Histórico y Trazabilidad de Inventario
+                <div className="min-w-0">
+                  <h2 className="text-sm sm:text-base font-bold text-foreground truncate">
+                    Kardex Histórico
                   </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Control de entradas, salidas, existencias resultantes y valuación
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    Trazabilidad de entradas, salidas y existencias
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto scroll-modern p-4 flex flex-col min-h-0">
+            {/* Cuerpo desplazable */}
+            <div className="flex-1 overflow-y-auto scroll-modern p-3 sm:p-4 flex flex-col min-h-0">
               <KardexView
                 selectedItemId={itemId}
                 initialLocationId={locationId}
                 onOpenAdjustment={onOpenAdjustment}
                 compact
               />
+            </div>
+
+            {/* Footer Fijo en Móvil */}
+            <div className="flex sm:hidden items-center justify-end border-t border-border/40 p-3 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+              <GlassButton variant="ghost" size="sm" onClick={onClose} className="w-full">
+                Cerrar Kardex
+              </GlassButton>
             </div>
           </motion.div>
         </div>

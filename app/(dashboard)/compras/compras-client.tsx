@@ -2404,55 +2404,39 @@ export function ComprasClient({ currentProfile }: ComprasClientProps) {
          ══════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {detailPurchase && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-4xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col"
+              className="glass-card max-w-4xl w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 shrink-0">
-                <div>
-                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+              <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 gap-2 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground flex flex-wrap items-center gap-2">
                     <span>Detalle de Compra #{detailPurchase.purchase_number}</span>
                     <StatusBadge status={detailPurchase.purchase_status} />
                     <StatusBadge status={detailPurchase.payment_condition} />
                   </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate">
                     Proveedor: {detailPurchase.supplier?.supplier_name || 'Compra Directa'} · Factura:{' '}
                     {detailPurchase.invoice_number || 'S/N'} · Fecha:{' '}
                     {formatDateTime(detailPurchase.purchase_date)}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <GlassButton
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleDownloadPurchasePdf(detailPurchase)}
-                  >
-                    <FileText size={14} className="mr-1" />
-                    PDF
-                  </GlassButton>
-                  <GlassButton
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleOpenLabelModalForPurchase(detailPurchase)}
-                  >
-                    <Printer size={14} className="mr-1" />
-                    Etiquetas
-                  </GlassButton>
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
                     onClick={() => setDetailPurchase(null)}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                   >
                     <X size={18} />
                   </button>
                 </div>
               </div>
 
-              <div className="overflow-y-auto scroll-modern space-y-4 pr-1">
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
                 {/* Partidas y Trazabilidad Kardex */}
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">
@@ -2573,8 +2557,36 @@ export function ComprasClient({ currentProfile }: ComprasClientProps) {
                     <span className="font-mono font-bold text-sm text-amber-400">
                       {formatCurrency(Number(detailPurchase.balance_due || 0))}
                     </span>
-                  </div>
                 </div>
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                <GlassButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDetailPurchase(null)}
+                  className="w-full sm:w-auto"
+                >
+                  Cerrar
+                </GlassButton>
+                <GlassButton
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleDownloadPurchasePdf(detailPurchase)}
+                  className="w-full sm:w-auto"
+                >
+                  <FileText size={14} className="mr-1" />
+                  Descargar PDF
+                </GlassButton>
+                <GlassButton
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleOpenLabelModalForPurchase(detailPurchase)}
+                  className="w-full sm:w-auto"
+                >
+                  <Printer size={14} className="mr-1" />
+                  Imprimir Etiquetas
+                </GlassButton>
               </div>
             </motion.div>
           </div>
@@ -2586,28 +2598,28 @@ export function ComprasClient({ currentProfile }: ComprasClientProps) {
          ══════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {paymentPurchase && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-md w-full p-6 space-y-4"
+              className="glass-card max-w-md w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+              <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
                   <DollarSign size={18} className="text-emerald-400" />
                   Abonar a Compra #{paymentPurchase.purchase_number}
                 </h3>
                 <button
                   type="button"
                   onClick={() => setPaymentPurchase(null)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              <form onSubmit={handleSavePayment} className="space-y-3.5">
+              <form id="payment-form" onSubmit={handleSavePayment} className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-3.5">
                 <div className="p-3 rounded-2xl bg-white/[0.03] border border-border/40 text-xs space-y-1">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Proveedor:</span>
@@ -2683,22 +2695,30 @@ export function ComprasClient({ currentProfile }: ComprasClientProps) {
                     onChange={(e) => setPayNotes(e.target.value)}
                   />
                 </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
-                  <GlassButton
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setPaymentPurchase(null)}
-                  >
-                    Cancelar
-                  </GlassButton>
-                  <GlassButton type="submit" variant="primary" size="sm" disabled={savingPayment}>
-                    <CheckCircle2 size={14} className="mr-1" />
-                    {savingPayment ? 'Guardando...' : 'Confirmar Abono'}
-                  </GlassButton>
-                </div>
               </form>
+
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                <GlassButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPaymentPurchase(null)}
+                  className="w-full sm:w-auto"
+                >
+                  Cancelar
+                </GlassButton>
+                <GlassButton
+                  form="payment-form"
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={savingPayment}
+                  className="w-full sm:w-auto"
+                >
+                  <CheckCircle2 size={14} className="mr-1" />
+                  {savingPayment ? 'Guardando...' : 'Confirmar Abono'}
+                </GlassButton>
+              </div>
             </motion.div>
           </div>
         )}
@@ -2709,51 +2729,54 @@ export function ComprasClient({ currentProfile }: ComprasClientProps) {
          ══════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {cancelPurchaseTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-md w-full p-6 space-y-4"
+              className="glass-card max-w-md w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl border-rose-500/40 shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                <h3 className="text-base font-bold text-rose-400 flex items-center gap-2">
+              <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                <h3 className="text-sm sm:text-base font-bold text-rose-400 flex items-center gap-2">
                   <AlertTriangle size={18} />
                   ¿Cancelar Compra #{cancelPurchaseTarget.purchase_number}?
                 </h3>
                 <button
                   type="button"
                   onClick={() => setCancelPurchaseTarget(null)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                {cancelPurchaseTarget.purchase_status === 'RECEIVED'
-                  ? 'Esta compra ya afectó existencias. Al cancelarla, se descontarán las unidades ingresadas en la sucursal y se registrará el movimiento de reversión (Salida) en el Kardex automáticamente.'
-                  : 'La orden de compra pendiente quedará marcada como cancelada.'}
-              </p>
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-3.5">
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  {cancelPurchaseTarget.purchase_status === 'RECEIVED'
+                    ? 'Esta compra ya afectó existencias. Al cancelarla, se descontarán las unidades ingresadas en la sucursal y se registrará el movimiento de reversión (Salida) en el Kardex automáticamente.'
+                    : 'La orden de compra pendiente quedará marcada como cancelada.'}
+                </p>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                  Motivo de cancelación
-                </label>
-                <GlassInput
-                  placeholder="Ej. Error en captura de factura o devolución a proveedor"
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  autoFocus
-                />
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    Motivo de cancelación
+                  </label>
+                  <GlassInput
+                    placeholder="Ej. Error en captura de factura o devolución a proveedor"
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    autoFocus
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
                 <GlassButton
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => setCancelPurchaseTarget(null)}
+                  className="w-full sm:w-auto"
                 >
                   Volver
                 </GlassButton>
@@ -2763,6 +2786,7 @@ export function ComprasClient({ currentProfile }: ComprasClientProps) {
                   size="sm"
                   disabled={cancelling}
                   onClick={handleConfirmCancelPurchase}
+                  className="w-full sm:w-auto"
                 >
                   <Ban size={14} className="mr-1" />
                   {cancelling ? 'Cancelando...' : 'Confirmar Cancelación'}

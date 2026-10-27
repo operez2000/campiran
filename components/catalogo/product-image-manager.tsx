@@ -703,14 +703,14 @@ export function ProductImageManager({
       {/* ── MODAL: LIVE IN-APP CAMERA (WEBRTC) ───────────────────────── */}
       <AnimatePresence>
         {cameraOpen && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto scroll-modern"
+              className="glass-card max-w-lg w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 shrink-0 sticky -top-5 -mx-5 px-5 pt-5 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
+              <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
                 <div className="flex items-center gap-2">
                   <Camera size={18} className="text-emerald-400" />
                   <h3 className="text-sm font-bold text-foreground">Visor de Cámara en Vivo</h3>
@@ -718,28 +718,30 @@ export function ProductImageManager({
                 <button
                   type="button"
                   onClick={stopCamera}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              {/* Viewport */}
-              <div className="relative rounded-2xl overflow-hidden bg-black aspect-video flex items-center justify-center border border-border/40 shadow-inner">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                />
+              {/* Viewport Body */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
+                <div className="relative rounded-2xl overflow-hidden bg-black aspect-video flex items-center justify-center border border-border/40 shadow-inner">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
 
-                {/* Shutter frame guideline */}
-                <div className="absolute inset-4 border border-dashed border-white/20 rounded-xl pointer-events-none" />
+                  {/* Shutter frame guideline */}
+                  <div className="absolute inset-4 border border-dashed border-white/20 rounded-xl pointer-events-none" />
+                </div>
               </div>
 
-              {/* Camera Controls */}
-              <div className="flex items-center justify-between pt-2">
+              {/* Camera Controls Fixed Footer */}
+              <div className="flex items-center justify-between p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
                 <GlassButton
                   type="button"
                   variant="ghost"
@@ -780,13 +782,13 @@ export function ProductImageManager({
         {lightboxIndex !== null && images[lightboxIndex] && (
           <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 sm:p-6 select-none">
             {/* Top Toolbar */}
-            <div className="absolute top-4 left-4 right-4 flex items-center justify-between text-white z-10">
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold border border-white/15">
+            <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex flex-wrap items-center justify-between gap-2 text-white z-20">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="px-2.5 sm:px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[11px] sm:text-xs font-semibold border border-white/15">
                   Foto {lightboxIndex + 1} de {images.length}
                 </span>
                 {(images[lightboxIndex]?.isCover || lightboxIndex === 0) && (
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-black text-xs font-bold flex items-center gap-1 shadow-md">
+                  <span className="px-2 sm:px-2.5 py-0.5 rounded-full bg-emerald-500 text-black text-[11px] sm:text-xs font-bold flex items-center gap-1 shadow-md">
                     <Star size={11} className="fill-black" />
                     Portada
                   </span>

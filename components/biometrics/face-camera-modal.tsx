@@ -204,7 +204,7 @@ export function FaceCameraModal({
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md">
           {/* Backdrop click */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -221,7 +221,7 @@ export function FaceCameraModal({
             initial={{ opacity: 0, scale: 0.96, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 10 }}
-            className="glass-card border-border/50 rounded-3xl max-w-md w-full relative z-10 overflow-hidden shadow-2xl max-h-[calc(100dvh-1rem)] sm:max-h-[88vh] flex flex-col"
+            className="glass-card border-border/50 rounded-2xl sm:rounded-3xl max-w-md w-full relative z-10 overflow-hidden shadow-2xl max-h-[92dvh] sm:max-h-[88vh] flex flex-col"
           >
             {/* Header (Shrink-0) */}
             <div className="flex items-center justify-between gap-2.5 p-4 sm:p-5 pb-3 border-b border-border/30 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
@@ -342,7 +342,7 @@ export function FaceCameraModal({
             </div>
 
             {/* Action Controls (Shrink-0, ALWAYS within viewport) */}
-            <div className="flex items-center justify-between sm:justify-end gap-2 p-3 sm:p-4 px-4 sm:px-5 border-t border-border/30 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-3 sm:p-4 px-4 sm:px-5 border-t border-border/30 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
               <GlassButton
                 variant="ghost"
                 size="sm"
@@ -350,16 +350,17 @@ export function FaceCameraModal({
                   stopWebcam()
                   onOpenChange(false)
                 }}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </GlassButton>
 
               {capturedPhoto && !verifyMode ? (
-                <div className="flex items-center gap-2">
-                  <GlassButton variant="secondary" size="sm" onClick={handleRetake}>
+                <div className="flex flex-col-reverse sm:flex-row items-center gap-2 w-full sm:w-auto">
+                  <GlassButton variant="secondary" size="sm" onClick={handleRetake} className="w-full sm:w-auto">
                     <RefreshCw size={13} className="mr-1.5" /> Repetir
                   </GlassButton>
-                  <GlassButton variant="primary" size="sm" onClick={handleConfirm} className="shadow-lg shadow-emerald-500/20">
+                  <GlassButton variant="primary" size="sm" onClick={handleConfirm} className="w-full sm:w-auto shadow-lg shadow-emerald-500/20">
                     <CheckCircle2 size={14} className="mr-1.5" /> Guardar Foto
                   </GlassButton>
                 </div>
@@ -369,7 +370,7 @@ export function FaceCameraModal({
                   size="sm"
                   disabled={!cameraActive || isStarting || !!cameraError || isScanning}
                   onClick={handleCapture}
-                  className="shadow-lg shadow-emerald-500/20"
+                  className="w-full sm:w-auto shadow-lg shadow-emerald-500/20"
                 >
                   <Camera size={14} className="mr-1.5" />
                   {isScanning

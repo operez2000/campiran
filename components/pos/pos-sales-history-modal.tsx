@@ -136,41 +136,40 @@ export function PosSalesHistoryModal({
   return (
     <>
       <AnimatePresence>
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            className="glass-card border-border/50 rounded-3xl max-w-5xl w-full flex flex-col max-h-[92vh] overflow-hidden shadow-2xl relative"
+            className="glass-card border-border/50 rounded-2xl sm:rounded-3xl max-w-5xl w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden shadow-2xl relative"
           >
-            {/* Header */}
-            <div className="p-4 sm:p-6 border-b border-border/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 bg-card/90 backdrop-blur-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 shrink-0">
-                  <History size={22} />
+            {/* Header Fijo */}
+            <div className="p-3 sm:p-5 border-b border-border/40 flex items-center justify-between gap-3 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 shrink-0">
+                  <History size={20} />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                    Historial de Ventas y Cancelaciones
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
-                      {totalCount} Registros
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2 truncate">
+                    <span>Historial de Ventas</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 font-mono">
+                      {totalCount}
                     </span>
                   </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Sucursal: <strong className="text-foreground">{storeName || 'Activa'}</strong> · Consulta,
-                    reimpresión de tickets y cancelaciones autorizadas
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    Sucursal: <strong className="text-foreground">{storeName || 'Activa'}</strong> · Consultas y cancelaciones
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 self-end sm:self-auto">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <GlassButton
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={loadOrders}
                   disabled={loading}
-                  className="gap-1.5"
+                  className="p-2 sm:px-3 gap-1.5"
                   title="Recargar listado"
                 >
                   <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
@@ -179,7 +178,7 @@ export function PosSalesHistoryModal({
                 <button
                   type="button"
                   onClick={() => onOpenChange(false)}
-                  className="p-2 rounded-xl glass-input text-muted-foreground hover:text-foreground transition-colors"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
                 >
                   <X size={18} />
                 </button>
@@ -474,6 +473,14 @@ export function PosSalesHistoryModal({
               onPageSizeChange={setPageSize}
               realtimeLabel="Actualización en vivo"
             />
+
+            {/* Footer Fijo en Móvil */}
+            <div className="flex sm:hidden items-center justify-between border-t border-border/40 p-3 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+              <span className="text-xs text-muted-foreground">{totalCount} registros</span>
+              <GlassButton variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+                Cerrar
+              </GlassButton>
+            </div>
           </motion.div>
         </div>
       </AnimatePresence>

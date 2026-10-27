@@ -769,30 +769,30 @@ export function ImpresorasClient({
       {/* Modal: Crear / Editar Impresora */}
       <AnimatePresence>
         {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-card max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto scroll-modern"
+              className="glass-card max-w-lg w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 gap-2 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
+              <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 gap-2 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
                 <div className="flex items-center gap-2">
                   <Printer size={20} className="text-emerald-500" />
-                  <h3 className="text-base font-bold text-foreground">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground">
                     {editingPrinter ? 'Editar Impresora' : 'Registrar Impresora'}
                   </h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              <form onSubmit={handleSavePrinter} className="flex flex-col gap-4">
+              <form id="printer-form" onSubmit={handleSavePrinter} className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 flex flex-col gap-4">
                 {/* Nombre */}
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1 block">
@@ -976,36 +976,38 @@ export function ImpresorasClient({
                     />
                   </label>
                 </div>
-
-                {/* Submit / Cancel */}
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <GlassButton
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setModalOpen(false)}
-                    disabled={saving}
-                  >
-                    Cancelar
-                  </GlassButton>
-                  <GlassButton
-                    type="submit"
-                    variant="primary"
-                    size="sm"
-                    disabled={saving}
-                    className="shadow-md shadow-emerald-500/20"
-                  >
-                    {saving ? (
-                      <>
-                        <RefreshCw size={14} className="animate-spin mr-1.5" />
-                        <span>Guardando...</span>
-                      </>
-                    ) : (
-                      <span>{editingPrinter ? 'Actualizar Impresora' : 'Registrar Impresora'}</span>
-                    )}
-                  </GlassButton>
-                </div>
               </form>
+
+              {/* Fixed Footer */}
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
+                <GlassButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setModalOpen(false)}
+                  disabled={saving}
+                  className="w-full sm:w-auto"
+                >
+                  Cancelar
+                </GlassButton>
+                <GlassButton
+                  form="printer-form"
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={saving}
+                  className="w-full sm:w-auto shadow-md shadow-emerald-500/20"
+                >
+                  {saving ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin mr-1.5" />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>{editingPrinter ? 'Actualizar Impresora' : 'Registrar Impresora'}</span>
+                  )}
+                </GlassButton>
+              </div>
             </motion.div>
           </div>
         )}

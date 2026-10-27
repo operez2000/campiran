@@ -170,19 +170,19 @@ export function StoreGeoGuard({ profile }: StoreGeoGuardProps) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
         <motion.div
           initial={{ opacity: 0, scale: 0.92, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.92, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="glass-card border border-emerald-500/30 max-w-md w-full p-6 shadow-2xl relative overflow-hidden space-y-5 max-h-[90vh] overflow-y-auto scroll-modern"
+          className="glass-card border border-emerald-500/30 rounded-2xl sm:rounded-3xl max-w-md w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden shadow-2xl relative"
         >
           {/* Luz ambiental decorativa */}
           <div className="absolute -top-16 -right-16 w-36 h-36 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Encabezado */}
-          <div className="flex items-start justify-between gap-3 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 pb-2 bg-card/95 dark:bg-card/90 backdrop-blur-xl border-b border-border/30 z-20">
+          {/* Encabezado fijo */}
+          <div className="flex items-start justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 border-b border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 flex-shrink-0 animate-pulse">
                 <Navigation size={22} className="text-white" />
@@ -206,68 +206,72 @@ export function StoreGeoGuard({ profile }: StoreGeoGuardProps) {
             </button>
           </div>
 
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Detectamos mediante geolocalización que te encuentras físicamente en otra sucursal. ¿Deseas cambiar tu sucursal activa para evitar registrar movimientos en la tienda equivocada?
-          </p>
+          {/* Cuerpo scrolleable */}
+          <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Detectamos mediante geolocalización que te encuentras físicamente en otra sucursal. ¿Deseas cambiar tu sucursal activa para evitar registrar movimientos en la tienda equivocada?
+            </p>
 
-          {/* Comparación de Sucursales */}
-          <div className="space-y-2.5">
-            {/* Sucursal Detectada */}
-            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <MapPin size={13} />
-                  Sucursal Detectada
-                </span>
-                <span className="text-[11px] font-mono text-emerald-300 font-semibold">
-                  A {formatDistance(detectedMatch.distanceMeters)} de ti
-                </span>
-              </div>
-              <p className="text-sm font-bold text-foreground">
-                {detectedMatch.store.description}
-              </p>
-              {detectedMatch.store.location && (
-                <p className="text-xs text-muted-foreground">
-                  {detectedMatch.store.location}
+            {/* Comparación de Sucursales */}
+            <div className="space-y-2.5">
+              {/* Sucursal Detectada */}
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin size={13} />
+                    Sucursal Detectada
+                  </span>
+                  <span className="text-[11px] font-mono text-emerald-300 font-semibold">
+                    A {formatDistance(detectedMatch.distanceMeters)} de ti
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-foreground">
+                  {detectedMatch.store.description}
                 </p>
-              )}
+                {detectedMatch.store.location && (
+                  <p className="text-xs text-muted-foreground">
+                    {detectedMatch.store.location}
+                  </p>
+                )}
+              </div>
+
+              {/* Sucursal Actual */}
+              <div className="p-3 rounded-xl bg-white/[0.02] border border-border/40 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <StoreIcon size={14} />
+                  <span>Sucursal activa actual:</span>
+                </div>
+                <span className="font-semibold text-foreground">
+                  {currentStore?.description || 'Ninguna'}
+                </span>
+              </div>
             </div>
 
-            {/* Sucursal Actual */}
-            <div className="p-3 rounded-xl bg-white/[0.02] border border-border/40 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <StoreIcon size={14} />
-                <span>Sucursal activa actual:</span>
-              </div>
-              <span className="font-semibold text-foreground">
-                {currentStore?.description || 'Ninguna'}
-              </span>
-            </div>
+            {/* Opción para actualizar permanentemente en profiles */}
+            {profile.role !== 'ADMIN' && (
+              <label className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-white/[0.02] cursor-pointer transition-colors select-none">
+                <input
+                  type="checkbox"
+                  checked={updatePermanent}
+                  onChange={(e) => setUpdatePermanent(e.target.checked)}
+                  className="mt-0.5 rounded border-border text-emerald-500 focus:ring-emerald-500/30 cursor-pointer"
+                />
+                <span className="text-xs text-muted-foreground">
+                  Asignar también como mi <strong className="text-foreground">sucursal principal permanente</strong> en mi perfil
+                </span>
+              </label>
+            )}
           </div>
 
-          {/* Opción para actualizar permanentemente en profiles */}
-          {profile.role !== 'ADMIN' && (
-            <label className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-white/[0.02] cursor-pointer transition-colors select-none">
-              <input
-                type="checkbox"
-                checked={updatePermanent}
-                onChange={(e) => setUpdatePermanent(e.target.checked)}
-                className="mt-0.5 rounded border-border text-emerald-500 focus:ring-emerald-500/30 cursor-pointer"
-              />
-              <span className="text-xs text-muted-foreground">
-                Asignar también como mi <strong className="text-foreground">sucursal principal permanente</strong> en mi perfil
-              </span>
-            </label>
-          )}
-
-          {/* Botones de acción */}
-          <div className="flex items-center justify-end gap-2.5 pt-1">
+          {/* Footer fijo */}
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-3 sm:p-4 border-t border-border/40 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
             <GlassButton
               type="button"
               variant="ghost"
               size="sm"
               onClick={handleDismiss}
               disabled={updating}
+              className="w-full sm:w-auto"
             >
               Mantener actual
             </GlassButton>
@@ -277,7 +281,7 @@ export function StoreGeoGuard({ profile }: StoreGeoGuardProps) {
               size="sm"
               onClick={handleAcceptSwitch}
               disabled={updating}
-              className="shadow-lg shadow-emerald-500/20"
+              className="w-full sm:w-auto shadow-lg shadow-emerald-500/20"
             >
               <Check size={14} className="mr-1.5" />
               {updating ? 'Cambiando...' : `Cambiar a ${detectedMatch.store.description}`}

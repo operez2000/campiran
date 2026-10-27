@@ -41,46 +41,52 @@ export function ConfirmDialog({
           />
 
           {/* Dialog */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4">
             <motion.div
-              className="glass-card w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto scroll-modern"
-              initial={{ opacity: 0, scale: 0.92, y: 20 }}
+              className="glass-card w-full max-w-md flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl"
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
-              {/* Sticky Header */}
-              <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-4 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20 shrink-0">
-                <div className="flex items-center gap-2.5">
-                  <div className={`p-2 rounded-xl ${
+              {/* Header Fijo */}
+              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`p-2 rounded-xl shrink-0 ${
                     variant === 'destructive'
                       ? 'bg-red-500/10 text-red-500'
                       : 'bg-amber-500/10 text-amber-500'
                   }`}>
                     <AlertTriangle size={18} />
                   </div>
-                  <h3 className="text-base font-bold text-[var(--foreground)]">
+                  <h3 className="text-base font-bold text-[var(--foreground)] truncate">
                     {title}
                   </h3>
                 </div>
                 <button
+                  type="button"
                   onClick={() => onOpenChange(false)}
-                  className="p-1.5 rounded-lg btn-ghost text-[var(--muted)] hover:text-foreground"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
                 >
-                  <X size={16} />
+                  <X size={18} />
                 </button>
               </div>
 
-              <p className="text-sm text-[var(--muted)] mb-6">
-                {description}
-              </p>
+              {/* Contenido desplazable */}
+              <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6">
+                <p className="text-sm text-[var(--muted)] leading-relaxed">
+                  {description}
+                </p>
+              </div>
 
-              <div className="flex gap-3 justify-end">
+              {/* Footer Fijo */}
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
                 <GlassButton
                   variant="ghost"
                   size="sm"
                   onClick={() => onOpenChange(false)}
                   disabled={loading}
+                  className="w-full sm:w-auto"
                 >
                   {cancelLabel}
                 </GlassButton>
@@ -89,6 +95,7 @@ export function ConfirmDialog({
                   size="sm"
                   loading={loading}
                   onClick={onConfirm}
+                  className="w-full sm:w-auto"
                 >
                   {confirmLabel}
                 </GlassButton>

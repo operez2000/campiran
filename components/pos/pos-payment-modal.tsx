@@ -224,7 +224,7 @@ export function PosPaymentModal({
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md">
           {/* Backdrop click */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -238,38 +238,41 @@ export function PosPaymentModal({
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            className="glass-card border-border/50 rounded-3xl max-w-2xl w-full p-6 relative z-10 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            className="glass-card border-border/50 rounded-2xl sm:rounded-3xl max-w-2xl w-full relative z-10 overflow-hidden shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh]"
           >
-            {/* Close Button */}
-            <button
-              onClick={() => !isSubmitting && onOpenChange(false)}
-              className="absolute top-4 right-4 z-30 p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
-            >
-              <X size={18} />
-            </button>
-
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-4 border-b border-border/20 pb-3 shrink-0 sticky -top-6 -mx-6 px-6 pt-6 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-20">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
-                <Receipt size={20} />
+            {/* Header Fijo */}
+            <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0">
+                  <Receipt size={18} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground truncate">
+                    Procesar Pago
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    Cliente:{' '}
+                    <span className="font-semibold text-foreground">
+                      {selectedClient
+                        ? `${selectedClient.first_name || ''} ${selectedClient.last_name || ''}`.trim()
+                        : 'Público en General'}
+                    </span>{' '}
+                    · TC: <span className="font-mono text-emerald-400 font-bold">${exchangeRate.toFixed(2)}</span>
+                  </p>
+                </div>
               </div>
-              <div className="pr-6">
-                <h3 className="text-lg font-bold text-foreground">
-                  Procesar Pago — Formas de Pago SAT
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Cliente:{' '}
-                  <span className="font-semibold text-foreground">
-                    {selectedClient
-                      ? `${selectedClient.first_name || ''} ${selectedClient.last_name || ''}`.trim()
-                      : 'Público en General'}
-                  </span>{' '}
-                  · Tipo de Cambio: <span className="font-mono text-emerald-400 font-bold">${exchangeRate.toFixed(2)} MXN/USD</span>
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() => !isSubmitting && onOpenChange(false)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
+              >
+                <X size={18} />
+              </button>
             </div>
 
-            {/* Total Display Bar */}
+            {/* Cuerpo desplazable */}
+            <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
+              {/* Total Display Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 p-3 rounded-2xl bg-white/[0.03] border border-border/40 shrink-0">
               <div>
                 <span className="text-[10px] text-muted-foreground block">Total a Pagar</span>
@@ -670,13 +673,14 @@ export function PosPaymentModal({
               </GlassCard>
             </div>
 
-            {/* Footer Buttons */}
-            <div className="pt-3 mt-3 border-t border-border/20 flex items-center justify-between">
+            {/* Footer Fijo */}
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
               <GlassButton
                 variant="ghost"
                 size="sm"
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </GlassButton>
@@ -691,7 +695,7 @@ export function PosPaymentModal({
                   Boolean(hasServices && !selectedTechnicianId)
                 }
                 onClick={handleConfirm}
-                className="px-6"
+                className="w-full sm:w-auto px-6 font-bold"
               >
                 {isSubmitting ? (
                   <>

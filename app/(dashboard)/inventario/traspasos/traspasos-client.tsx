@@ -48,6 +48,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogBody,
   DialogFooter,
 } from '@/components/ui/dialog'
 import {
@@ -1575,7 +1576,7 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
           MODAL 1: NUEVO TRASPASO ENTRE SUCURSALES
          ══════════════════════════════════════════════════════════ */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto scroll-modern">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Truck className="text-emerald-500" size={20} />
@@ -1587,7 +1588,7 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-4 py-1">
+          <DialogBody className="space-y-4">
             {/* 1. Selector de Modalidad */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <button
@@ -2101,15 +2102,16 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
                 </span>
               </div>
             </div>
-          </div>
+          </DialogBody>
 
-          <DialogFooter className="pt-2">
+          <DialogFooter>
             <GlassButton
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => setCreateOpen(false)}
               disabled={submittingCreate}
+              className="w-full sm:w-auto"
             >
               Cancelar
             </GlassButton>
@@ -2121,6 +2123,7 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
               disabled={draftLines.length === 0 || !selectedDestStore}
               icon={transferMode === 'DIRECT' ? <Zap size={15} /> : <Truck size={15} />}
               onClick={handleCreateTransferSubmit}
+              className="w-full sm:w-auto"
             >
               {transferMode === 'DIRECT'
                 ? 'Aplicar Traspaso Directo'
@@ -2139,7 +2142,7 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
           if (!open) setReceiveTarget(null)
         }}
       >
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto scroll-modern">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <PackageCheck className="text-emerald-500" size={20} />
@@ -2160,7 +2163,7 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
           </DialogHeader>
 
           {receiveTarget && (
-            <div className="flex flex-col gap-4 py-1">
+            <DialogBody className="space-y-4">
               {/* Ubicación de recepción */}
               <div className="p-3 rounded-2xl glass border border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -2345,16 +2348,17 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
                 value={receptionNotes}
                 onChange={(e) => setReceptionNotes(e.target.value)}
               />
-            </div>
+            </DialogBody>
           )}
 
-          <DialogFooter className="pt-2">
+          <DialogFooter>
             <GlassButton
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => setReceiveTarget(null)}
               disabled={submittingReceive}
+              className="w-full sm:w-auto"
             >
               Cancelar
             </GlassButton>
@@ -2365,6 +2369,7 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
               loading={submittingReceive}
               icon={<CheckCircle2 size={15} />}
               onClick={handleConfirmReceive}
+              className="w-full sm:w-auto"
             >
               Confirmar Recepción y Sumar Stock
             </GlassButton>
@@ -2381,7 +2386,7 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
           if (!open) setDetailTransfer(null)
         }}
       >
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto scroll-modern">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between pr-6">
               <span className="flex items-center gap-2">
@@ -2410,7 +2415,7 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
           </DialogHeader>
 
           {detailTransfer && (
-            <div className="flex flex-col gap-4 py-1">
+            <DialogBody className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3 rounded-2xl glass border border-border/50">
                   <p className="text-[11px] font-bold uppercase text-indigo-400">
@@ -2529,10 +2534,10 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
                   </table>
                 </div>
               </div>
-            </div>
+            </DialogBody>
           )}
 
-          <DialogFooter className="pt-2">
+          <DialogFooter>
             {detailTransfer && (
               <GlassButton
                 type="button"
@@ -2540,6 +2545,7 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
                 size="sm"
                 icon={<FileText size={15} />}
                 onClick={() => handleExportTransferPDF(detailTransfer)}
+                className="w-full sm:w-auto"
               >
                 Descargar Comprobante PDF
               </GlassButton>
@@ -2549,6 +2555,7 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
               variant="ghost"
               size="sm"
               onClick={() => setDetailTransfer(null)}
+              className="w-full sm:w-auto"
             >
               Cerrar
             </GlassButton>
@@ -2576,17 +2583,19 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
               traspaso.
             </DialogDescription>
           </DialogHeader>
-          <div className="relative rounded-2xl overflow-hidden bg-black aspect-video border border-border/50">
-            <video
-              ref={videoRef}
-              className="w-full h-full object-cover"
-              playsInline
-              muted
-            />
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <div className="w-3/4 h-24 border-2 border-emerald-400/80 rounded-xl shadow-[0_0_25px_rgba(16,185,129,0.35)]" />
+          <DialogBody className="space-y-3">
+            <div className="relative rounded-2xl overflow-hidden bg-black aspect-video border border-border/50">
+              <video
+                ref={videoRef}
+                className="w-full h-full object-cover"
+                playsInline
+                muted
+              />
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div className="w-3/4 h-24 border-2 border-emerald-400/80 rounded-xl shadow-[0_0_25px_rgba(16,185,129,0.35)]" />
+              </div>
             </div>
-          </div>
+          </DialogBody>
           <DialogFooter>
             <GlassButton
               type="button"
@@ -2594,6 +2603,7 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
               size="sm"
               icon={<X size={14} />}
               onClick={stopCamera}
+              className="w-full sm:w-auto"
             >
               Cerrar Cámara
             </GlassButton>
@@ -2621,14 +2631,14 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
               stock de la sucursal de origen y quedará registrado en el Kardex.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-2">
+          <DialogBody className="space-y-3">
             <GlassInput
               label="Motivo de la cancelación"
               placeholder="Ej. Error de captura en cantidades o sucursal destino..."
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
             />
-          </div>
+          </DialogBody>
           <DialogFooter>
             <GlassButton
               type="button"
@@ -2636,6 +2646,7 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
               size="sm"
               onClick={() => setCancelTarget(null)}
               disabled={submittingCancel}
+              className="w-full sm:w-auto"
             >
               Volver
             </GlassButton>
@@ -2645,6 +2656,7 @@ export function TraspasosClient({ currentProfile }: { currentProfile: Profile | 
               size="sm"
               loading={submittingCancel}
               onClick={handleConfirmCancel}
+              className="w-full sm:w-auto"
             >
               Confirmar Cancelación
             </GlassButton>
