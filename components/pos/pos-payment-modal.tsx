@@ -320,7 +320,7 @@ export function PosPaymentModal({
             </div>
 
             {/* Main Area: Existing Payment Lines + New Payment Form */}
-            <div className="flex-1 overflow-y-auto scroll-modern space-y-3 pr-1">
+            <div className="space-y-3">
               {/* Payment Lines List */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
@@ -671,6 +671,7 @@ export function PosPaymentModal({
                   className="glass-input w-full px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:ring-1 focus:ring-emerald-500/50"
                 />
               </GlassCard>
+            </div>
             </div>
 
             {/* Footer Fijo */}

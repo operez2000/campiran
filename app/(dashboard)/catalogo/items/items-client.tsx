@@ -1864,8 +1864,9 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                       />
                     </div>
                   </div>
-                </form>
-              </div>
+                </div>
+              </form>
+            </div>
 
               {/* Footer Fijo */}
               <div className="border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10 space-y-1.5">

@@ -1128,9 +1128,10 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Footer Fijo */}
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+            {/* Footer Fijo */}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
                 <GlassButton
                   type="button"
                   variant="ghost"

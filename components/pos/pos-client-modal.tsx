@@ -342,7 +342,6 @@ export function PosClientModal({
             </div>
 
             </div>
-            </div>
 
             {/* Footer Fijo */}
             <div className="flex items-center justify-between gap-2 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10 text-xs text-muted-foreground">

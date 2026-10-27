@@ -674,10 +674,11 @@ export function LabelPrintModal({
                     Descargar como PDF
                   </>
                 )}
-              </div>
+              </GlassButton>
             </div>
           </div>
-        </DialogBody>
+        </div>
+      </DialogBody>
 
         <DialogFooter>
           <GlassButton

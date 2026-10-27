@@ -2557,6 +2557,7 @@ export function ComprasClient({ currentProfile }: ComprasClientProps) {
                     <span className="font-mono font-bold text-sm text-amber-400">
                       {formatCurrency(Number(detailPurchase.balance_due || 0))}
                     </span>
+                  </div>
                 </div>
               </div>
 
