@@ -98,7 +98,7 @@ function calculateNextItemCode(existingItems: Array<{ code?: string | null }>): 
       try {
         const val = BigInt(trimmed)
         if (val > maxVal) maxVal = val
-      } catch {}
+      } catch { }
     }
   }
 
@@ -115,7 +115,7 @@ function calculateNextItemCode(existingItems: Array<{ code?: string | null }>): 
         try {
           const val = BigInt(trimmed)
           if (val > maxVal) maxVal = val
-        } catch {}
+        } catch { }
       }
     }
   }
@@ -999,11 +999,10 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
           <button
             type="button"
             onClick={() => handleTabChange('P')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150 cursor-pointer ${
-              activeTab === 'P'
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25'
-                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150 cursor-pointer ${activeTab === 'P'
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25'
+              : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+              }`}
           >
             {tabLoading === 'P' ? (
               <Loader2 size={13} className="animate-spin text-white" />
@@ -1012,9 +1011,8 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
             )}
             <span>Productos</span>
             <span
-              className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold ${
-                activeTab === 'P' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
-              }`}
+              className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold ${activeTab === 'P' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
+                }`}
             >
               {stats.products}
             </span>
@@ -1023,11 +1021,10 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
           <button
             type="button"
             onClick={() => handleTabChange('S')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150 cursor-pointer ${
-              activeTab === 'S'
-                ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/25'
-                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150 cursor-pointer ${activeTab === 'S'
+              ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/25'
+              : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+              }`}
           >
             {tabLoading === 'S' ? (
               <Loader2 size={13} className="animate-spin text-white" />
@@ -1036,9 +1033,8 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
             )}
             <span>Servicios</span>
             <span
-              className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold ${
-                activeTab === 'S' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
-              }`}
+              className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold ${activeTab === 'S' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
+                }`}
             >
               {stats.services}
             </span>
@@ -1047,11 +1043,10 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
           <button
             type="button"
             onClick={() => handleTabChange('ALL')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150 cursor-pointer ${
-              activeTab === 'ALL'
-                ? 'bg-gradient-to-r from-slate-700 to-slate-900 text-white shadow-md shadow-slate-500/25 dark:from-white/20 dark:to-white/10 dark:text-white'
-                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150 cursor-pointer ${activeTab === 'ALL'
+              ? 'bg-gradient-to-r from-slate-700 to-slate-900 text-white shadow-md shadow-slate-500/25 dark:from-white/20 dark:to-white/10 dark:text-white'
+              : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+              }`}
           >
             {tabLoading === 'ALL' ? (
               <Loader2 size={13} className="animate-spin text-white" />
@@ -1060,9 +1055,8 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
             )}
             <span>Todos</span>
             <span
-              className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
-                activeTab === 'ALL' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
-              }`}
+              className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${activeTab === 'ALL' ? 'bg-white/20 text-white' : 'bg-white/10 text-muted-foreground'
+                }`}
             >
               {stats.total}
             </span>
@@ -1131,7 +1125,7 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
               >
                 <option value="ALL" className="bg-zinc-900 text-white">Todas las clasificaciones</option>
                 <option value="REGULAR" className="bg-zinc-900 text-white">Regular ({stats.regular})</option>
-                <option value="FICHA_TECNICA" className="bg-zinc-900 text-white">Ficha Técnica ({stats.fichaTecnica})</option>
+                <option value="FICHA_TECNICA" className="bg-zinc-900 text-white">Pieza Técnica ({stats.fichaTecnica})</option>
               </select>
             </div>
 
@@ -1140,8 +1134,8 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
               <button
                 onClick={() => setStatusFilter('A')}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${statusFilter === 'A'
-                    ? 'bg-emerald-500 text-white shadow-sm font-semibold'
-                    : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-emerald-500 text-white shadow-sm font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
                   }`}
               >
                 Activos
@@ -1149,8 +1143,8 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
               <button
                 onClick={() => setStatusFilter('I')}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${statusFilter === 'I'
-                    ? 'bg-emerald-500 text-white shadow-sm font-semibold'
-                    : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-emerald-500 text-white shadow-sm font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
                   }`}
               >
                 Inactivos
@@ -1158,8 +1152,8 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
               <button
                 onClick={() => setStatusFilter('ALL')}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${statusFilter === 'ALL'
-                    ? 'bg-emerald-500 text-white shadow-sm font-semibold'
-                    : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-emerald-500 text-white shadow-sm font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
                   }`}
               >
                 Todos
@@ -1302,23 +1296,23 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                             },
                             ...(hasImages
                               ? [
-                                  {
-                                    label: `Ver fotos (${item.item_images!.length})`,
-                                    icon: <ImageIcon size={15} />,
-                                    onClick: () => setCarouselModalItem(item),
-                                    variant: 'default' as const,
-                                  },
-                                ]
+                                {
+                                  label: `Ver fotos (${item.item_images!.length})`,
+                                  icon: <ImageIcon size={15} />,
+                                  onClick: () => setCarouselModalItem(item),
+                                  variant: 'default' as const,
+                                },
+                              ]
                               : []),
                             ...(!isService
                               ? [
-                                  {
-                                    label: 'Imprimir etiqueta',
-                                    icon: <Barcode size={15} />,
-                                    onClick: () => handleOpenPrintModal([item]),
-                                    variant: 'default' as const,
-                                  },
-                                ]
+                                {
+                                  label: 'Imprimir etiqueta',
+                                  icon: <Barcode size={15} />,
+                                  onClick: () => handleOpenPrintModal([item]),
+                                  variant: 'default' as const,
+                                },
+                              ]
                               : []),
                             {
                               label:
@@ -1392,8 +1386,8 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                             <span
                               onClick={() => handleOpenEdit(item)}
                               className={`font-semibold transition-colors cursor-pointer ${isService
-                                  ? 'text-foreground group-hover:text-indigo-400'
-                                  : 'text-foreground group-hover:text-emerald-400'
+                                ? 'text-foreground group-hover:text-indigo-400'
+                                : 'text-foreground group-hover:text-emerald-400'
                                 }`}
                             >
                               {item.description}
@@ -1434,7 +1428,7 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                         {item.classification === 'FICHA_TECNICA' ? (
                           <span className="px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 font-medium text-[11px] inline-flex items-center gap-1 shadow-xs">
                             <FileText size={11} />
-                            Ficha Técnica
+                            Pieza Técnica
                           </span>
                         ) : (
                           <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium text-[11px] inline-flex items-center gap-1 shadow-xs">
@@ -1555,8 +1549,8 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                       }))
                     }}
                     className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${formData.type === 'P'
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                       }`}
                   >
                     <Package size={15} />
@@ -1573,8 +1567,8 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                       }))
                     }}
                     className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${formData.type === 'S'
-                        ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                      ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                       }`}
                   >
                     <Wrench size={15} />
@@ -1582,7 +1576,7 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                   </button>
                 </div>
 
-                {/* Segmented Switch: Clasificación (Regular vs Ficha Técnica) */}
+                {/* Segmented Switch: Clasificación (Regular vs Pieza Técnica) */}
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground block mb-1">
                     Clasificación del Artículo
@@ -1596,11 +1590,10 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                           classification: 'REGULAR',
                         }))
                       }
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                        formData.classification === 'REGULAR'
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                      }`}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${formData.classification === 'REGULAR'
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                        }`}
                     >
                       <Tag size={14} />
                       <span>Regular</span>
@@ -1613,14 +1606,13 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                           classification: 'FICHA_TECNICA',
                         }))
                       }
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                        formData.classification === 'FICHA_TECNICA'
-                          ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                      }`}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${formData.classification === 'FICHA_TECNICA'
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                        }`}
                     >
                       <FileText size={14} />
-                      <span>Ficha Técnica</span>
+                      <span>Pieza Técnica</span>
                     </button>
                   </div>
                 </div>

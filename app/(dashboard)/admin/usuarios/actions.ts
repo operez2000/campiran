@@ -212,6 +212,8 @@ export async function getUsersAndStoresAction(): Promise<{ users: Profile[]; sto
       avatar_url: avatarUrl,
       created_at: lu?.created_at || au.created_at,
       updated_at: au.updated_at || au.created_at,
+      sales_commission_pct: Number(lu?.sales_commission_pct ?? au.user_metadata?.sales_commission_pct ?? 0),
+      service_commission_pct: Number(lu?.service_commission_pct ?? au.user_metadata?.service_commission_pct ?? 0),
       biometrics: biometricsMap.get(au.id) || null,
     })
   }
@@ -232,6 +234,8 @@ export async function getUsersAndStoresAction(): Promise<{ users: Profile[]; sto
       avatar_url: (lu.avatar_url as string) || null,
       created_at: lu.created_at || new Date().toISOString(),
       updated_at: lu.created_at || new Date().toISOString(),
+      sales_commission_pct: Number(lu?.sales_commission_pct ?? 0),
+      service_commission_pct: Number(lu?.service_commission_pct ?? 0),
       biometrics: biometricsMap.get(lu.id_user) || null,
     })
   }
@@ -256,6 +260,8 @@ export async function updateUserAction(data: {
   phone?: string | null
   cashier_number?: string | null
   cashier_pin?: string | null
+  sales_commission_pct?: number | null
+  service_commission_pct?: number | null
 }) {
   const adminClient = createAdminClient()
 
@@ -270,21 +276,27 @@ export async function updateUserAction(data: {
   }
   if (data.full_name) userPayload.user_name = data.full_name
   if (data.phone !== undefined) userPayload.phone = data.phone
+  if (data.sales_commission_pct !== undefined) userPayload.sales_commission_pct = data.sales_commission_pct ?? 0
+  if (data.service_commission_pct !== undefined) userPayload.service_commission_pct = data.service_commission_pct ?? 0
 
   await adminClient.from('users').update(userPayload).eq('id_user', data.id)
 
   // 2. Intentar actualizar en public.profiles si existe
   try {
+    const profUpdates: Record<string, unknown> = {
+      role: data.role,
+      id_store: storeId,
+      status: data.status,
+      ...(data.full_name ? { full_name: data.full_name } : {}),
+      ...(data.phone !== undefined ? { phone: data.phone } : {}),
+      updated_at: new Date().toISOString(),
+    }
+    if (data.sales_commission_pct !== undefined) profUpdates.sales_commission_pct = data.sales_commission_pct ?? 0
+    if (data.service_commission_pct !== undefined) profUpdates.service_commission_pct = data.service_commission_pct ?? 0
+
     await adminClient
       .from('profiles')
-      .update({
-        role: data.role,
-        id_store: storeId,
-        status: data.status,
-        ...(data.full_name ? { full_name: data.full_name } : {}),
-        ...(data.phone !== undefined ? { phone: data.phone } : {}),
-        updated_at: new Date().toISOString(),
-      })
+      .update(profUpdates)
       .eq('id', data.id)
   } catch {
     // Si profiles no existe, continuar
@@ -316,6 +328,8 @@ export async function updateUserAction(data: {
     }
     if (data.cashier_number !== undefined) metaUpdates.cashier_number = data.cashier_number ? data.cashier_number.trim() : null
     if (data.cashier_pin !== undefined) metaUpdates.cashier_pin = data.cashier_pin ? data.cashier_pin.trim() : null
+    if (data.sales_commission_pct !== undefined) metaUpdates.sales_commission_pct = data.sales_commission_pct ?? 0
+    if (data.service_commission_pct !== undefined) metaUpdates.service_commission_pct = data.service_commission_pct ?? 0
 
     await adminClient.auth.admin.updateUserById(data.id, {
       user_metadata: metaUpdates,
@@ -354,6 +368,8 @@ export async function createUserAction(formData: {
   status?: ProfileStatus
   cashier_number?: string | null
   cashier_pin?: string | null
+  sales_commission_pct?: number | null
+  service_commission_pct?: number | null
 }) {
   const adminClient = createAdminClient()
 
@@ -372,6 +388,8 @@ export async function createUserAction(formData: {
   const storeId = role === 'ADMIN' ? null : formData.id_store || null
   const roleCode = roleToRoleCode(role)
   const statusCode = statusToStatusCode(status)
+  const salesCommissionPct = formData.sales_commission_pct ?? 0
+  const serviceCommissionPct = formData.service_commission_pct ?? 0
 
   // 1. Crear en Supabase Auth
   const { data: authResult, error: authError } = await adminClient.auth.admin.createUser({
@@ -386,6 +404,8 @@ export async function createUserAction(formData: {
       status,
       cashier_number: formData.cashier_number ? formData.cashier_number.trim() : null,
       cashier_pin: formData.cashier_pin ? formData.cashier_pin.trim() : null,
+      sales_commission_pct: salesCommissionPct,
+      service_commission_pct: serviceCommissionPct,
       has_webauthn: false,
       has_face: false,
     },
@@ -405,6 +425,8 @@ export async function createUserAction(formData: {
     role: roleCode,
     status: statusCode,
     phone: formData.phone || null,
+    sales_commission_pct: salesCommissionPct,
+    service_commission_pct: serviceCommissionPct,
   })
 
   if (userError) {
@@ -421,6 +443,8 @@ export async function createUserAction(formData: {
       id_store: storeId,
       status,
       phone: formData.phone || null,
+      sales_commission_pct: salesCommissionPct,
+      service_commission_pct: serviceCommissionPct,
     })
   } catch {
     // Si profiles no existe en la base de datos todavía

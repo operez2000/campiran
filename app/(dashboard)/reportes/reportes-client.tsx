@@ -20,10 +20,11 @@ import {
 import {
   BarChart3, TrendingUp, DollarSign, ShoppingCart,
   AlertTriangle, Download, FileSpreadsheet, FileText,
-  Calendar, RefreshCw, Trophy, ArrowUpRight, Search, Clock
+  Calendar, RefreshCw, Trophy, ArrowUpRight, Search, Clock, Percent
 } from 'lucide-react'
 import { TableColumnHeader, TablePagination } from '@/components/tables'
 import { AttendanceReportTab } from './attendance-report-tab'
+import { CommissionsReportTab } from './comisiones-report-tab'
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'year'
 
@@ -41,7 +42,7 @@ export function ReportesClient({ currentProfile = null }: ReportesClientProps) {
   const supabase = createClient()
   const { currentStore, storeId } = useStore()
 
-  const [activeTab, setActiveTab] = useState<'ventas' | 'asistencia'>('ventas')
+  const [activeTab, setActiveTab] = useState<'ventas' | 'asistencia' | 'comisiones'>('ventas')
   const [period, setPeriod] = useState<PeriodFilter>('month')
   const [orders, setOrders] = useState<Order[]>([])
   const [criticalStocks, setCriticalStocks] = useState<Stock[]>([])
@@ -373,16 +374,20 @@ export function ReportesClient({ currentProfile = null }: ReportesClientProps) {
                   {currentStore?.description ?? 'sucursal activa'}
                 </span>
               </>
-            ) : (
+            ) : activeTab === 'asistencia' ? (
               <>
                 Registro de entradas, salidas y cómputo de horas trabajadas por empleado
+              </>
+            ) : (
+              <>
+                Cálculo y liquidación de comisiones de artículos y órdenes de servicio sin IVA para nómina
               </>
             )}
           </p>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl glass border border-[var(--border)]">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl glass border border-[var(--border)]">
           <button
             onClick={() => setActiveTab('ventas')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
@@ -406,12 +411,29 @@ export function ReportesClient({ currentProfile = null }: ReportesClientProps) {
             <Clock size={15} />
             <span>Asistencia de Empleados</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('comisiones')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'comisiones'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20'
+                : 'text-muted-foreground hover:text-foreground hover:bg-emerald-500/10'
+            }`}
+          >
+            <Percent size={15} />
+            <span>Comisiones & Nómina</span>
+          </button>
         </div>
       </div>
 
       {/* Render Active Tab Content */}
       {activeTab === 'asistencia' ? (
         <AttendanceReportTab
+          currentProfile={currentProfile || null}
+          activeStoreId={storeId}
+        />
+      ) : activeTab === 'comisiones' ? (
+        <CommissionsReportTab
           currentProfile={currentProfile || null}
           activeStoreId={storeId}
         />

@@ -50,6 +50,8 @@ export function mapUserToProfile(u: Record<string, unknown>, userMeta?: Record<s
       null,
     created_at: (u.created_at as string) || new Date().toISOString(),
     updated_at: (u.updated_at as string) || new Date().toISOString(),
+    sales_commission_pct: Number(u.sales_commission_pct ?? userMeta?.sales_commission_pct ?? 0),
+    service_commission_pct: Number(u.service_commission_pct ?? userMeta?.service_commission_pct ?? 0),
   }
 }
 

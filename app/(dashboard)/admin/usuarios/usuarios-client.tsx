@@ -14,7 +14,7 @@ import { toast } from 'sonner'
 import {
   UserCog, Search, Edit3, Check, X, Shield, Store as StoreIcon,
   RefreshCw, Power, CheckCircle2, UserPlus, Phone, Mail, Lock, Trash2, Users,
-  Fingerprint, ScanFace, KeyRound, ShieldCheck, Eye, EyeOff
+  Fingerprint, ScanFace, KeyRound, ShieldCheck, Eye, EyeOff, Percent
 } from 'lucide-react'
 import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
 import { BiometricsEnrollmentModal } from '@/components/biometrics/biometrics-enrollment-modal'
@@ -61,6 +61,8 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
   const [editCashierNumber, setEditCashierNumber] = useState('')
   const [editCashierPin, setEditCashierPin] = useState('')
   const [showEditPin, setShowEditPin] = useState(false)
+  const [editSalesCommissionPct, setEditSalesCommissionPct] = useState('0')
+  const [editServiceCommissionPct, setEditServiceCommissionPct] = useState('0')
   const [saving, setSaving] = useState(false)
 
   // Biometrics Enrollment Modal state
@@ -78,6 +80,8 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
   const [createStatus, setCreateStatus] = useState<ProfileStatus>('active')
   const [createCashierNumber, setCreateCashierNumber] = useState('')
   const [createCashierPin, setCreateCashierPin] = useState('')
+  const [createSalesCommissionPct, setCreateSalesCommissionPct] = useState('0')
+  const [createServiceCommissionPct, setCreateServiceCommissionPct] = useState('0')
   const [creating, setCreating] = useState(false)
 
   // Confirm delete / suspend state
@@ -256,6 +260,8 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
     setSelectedStatus(profile.status || 'pending')
     setEditCashierNumber(profile.biometrics?.cashier_number || '')
     setEditCashierPin(profile.biometrics?.cashier_pin || '')
+    setEditSalesCommissionPct(profile.sales_commission_pct != null ? String(profile.sales_commission_pct) : '0')
+    setEditServiceCommissionPct(profile.service_commission_pct != null ? String(profile.service_commission_pct) : '0')
     setShowEditPin(false)
   }
 
@@ -273,6 +279,8 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
         phone: editPhone.trim() || null,
         cashier_number: editCashierNumber.trim() || null,
         cashier_pin: editCashierPin.trim() || null,
+        sales_commission_pct: parseFloat(editSalesCommissionPct) || 0,
+        service_commission_pct: parseFloat(editServiceCommissionPct) || 0,
       })
 
       toast.success(`Usuario ${editName || editingProfile.email} actualizado correctamente`)
@@ -348,6 +356,8 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
         status: createStatus,
         cashier_number: createCashierNumber.trim() || null,
         cashier_pin: createCashierPin.trim() || null,
+        sales_commission_pct: parseFloat(createSalesCommissionPct) || 0,
+        service_commission_pct: parseFloat(createServiceCommissionPct) || 0,
       })
 
       toast.success(`Usuario ${createName} creado exitosamente`)
@@ -361,6 +371,8 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
       setCreateStatus('active')
       setCreateCashierNumber('')
       setCreateCashierPin('')
+      setCreateSalesCommissionPct('0')
+      setCreateServiceCommissionPct('0')
       fetchData()
 
       // Sugerir enrolar biometría (WebAuthn / Face ID) si es rol operativo
@@ -554,6 +566,9 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                   sortDirection={sortDirection}
                   onSort={handleSort}
                 />
+                <th className="px-4 py-3.5 text-xs font-semibold text-muted-foreground text-left">
+                  Comisiones (% sin IVA)
+                </th>
                 <TableColumnHeader
                   title="Estado"
                   sortKey="status"
@@ -567,7 +582,7 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
             <tbody className="divide-y divide-border/20">
               {loading && profiles.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                     <div className="flex items-center justify-center gap-2">
                       <RefreshCw size={18} className="animate-spin text-emerald-500" />
                       <span>Cargando usuarios desde Supabase...</span>
@@ -576,7 +591,7 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                 </tr>
               ) : paginatedProfiles.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                     <p className="text-base font-medium">No se encontraron usuarios</p>
                     <p className="text-xs mt-1 text-muted-foreground/80">
                       Modifica los filtros de búsqueda o agrega un nuevo usuario.
@@ -745,6 +760,26 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                               <span>Configurar biometría</span>
                             </button>
                           </div>
+                        </div>
+                      </td>
+
+                      {/* Comisiones */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col gap-1 min-w-[130px]">
+                          <span
+                            className="inline-flex items-center justify-between px-2 py-0.5 rounded-md text-[11px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            title="Comisión sobre artículos/productos (sin IVA)"
+                          >
+                            <span className="text-[10px] uppercase font-sans font-medium text-muted-foreground">Prod:</span>
+                            <span className="font-bold">{p.sales_commission_pct ?? 0}%</span>
+                          </span>
+                          <span
+                            className="inline-flex items-center justify-between px-2 py-0.5 rounded-md text-[11px] font-mono bg-indigo-500/10 text-indigo-300 border border-indigo-500/20"
+                            title="Comisión sobre servicios / taller (sin IVA)"
+                          >
+                            <span className="text-[10px] uppercase font-sans font-medium text-muted-foreground">Serv:</span>
+                            <span className="font-bold">{p.service_commission_pct ?? 0}%</span>
+                          </span>
                         </div>
                       </td>
 
@@ -1039,6 +1074,67 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                 </button>
               </div>
 
+              {/* Esquema de Comisiones */}
+              <div className="pt-2 space-y-3 border-t border-border/30">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                    <Percent size={14} className="text-emerald-400" />
+                    <span>Esquema de Comisiones (Sobre Importe sin IVA)</span>
+                  </label>
+                  <span className="text-[10px] text-muted-foreground font-mono">Base sin IVA</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
+                      % Comisión en Artículos (Ventas)
+                    </label>
+                    <div className="relative">
+                      <GlassInput
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        placeholder="0"
+                        value={editSalesCommissionPct}
+                        onChange={(e) => setEditSalesCommissionPct(e.target.value)}
+                        className="font-mono pr-8"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
+                        %
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/70 mt-1">
+                      Aplica cuando vende productos / refacciones.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
+                      % Comisión en Servicios (Técnico / Taller)
+                    </label>
+                    <div className="relative">
+                      <GlassInput
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        placeholder="0"
+                        value={editServiceCommissionPct}
+                        onChange={(e) => setEditServiceCommissionPct(e.target.value)}
+                        className="font-mono pr-8"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
+                        %
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/70 mt-1">
+                      Aplica cuando realiza reparaciones / servicios.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border/40">
                 <GlassButton
                   type="button"
@@ -1275,6 +1371,60 @@ export function UsuariosClient({ initialUsers = [], initialStores = [] }: Usuari
                   <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
                     💡 Podrás enrolar sensores Touch ID / Face ID (WebAuthn) y capturar su rostro con la cámara inmediatamente después de crearlo.
                   </p>
+                </div>
+
+                {/* Comisiones en Creación */}
+                <div className="pt-2 border-t border-border/30 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <Percent size={14} className="text-emerald-400" />
+                      <span>Comisiones Asignadas (Base sin IVA)</span>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
+                        % Comisión en Artículos
+                      </label>
+                      <div className="relative">
+                        <GlassInput
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          placeholder="0"
+                          value={createSalesCommissionPct}
+                          onChange={(e) => setCreateSalesCommissionPct(e.target.value)}
+                          className="font-mono pr-8"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
+                          %
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
+                        % Comisión en Servicios
+                      </label>
+                      <div className="relative">
+                        <GlassInput
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          placeholder="0"
+                          value={createServiceCommissionPct}
+                          onChange={(e) => setCreateServiceCommissionPct(e.target.value)}
+                          className="font-mono pr-8"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
+                          %
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border/40">

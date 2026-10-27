@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Migración 015: Agregar campo classification (Regular o Ficha Técnica) en items
+-- Migración 015: Agregar campo classification (Regular o Pieza Técnica) en items
 -- Run in Supabase SQL Editor:
 -- https://supabase.com/dashboard/project/qqcvsmtftbxvqbymphru/sql
 -- ==============================================================================

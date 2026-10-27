@@ -25,13 +25,15 @@ import {
   ShoppingCart, Search, Plus, Minus, Trash2, User,
   CreditCard, Banknote, ArrowRightLeft, Printer, CheckCircle2,
   X, Layers, ScanLine, DollarSign, Store as StoreIcon, ImageIcon,
-  Users, Lock, ShieldCheck, DoorClosed, RotateCcw, History
+  Users, Lock, ShieldCheck, DoorClosed, RotateCcw, History,
+  UserCheck, Wrench
 } from 'lucide-react'
 import { PosClientModal } from '@/components/pos/pos-client-modal'
 import { ShiftOpenModal } from '@/components/pos/shift-open-modal'
 import { PosPaymentModal, SAT_PAYMENT_METHODS } from '@/components/pos/pos-payment-modal'
 import { PosSalesHistoryModal } from '@/components/pos/pos-sales-history-modal'
 import { getActiveShiftAction, closeShiftAction, getPosClientsAction } from './shift-actions'
+import { getStoreEmployeesAction } from '@/app/(dashboard)/reportes/attendance-actions'
 import { printOrderReceipt } from '@/lib/qz-tray-service'
 
 interface CartLine {
@@ -62,6 +64,27 @@ export function PosClient() {
 
   // Cart
   const [cart, setCart] = useState<CartLine[]>([])
+
+  // Employees & Commissions Assignment
+  const [employees, setEmployees] = useState<Profile[]>([])
+  const [selectedSellerId, setSelectedSellerId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('campiran_pos_last_seller') || null
+    }
+    return null
+  })
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null)
+
+  const handleSellerChange = (id: string | null) => {
+    setSelectedSellerId(id)
+    if (typeof window !== 'undefined') {
+      if (id) {
+        localStorage.setItem('campiran_pos_last_seller', id)
+      } else {
+        localStorage.removeItem('campiran_pos_last_seller')
+      }
+    }
+  }
 
   // Selected Client & Client Selector Modal
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
@@ -95,6 +118,8 @@ export function PosClient() {
     changeUsd: number
     exchangeRate: number
     notes?: string
+    sellerName?: string | null
+    technicianName?: string | null
   } | null>(null)
   const [printingWithQz, setPrintingWithQz] = useState(false)
 
@@ -271,6 +296,20 @@ export function PosClient() {
   useEffect(() => {
     fetchClients()
   }, [fetchClients])
+
+  // 4. Load Store Employees for Commissions Assignment
+  const fetchEmployees = useCallback(async () => {
+    try {
+      const list = await getStoreEmployeesAction(storeId)
+      setEmployees(list || [])
+    } catch (err) {
+      console.warn('Error cargando empleados para comisiones:', err)
+    }
+  }, [storeId])
+
+  useEffect(() => {
+    fetchEmployees()
+  }, [fetchEmployees])
 
   // Realtime subscription on clients table
   useEffect(() => {
@@ -540,19 +579,36 @@ export function PosClient() {
   }
 
   // Cart Totals
-  const { subtotal, taxAmount, total } = useMemo(() => {
+  const { subtotal, taxAmount, total, hasProducts, hasServices, productsSubtotal, servicesSubtotal } = useMemo(() => {
     let sub = 0
     let tax = 0
+    let pSub = 0
+    let sSub = 0
+    let hProd = false
+    let hServ = false
+
     cart.forEach((line) => {
       const lineTotal = line.totalPrice
       const lineTaxRate = (line.item.tax ?? 16) / 100
       sub += lineTotal
       tax += lineTotal * lineTaxRate
+
+      if (line.item.type === 'S') {
+        hServ = true
+        sSub += lineTotal
+      } else {
+        hProd = true
+        pSub += lineTotal
+      }
     })
     return {
       subtotal: sub,
       taxAmount: tax,
       total: sub + tax,
+      hasProducts: hProd,
+      hasServices: hServ,
+      productsSubtotal: pSub,
+      servicesSubtotal: sSub,
     }
   }, [cart])
 
@@ -596,6 +652,17 @@ export function PosClient() {
     try {
       const resolvedClientId = selectedClient?.id_client ?? publicoGeneralClient?.id_client ?? null
 
+      // Cálculo de comisiones sobre importe sin IVA
+      const finalSellerId = hasProducts ? selectedSellerId : null
+      const sellerProfile = employees.find((e) => e.id === finalSellerId)
+      const sellerPct = Number(sellerProfile?.sales_commission_pct ?? 0)
+      const sellerAmount = hasProducts ? Number((productsSubtotal * (sellerPct / 100)).toFixed(2)) : 0
+
+      const finalTechnicianId = hasServices ? selectedTechnicianId : null
+      const techProfile = employees.find((e) => e.id === finalTechnicianId)
+      const techPct = Number(techProfile?.service_commission_pct ?? 0)
+      const techAmount = hasServices ? Number((servicesSubtotal * (techPct / 100)).toFixed(2)) : 0
+
       // 1. Insert order into `orders`
       const orderPayload: Record<string, unknown> = {
         id_store: storeId,
@@ -616,6 +683,15 @@ export function PosClient() {
           : paymentData.payments
               .map((p) => `[SAT ${p.method}] ${formatCurrency(p.amountMxn)}`)
               .join(' | '),
+        // Comisiones
+        id_seller: finalSellerId,
+        id_technician: finalTechnicianId,
+        products_subtotal: productsSubtotal,
+        services_subtotal: servicesSubtotal,
+        seller_commission_pct: sellerPct,
+        seller_commission_amount: sellerAmount,
+        technician_commission_pct: techPct,
+        technician_commission_amount: techAmount,
       }
 
       // Extras if columns exist
@@ -731,9 +807,23 @@ export function PosClient() {
         changeUsd: paymentData.changeUsd,
         exchangeRate: paymentData.exchangeRate,
         notes: paymentData.notes,
+        sellerName: sellerProfile?.full_name || sellerProfile?.email || null,
+        technicianName: techProfile?.full_name || techProfile?.email || null,
       })
 
-      // 5. Reset POS cart & close payment modal
+      // 5. Reset POS cart & commissions
+      if (!hasProducts) {
+        // Si en la venta no hubo venta de artículos, se limpia el vendedor
+        setSelectedSellerId(null)
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.removeItem('campiran_pos_last_seller')
+          } catch {}
+        }
+      }
+      // El técnico de servicios siempre se reinicia para la siguiente venta
+      setSelectedTechnicianId(null)
+
       setCart([])
       setSelectedClient(null)
       setIsClientSelected(false)
@@ -1086,6 +1176,82 @@ export function PosClient() {
               )}
             </div>
 
+            {/* Asignación Rápida de Comisiones (Vendedor / Técnico) */}
+            <div className="p-2.5 bg-black/20 border-b border-border/30 space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-foreground">
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <UserCheck size={13} className="text-emerald-400" />
+                  <span>Personal Asignado</span>
+                </span>
+                {selectedSellerId && (
+                  <span className="text-[10px] text-emerald-400 font-mono">
+                    {employees.find((e) => e.id === selectedSellerId)?.sales_commission_pct ?? 0}% com.
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                {/* Selector de Vendedor */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-medium text-muted-foreground w-16 shrink-0">
+                    Vendedor:
+                  </span>
+                  <select
+                    value={selectedSellerId || ''}
+                    onChange={(e) => handleSellerChange(e.target.value || null)}
+                    className={`flex-1 glass-input px-2 py-1 text-[11px] text-foreground bg-transparent focus:outline-none transition-colors ${
+                      hasProducts && !selectedSellerId ? 'border-amber-500/60 bg-amber-500/10' : ''
+                    }`}
+                  >
+                    <option value="" className="bg-zinc-900 text-white">
+                      {hasProducts ? '-- Seleccionar Vendedor * --' : '-- Sin vendedor --'}
+                    </option>
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.id} className="bg-zinc-900 text-white">
+                        {emp.full_name || emp.email} ({emp.sales_commission_pct ?? 0}% prod)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Selector de Técnico (Se activa si hay servicios) */}
+                {hasServices && (
+                  <div className="flex items-center gap-1.5 pt-1 border-t border-border/20">
+                    <span className="text-[10px] font-medium text-indigo-300 w-16 shrink-0 flex items-center gap-1">
+                      <Wrench size={10} />
+                      Técnico:
+                    </span>
+                    <select
+                      value={selectedTechnicianId || ''}
+                      onChange={(e) => setSelectedTechnicianId(e.target.value || null)}
+                      className={`flex-1 glass-input px-2 py-1 text-[11px] text-foreground bg-transparent focus:outline-none transition-colors ${
+                        hasServices && !selectedTechnicianId ? 'border-amber-500/60 bg-amber-500/10' : ''
+                      }`}
+                    >
+                      <option value="" className="bg-zinc-900 text-white">
+                        -- Seleccionar Técnico * --
+                      </option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.id} className="bg-zinc-900 text-white">
+                          {emp.full_name || emp.email} ({emp.service_commission_pct ?? 0}% serv)
+                        </option>
+                      ))}
+                    </select>
+                    {selectedSellerId && selectedTechnicianId !== selectedSellerId && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTechnicianId(selectedSellerId)}
+                        className="px-1.5 py-1 text-[10px] rounded-lg bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 transition-colors shrink-0"
+                        title="Asignar el mismo vendedor como técnico"
+                      >
+                        = Vendedor
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Cart Items List with Thumbnail */}
             <div className="flex-1 overflow-y-auto scroll-modern divide-y divide-border/20 p-2">
               {cart.length === 0 ? (
@@ -1249,6 +1415,13 @@ export function PosClient() {
         selectedClient={selectedClient}
         isSubmitting={isSubmittingOrder}
         onConfirmPayment={handleProcessOrder}
+        hasProducts={hasProducts}
+        hasServices={hasServices}
+        selectedSellerId={selectedSellerId}
+        selectedTechnicianId={selectedTechnicianId}
+        onSellerChange={handleSellerChange}
+        onTechnicianChange={setSelectedTechnicianId}
+        employees={employees}
       />
 
       {/* Modal 4: Completed Ticket Receipt Preview with SAT breakdown & Bilingual Change */}
@@ -1271,6 +1444,16 @@ export function PosClient() {
                 <p className="text-[11px] text-zinc-600 mt-0.5">
                   Cliente: <span className="font-bold">{completedOrder.clientName}</span>
                 </p>
+                {completedOrder.sellerName && (
+                  <p className="text-[10px] text-zinc-600 mt-0.5">
+                    Atendido por: <span className="font-semibold text-zinc-800">{completedOrder.sellerName}</span>
+                  </p>
+                )}
+                {completedOrder.technicianName && (
+                  <p className="text-[10px] text-zinc-600 mt-0.5">
+                    Técnico servicio: <span className="font-semibold text-zinc-800">{completedOrder.technicianName}</span>
+                  </p>
+                )}
               </div>
 
               {/* Items Table */}

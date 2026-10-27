@@ -4,10 +4,11 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Camera, Upload, Trash2, Star, Eye, X, ChevronLeft, ChevronRight,
-  RefreshCw, Smartphone, Image as ImageIcon
+  RefreshCw, Smartphone, Image as ImageIcon, Crop
 } from 'lucide-react'
 import { GlassButton } from '@/components/glass-button'
 import { resizeAndCompressImage, formatFileSize, type ProcessedImage } from '@/lib/image-utils'
+import { ImageCropModal } from './image-crop-modal'
 import { toast } from 'sonner'
 
 export interface ManagedImageItem {
@@ -71,13 +72,172 @@ export function ProductImageManager({
   const nativeCameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
+  // Crop & Rotate Queue States
+  interface CropQueueItem {
+    file: File | Blob
+    name: string
+    originalSize: number
+  }
+  const [cropQueue, setCropQueue] = useState<CropQueueItem[]>([])
+  const [currentCropIndex, setCurrentCropIndex] = useState<number>(0)
+  const [accumulatedNewItems, setAccumulatedNewItems] = useState<ManagedImageItem[]>([])
+
+  // State para recortar/girar una imagen existente de la galería
+  const [editingImageItem, setEditingImageItem] = useState<{
+    index: number
+    image: ManagedImageItem
+  } | null>(null)
+
   const notifyChange = useCallback((nextImages: ManagedImageItem[], nextDeleted: string[]) => {
     setImages(nextImages)
     setDeletedIds(nextDeleted)
     onChange(nextImages, nextDeleted)
   }, [onChange])
 
-  // Process and add files
+  // Finalizar e integrar lote de imágenes a la lista principal
+  const finalizeNewImages = useCallback((newItems: ManagedImageItem[]) => {
+    setCropQueue([])
+    setCurrentCropIndex(0)
+    setAccumulatedNewItems([])
+    setProcessing(false)
+
+    if (newItems.length === 0) return
+
+    const willBeFirst = images.length === 0
+    const formattedNew = newItems.map((item, idx) => ({
+      ...item,
+      isCover: willBeFirst && idx === 0,
+    }))
+    const updated = [...images, ...formattedNew]
+    if (!updated.some((img) => img.isCover)) {
+      updated[0] = { ...updated[0], isCover: true }
+    }
+    setHasPendingChanges(true)
+    notifyChange(updated, deletedIds)
+
+    const totalSaved = newItems.reduce(
+      (acc, curr) => acc + ((curr.originalSize || 0) - (curr.fileSize || 0)),
+      0
+    )
+    if (totalSaved > 0) {
+      toast.success(
+        `${newItems.length} foto(s) recortada(s) 1:1 y optimizada(s) a máx 720px (-${formatFileSize(totalSaved)} ahorrados)`
+      )
+    } else {
+      toast.success(`${newItems.length} foto(s) agregada(s) con recorte 1:1`)
+    }
+  }, [images, deletedIds, notifyChange])
+
+  // Confirmar recorte de una imagen en la cola
+  const handleQueueCropConfirm = useCallback(async (result: { blob: Blob; dataUrl: string }) => {
+    const currentItem = cropQueue[currentCropIndex]
+    if (!currentItem) return
+
+    try {
+      const processed: ProcessedImage = await resizeAndCompressImage(
+        result.blob,
+        720,
+        0.85,
+        currentItem.name
+      )
+
+      const newItem: ManagedImageItem = {
+        id: `new_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        url: processed.dataUrl,
+        blob: processed.blob,
+        isNew: true,
+        isCover: false,
+        width: processed.width,
+        height: processed.height,
+        fileSize: processed.optimizedSize,
+        originalSize: currentItem.originalSize || processed.optimizedSize,
+      }
+
+      const nextAccumulated = [...accumulatedNewItems, newItem]
+
+      if (currentCropIndex + 1 < cropQueue.length) {
+        setAccumulatedNewItems(nextAccumulated)
+        setCurrentCropIndex((prev) => prev + 1)
+        toast.info(`Foto ${currentCropIndex + 1} de ${cropQueue.length} ajustada`)
+      } else {
+        finalizeNewImages(nextAccumulated)
+      }
+    } catch (err) {
+      console.error('Error al procesar recorte en cola:', err)
+      toast.error('Error al optimizar recorte de imagen')
+    }
+  }, [cropQueue, currentCropIndex, accumulatedNewItems, finalizeNewImages])
+
+  // Omitir recorte de la imagen actual en cola
+  const handleQueueCropSkip = useCallback(() => {
+    if (currentCropIndex + 1 < cropQueue.length) {
+      setCurrentCropIndex((prev) => prev + 1)
+    } else {
+      finalizeNewImages(accumulatedNewItems)
+    }
+  }, [currentCropIndex, cropQueue.length, finalizeNewImages, accumulatedNewItems])
+
+  // Cancelar toda la cola restante
+  const handleQueueCropCancelAll = useCallback(() => {
+    setCropQueue([])
+    setCurrentCropIndex(0)
+    setAccumulatedNewItems([])
+    setProcessing(false)
+  }, [])
+
+  // Confirmar recorte de una imagen existente en la galería
+  const handleEditImageConfirm = useCallback(async (result: { blob: Blob; dataUrl: string }) => {
+    if (!editingImageItem) return
+    const { index, image: target } = editingImageItem
+
+    try {
+      const processed: ProcessedImage = await resizeAndCompressImage(
+        result.blob,
+        720,
+        0.85,
+        'recorte_edit.webp'
+      )
+
+      const updated = [...images]
+      const nextDeleted = [...deletedIds]
+
+      if (target.isExisting && target.id) {
+        nextDeleted.push(target.id)
+        updated[index] = {
+          id: `new_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+          url: processed.dataUrl,
+          blob: processed.blob,
+          isNew: true,
+          isCover: target.isCover,
+          width: processed.width,
+          height: processed.height,
+          fileSize: processed.optimizedSize,
+          originalSize: target.fileSize || processed.optimizedSize,
+        }
+      } else {
+        updated[index] = {
+          ...target,
+          url: processed.dataUrl,
+          blob: processed.blob,
+          width: processed.width,
+          height: processed.height,
+          fileSize: processed.optimizedSize,
+        }
+      }
+
+      setHasPendingChanges(true)
+      notifyChange(updated, nextDeleted)
+      setEditingImageItem(null)
+      toast.success(
+        'Fotografía recortada exitosamente. Haga clic en "Actualizar Producto" para guardar los cambios.'
+      )
+    } catch (err) {
+      console.error('Error al recortar imagen existente:', err)
+      toast.error('Error al recortar la imagen seleccionada')
+    }
+  }, [editingImageItem, images, deletedIds, notifyChange])
+
+  // Recepción de archivos: pone los archivos en cola y abre el modal de recorte
   const processFiles = useCallback(
     async (fileList: FileList | File[]) => {
       const files = Array.from(fileList).filter((f) => f.type.startsWith('image/'))
@@ -86,55 +246,17 @@ export function ProductImageManager({
         return
       }
 
-      setProcessing(true)
-      const newItems: ManagedImageItem[] = []
+      const queueItems: CropQueueItem[] = files.map((f) => ({
+        file: f,
+        name: f.name || `foto_${Date.now()}.jpg`,
+        originalSize: f.size || 0,
+      }))
 
-      for (const file of files) {
-        try {
-          const processed: ProcessedImage = await resizeAndCompressImage(file, 720, 0.85, file.name)
-          newItems.push({
-            id: `new_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-            url: processed.dataUrl,
-            blob: processed.blob,
-            isNew: true,
-            isCover: false,
-            width: processed.width,
-            height: processed.height,
-            fileSize: processed.optimizedSize,
-            originalSize: processed.originalSize,
-          })
-        } catch (err) {
-          console.error('Error processing image:', err)
-          toast.error(`Error al procesar "${file.name}"`)
-        }
-      }
-
-      if (newItems.length > 0) {
-        // Si no había imágenes previas, la primera imagen nueva es la portada
-        const willBeFirst = images.length === 0
-        const formattedNew = newItems.map((item, idx) => ({
-          ...item,
-          isCover: willBeFirst && idx === 0,
-        }))
-        const updated = [...images, ...formattedNew]
-        if (!updated.some((img) => img.isCover)) {
-          updated[0] = { ...updated[0], isCover: true }
-        }
-        setHasPendingChanges(true)
-        notifyChange(updated, deletedIds)
-        const totalSaved = newItems.reduce((acc, curr) => acc + ((curr.originalSize || 0) - (curr.fileSize || 0)), 0)
-        if (totalSaved > 0) {
-          toast.success(
-            `${newItems.length} imagen(es) optimizada(s) a máx 720px (-${formatFileSize(totalSaved)} ahorrados)`
-          )
-        } else {
-          toast.success(`${newItems.length} imagen(es) agregada(s)`)
-        }
-      }
-
-      setProcessing(false)
+      setCropQueue(queueItems)
+      setCurrentCropIndex(0)
+      setAccumulatedNewItems([])
     },
-    [images, deletedIds, notifyChange]
+    []
   )
 
   // Drag and Drop handlers
@@ -278,6 +400,7 @@ export function ProductImageManager({
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
     canvas.toBlob(async (blob) => {
       if (!blob) return
+      stopCamera()
       await processFiles([new File([blob], `cam_${Date.now()}.jpg`, { type: 'image/jpeg' })])
     }, 'image/jpeg', 0.9)
   }
@@ -514,6 +637,19 @@ export function ProductImageManager({
                         <Eye size={15} />
                       </button>
 
+                      {/* Crop & Rotate */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingImageItem({ index, image: img })
+                        }}
+                        className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-black transition-colors cursor-pointer"
+                        title="Recortar y girar foto (1:1)"
+                      >
+                        <Crop size={15} />
+                      </button>
+
                       {/* Set as Primary */}
                       {!isPrimary && (
                         <button
@@ -670,6 +806,19 @@ export function ProductImageManager({
                 )}
                 <button
                   type="button"
+                  onClick={() => {
+                    const currentIdx = lightboxIndex
+                    setLightboxIndex(null)
+                    setEditingImageItem({ index: currentIdx, image: images[currentIdx] })
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-emerald-500 hover:text-black text-white transition-colors text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                  title="Recortar y girar fotografía (1:1)"
+                >
+                  <Crop size={13} />
+                  Recortar
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleRemoveImage(lightboxIndex)}
                   className="px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-colors text-xs font-medium flex items-center gap-1.5"
                 >
@@ -762,6 +911,40 @@ export function ProductImageManager({
           </div>
         )}
       </AnimatePresence>
+
+      {/* ── MODAL: RECORTE Y GIRO (1:1) PARA COLA DE NUEVAS FOTOGRAFÍAS ─── */}
+      {cropQueue.length > 0 && cropQueue[currentCropIndex] && (
+        <ImageCropModal
+          open={cropQueue.length > 0}
+          imageSource={cropQueue[currentCropIndex].file}
+          fileName={cropQueue[currentCropIndex].name}
+          queueIndex={currentCropIndex + 1}
+          queueTotal={cropQueue.length}
+          onConfirm={handleQueueCropConfirm}
+          onCancel={() => {
+            if (cropQueue.length > 1) {
+              handleQueueCropSkip()
+            } else {
+              handleQueueCropCancelAll()
+            }
+          }}
+          onSkip={cropQueue.length > 1 ? handleQueueCropSkip : undefined}
+          onCancelAll={cropQueue.length > 1 ? handleQueueCropCancelAll : undefined}
+        />
+      )}
+
+      {/* ── MODAL: RECORTE Y GIRO (1:1) PARA FOTO DE LA GALERÍA ─────────── */}
+      {editingImageItem && (
+        <ImageCropModal
+          open={Boolean(editingImageItem)}
+          imageSource={editingImageItem.image.url}
+          fileName={`Foto #${editingImageItem.index + 1}`}
+          queueIndex={1}
+          queueTotal={1}
+          onConfirm={handleEditImageConfirm}
+          onCancel={() => setEditingImageItem(null)}
+        />
+      )}
     </div>
   )
 }

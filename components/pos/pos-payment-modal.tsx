@@ -10,12 +10,14 @@ import {
   type SatPaymentCode,
   type SatPaymentMethodInfo,
   type PaymentBreakdownItem,
+  type Profile,
 } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
   CreditCard, Banknote, ArrowRightLeft, CheckCircle2,
-  AlertCircle, DollarSign, Plus, Trash2, X, Receipt, Building2, HelpCircle, FileText
+  AlertCircle, DollarSign, Plus, Trash2, X, Receipt, Building2, HelpCircle, FileText,
+  UserCheck, Wrench, Percent, AlertTriangle, Users
 } from 'lucide-react'
 
 export const SAT_PAYMENT_METHODS: SatPaymentMethodInfo[] = [
@@ -44,6 +46,14 @@ interface PosPaymentModalProps {
     exchangeRate: number
     notes?: string
   }) => void
+  // Comisiones
+  hasProducts?: boolean
+  hasServices?: boolean
+  selectedSellerId?: string | null
+  selectedTechnicianId?: string | null
+  onSellerChange?: (sellerId: string | null) => void
+  onTechnicianChange?: (techId: string | null) => void
+  employees?: Profile[]
 }
 
 export function PosPaymentModal({
@@ -54,6 +64,13 @@ export function PosPaymentModal({
   selectedClient,
   isSubmitting = false,
   onConfirmPayment,
+  hasProducts = false,
+  hasServices = false,
+  selectedSellerId = null,
+  selectedTechnicianId = null,
+  onSellerChange,
+  onTechnicianChange,
+  employees = [],
 }: PosPaymentModalProps) {
   // Active payment entries
   const [payments, setPayments] = useState<PaymentBreakdownItem[]>([])
@@ -179,6 +196,16 @@ export function PosPaymentModal({
       toast.error(
         `Faltan ${formatCurrency(remainingMxn)} por cubrir. Agrega otro método de pago.`
       )
+      return
+    }
+
+    if (hasProducts && !selectedSellerId) {
+      toast.error('Debes seleccionar el Vendedor de productos para completar la venta.')
+      return
+    }
+
+    if (hasServices && !selectedTechnicianId) {
+      toast.error('Debes seleccionar el Técnico del servicio para completar la venta.')
       return
     }
 
@@ -508,6 +535,120 @@ export function PosPaymentModal({
                 </div>
               </GlassCard>
 
+              {/* Asignación de Comisiones (Vendedor / Técnico) */}
+              {(hasProducts || hasServices) && (
+                <GlassCard
+                  padding="sm"
+                  className={`space-y-2.5 border transition-all ${
+                    (hasProducts && !selectedSellerId) || (hasServices && !selectedTechnicianId)
+                      ? 'border-amber-500/50 bg-amber-500/5 ring-1 ring-amber-500/30'
+                      : 'border-border/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-xs font-semibold text-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <UserCheck size={15} className="text-emerald-400" />
+                      <span>Personal y Comisiones de la Venta</span>
+                    </span>
+                    {(hasProducts && !selectedSellerId) || (hasServices && !selectedTechnicianId) ? (
+                      <span className="text-[11px] text-amber-400 flex items-center gap-1 font-medium animate-pulse">
+                        <AlertTriangle size={12} />
+                        Asignación pendiente
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-emerald-400 font-medium">✓ Personal asignado</span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {/* Vendedor de productos */}
+                    {hasProducts ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-semibold text-muted-foreground">
+                            Vendedor (Artículos) *
+                          </label>
+                          {selectedSellerId && (
+                            <span className="text-[10px] text-emerald-400 font-mono font-bold">
+                              {employees.find((e) => e.id === selectedSellerId)?.sales_commission_pct ?? 0}% com.
+                            </span>
+                          )}
+                        </div>
+                        <select
+                          value={selectedSellerId || ''}
+                          onChange={(e) => onSellerChange?.(e.target.value || null)}
+                          className={`w-full glass-input px-2.5 py-1.5 text-xs text-foreground bg-transparent focus:outline-none transition-colors ${
+                            !selectedSellerId ? 'border-amber-500/80 bg-amber-500/10' : ''
+                          }`}
+                        >
+                          <option value="" className="bg-zinc-900 text-white">
+                            -- Seleccionar Vendedor * --
+                          </option>
+                          {employees.map((emp) => (
+                            <option key={emp.id} value={emp.id} className="bg-zinc-900 text-white">
+                              {emp.full_name || emp.email} ({emp.sales_commission_pct ?? 0}% prod)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="p-2 rounded-xl bg-white/[0.02] border border-border/20 text-[11px] text-muted-foreground/70 flex items-center justify-center">
+                        Sin artículos (no requiere vendedor)
+                      </div>
+                    )}
+
+                    {/* Técnico de servicios */}
+                    {hasServices ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                            <Wrench size={12} className="text-indigo-400" />
+                            <span>Técnico (Servicio) *</span>
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            {selectedSellerId && (
+                              <button
+                                type="button"
+                                onClick={() => onTechnicianChange?.(selectedSellerId)}
+                                className="text-[10px] text-indigo-400 hover:text-indigo-300 underline font-medium cursor-pointer"
+                                title="Copiar el mismo vendedor como técnico"
+                              >
+                                Mismo vendedor
+                              </button>
+                            )}
+                            {selectedTechnicianId && (
+                              <span className="text-[10px] text-indigo-300 font-mono font-bold">
+                                {employees.find((e) => e.id === selectedTechnicianId)?.service_commission_pct ?? 0}% com.
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <select
+                          value={selectedTechnicianId || ''}
+                          onChange={(e) => onTechnicianChange?.(e.target.value || null)}
+                          className={`w-full glass-input px-2.5 py-1.5 text-xs text-foreground bg-transparent focus:outline-none transition-colors ${
+                            !selectedTechnicianId ? 'border-amber-500/80 bg-amber-500/10' : ''
+                          }`}
+                        >
+                          <option value="" className="bg-zinc-900 text-white">
+                            -- Seleccionar Técnico * --
+                          </option>
+                          {employees.map((emp) => (
+                            <option key={emp.id} value={emp.id} className="bg-zinc-900 text-white">
+                              {emp.full_name || emp.email} ({emp.service_commission_pct ?? 0}% serv)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="p-2 rounded-xl bg-white/[0.02] border border-border/20 text-[11px] text-muted-foreground/70 flex items-center justify-center">
+                        Sin servicios (no requiere técnico)
+                      </div>
+                    )}
+                  </div>
+                </GlassCard>
+              )}
+
               {/* Observaciones de la Venta (Texto libre - se guardará y se imprimirá en ticket) */}
               <GlassCard padding="sm" className="space-y-1.5 border-border/40">
                 <div className="flex items-center justify-between text-xs font-semibold text-foreground">
@@ -543,7 +684,12 @@ export function PosPaymentModal({
               <GlassButton
                 variant="primary"
                 size="md"
-                disabled={totalPaidMxn < totalAmountMxn || isSubmitting}
+                disabled={
+                  totalPaidMxn < totalAmountMxn ||
+                  isSubmitting ||
+                  Boolean(hasProducts && !selectedSellerId) ||
+                  Boolean(hasServices && !selectedTechnicianId)
+                }
                 onClick={handleConfirm}
                 className="px-6"
               >

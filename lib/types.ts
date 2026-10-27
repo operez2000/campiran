@@ -18,6 +18,8 @@ export interface Profile {
   avatar_url: string | null
   created_at: string
   updated_at: string
+  sales_commission_pct?: number | null
+  service_commission_pct?: number | null
   biometrics?: UserBiometric | null
 }
 
@@ -449,10 +451,21 @@ export interface Order {
   cancelled_by_name?: string | null
   cancellation_reason?: string | null
   cancellation_auth_method?: 'pin' | 'webauthn' | 'face' | 'biometric' | null
+  // Comisiones en ventas y servicios
+  id_seller?: string | null
+  id_technician?: string | null
+  products_subtotal?: number
+  services_subtotal?: number
+  seller_commission_pct?: number
+  seller_commission_amount?: number
+  technician_commission_pct?: number
+  technician_commission_amount?: number
   // Relations
   client?: Client
   store?: Store
   shift?: CashShift
+  seller?: Profile | null
+  technician?: Profile | null
   order_items?: OrderItem[]
 }
 
