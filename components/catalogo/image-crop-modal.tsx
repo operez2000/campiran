@@ -11,6 +11,7 @@ import {
   Maximize2,
   Check,
   X,
+  Move,
   Sparkles,
 } from 'lucide-react'
 import { GlassButton } from '@/components/glass-button'
@@ -27,7 +28,16 @@ export interface ImageCropModalProps {
   onCancelAll?: () => void
 }
 
-const CANVAS_SIZE = 360 // Base coordinate system for 1:1 preview
+const PREVIEW_MAX_DIM = 330 // Máxima dimensión en píxeles para el contenedor de previsualización
+const MIN_CROP_SIZE = 50 // Tamaño mínimo del marco de recorte en px
+
+interface CropBox {
+  x: number
+  y: number
+  size: number
+}
+
+type DragMode = 'move' | 'tl' | 'tr' | 'bl' | 'br' | null
 
 export function ImageCropModal({
   open,
@@ -43,17 +53,29 @@ export function ImageCropModal({
   const [imageObj, setImageObj] = useState<HTMLImageElement | null>(null)
   const [loading, setLoading] = useState(true)
   const [rotation, setRotation] = useState<number>(0) // 0, 90, 180, 270
-  const [zoom, setZoom] = useState<number>(1) // 1.0 to 3.0
-  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const isDraggingRef = useRef(false)
-  const lastPointerPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
-  const initialPinchDistRef = useRef<number | null>(null)
-  const initialPinchZoomRef = useRef<number>(1)
+  // Dimensiones calculadas del contenedor de previsualización
+  const [previewDims, setPreviewDims] = useState<{ width: number; height: number }>({
+    width: PREVIEW_MAX_DIM,
+    height: PREVIEW_MAX_DIM,
+  })
 
-  // Cargar imagen en memoria de forma segura
+  // Marco de recorte 1:1 en coordenadas del preview
+  const [crop, setCrop] = useState<CropBox>({ x: 0, y: 0, size: PREVIEW_MAX_DIM })
+
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Referencias para el arrastre
+  const dragRef = useRef<{
+    mode: DragMode
+    startX: number
+    startY: number
+    startCrop: CropBox
+  } | null>(null)
+
+  // Cargar imagen de forma segura
   useEffect(() => {
     if (!open || !imageSource) {
       setImageObj(null)
@@ -62,8 +84,6 @@ export function ImageCropModal({
 
     setLoading(true)
     setRotation(0)
-    setZoom(1)
-    setPan({ x: 0, y: 0 })
 
     let objectUrlToRevoke: string | null = null
     const img = new Image()
@@ -76,7 +96,7 @@ export function ImageCropModal({
 
     img.onerror = () => {
       setLoading(false)
-      console.error('Error al cargar imagen en modal de recorte')
+      console.error('Error al cargar la imagen en el visor de recorte')
     }
 
     if (imageSource instanceof File || imageSource instanceof Blob) {
@@ -93,196 +113,297 @@ export function ImageCropModal({
     }
   }, [open, imageSource])
 
-  // Calcular límites de paneo para no dejar bordes vacíos
-  const getClampedPan = useCallback(
-    (currentPan: { x: number; y: number }, currentZoom: number, currentRotation: number, img: HTMLImageElement) => {
-      const W0 = img.naturalWidth || CANVAS_SIZE
-      const H0 = img.naturalHeight || CANVAS_SIZE
-      const scaleBase = CANVAS_SIZE / Math.min(W0, H0)
-      const currentScale = scaleBase * currentZoom
+  // Recalcular dimensiones y centrar el cuadro de recorte cuando cambia la imagen o rotación
+  useEffect(() => {
+    if (!imageObj) return
 
-      const isRotated90 = currentRotation === 90 || currentRotation === 270
-      const visualW = (isRotated90 ? H0 : W0) * currentScale
-      const visualH = (isRotated90 ? W0 : H0) * currentScale
+    const W_nat = imageObj.naturalWidth || 800
+    const H_nat = imageObj.naturalHeight || 600
 
-      const maxPanX = Math.max(0, (visualW - CANVAS_SIZE) / 2)
-      const maxPanY = Math.max(0, (visualH - CANVAS_SIZE) / 2)
+    const isRotated90 = rotation === 90 || rotation === 270
+    const W_eff = isRotated90 ? H_nat : W_nat
+    const H_eff = isRotated90 ? W_nat : H_nat
 
-      return {
-        x: Math.min(maxPanX, Math.max(-maxPanX, currentPan.x)),
-        y: Math.min(maxPanY, Math.max(-maxPanY, currentPan.y)),
-      }
-    },
-    []
-  )
+    const scale = Math.min(PREVIEW_MAX_DIM / W_eff, PREVIEW_MAX_DIM / H_eff)
+    const pWidth = Math.max(100, Math.round(W_eff * scale))
+    const pHeight = Math.max(100, Math.round(H_eff * scale))
 
-  // Redibujar el preview en el canvas 1:1
-  const drawPreview = useCallback(() => {
-    if (!canvasRef.current || !imageObj) return
-    const canvas = canvasRef.current
+    setPreviewDims({ width: pWidth, height: pHeight })
+
+    // Inicializar marco de recorte como cuadrado máximo centrado
+    const initialSize = Math.min(pWidth, pHeight)
+    setCrop({
+      x: Math.round((pWidth - initialSize) / 2),
+      y: Math.round((pHeight - initialSize) / 2),
+      size: initialSize,
+    })
+  }, [imageObj, rotation])
+
+  // Dibujar la imagen rotada en el canvas de previsualización
+  useEffect(() => {
+    if (!previewCanvasRef.current || !imageObj) return
+
+    const canvas = previewCanvasRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const W0 = imageObj.naturalWidth || CANVAS_SIZE
-    const H0 = imageObj.naturalHeight || CANVAS_SIZE
-
-    const scaleBase = CANVAS_SIZE / Math.min(W0, H0)
-    const currentScale = scaleBase * zoom
-
-    const clamped = getClampedPan(pan, zoom, rotation, imageObj)
+    const { width: pW, height: pH } = previewDims
+    canvas.width = pW
+    canvas.height = pH
 
     ctx.save()
-    ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
+    ctx.clearRect(0, 0, pW, pH)
 
-    // Fondo oscuro por si acaso
+    // Fondo neutro
     ctx.fillStyle = '#09090b'
-    ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
+    ctx.fillRect(0, 0, pW, pH)
 
-    // Aplicar transformación centrada
-    ctx.translate(CANVAS_SIZE / 2 + clamped.x, CANVAS_SIZE / 2 + clamped.y)
-    ctx.rotate((rotation * Math.PI) / 180)
-    ctx.scale(currentScale, currentScale)
-
-    // Calidad alta de interpolación
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
 
-    ctx.drawImage(imageObj, -W0 / 2, -H0 / 2, W0, H0)
-    ctx.restore()
-  }, [imageObj, rotation, zoom, pan, getClampedPan])
+    // Centrar y rotar
+    ctx.translate(pW / 2, pH / 2)
+    ctx.rotate((rotation * Math.PI) / 180)
 
-  useEffect(() => {
-    drawPreview()
-  }, [drawPreview])
+    const isRotated90 = rotation === 90 || rotation === 270
+    const drawW = isRotated90 ? pH : pW
+    const drawH = isRotated90 ? pW : pH
+
+    ctx.drawImage(imageObj, -drawW / 2, -drawH / 2, drawW, drawH)
+    ctx.restore()
+  }, [imageObj, rotation, previewDims])
 
   // Girar 90 grados
   const handleRotate = (direction: 'cw' | 'ccw') => {
-    if (!imageObj) return
     const delta = direction === 'cw' ? 90 : -90
-    const nextRot = (rotation + delta + 360) % 360
-    setRotation(nextRot)
-    setPan((prev) => getClampedPan(prev, zoom, nextRot, imageObj))
+    setRotation((prev) => (prev + delta + 360) % 360)
   }
 
-  // Modificar Zoom con slider o botones
-  const handleZoomChange = (nextZoom: number) => {
-    if (!imageObj) return
-    const clampedZoom = Math.min(3, Math.max(1, Number(nextZoom.toFixed(2))))
-    setZoom(clampedZoom)
-    setPan((prev) => getClampedPan(prev, clampedZoom, rotation, imageObj))
+  // Maximizar / Centrar cuadro de recorte
+  const handleMaximizeCrop = () => {
+    const maxSize = Math.min(previewDims.width, previewDims.height)
+    setCrop({
+      x: Math.round((previewDims.width - maxSize) / 2),
+      y: Math.round((previewDims.height - maxSize) / 2),
+      size: maxSize,
+    })
   }
 
-  // Reset / Centrar
-  const handleReset = () => {
-    setZoom(1)
-    setPan({ x: 0, y: 0 })
-    setRotation(0)
+  // Ajustar tamaño del cuadro de recorte con slider manteniendo el centro
+  const handleCropSizeChange = (newSize: number) => {
+    const maxSize = Math.min(previewDims.width, previewDims.height)
+    const clampedSize = Math.max(MIN_CROP_SIZE, Math.min(maxSize, Math.round(newSize)))
+
+    const centerX = crop.x + crop.size / 2
+    const centerY = crop.y + crop.size / 2
+
+    let nextX = Math.round(centerX - clampedSize / 2)
+    let nextY = Math.round(centerY - clampedSize / 2)
+
+    nextX = Math.max(0, Math.min(previewDims.width - clampedSize, nextX))
+    nextY = Math.max(0, Math.min(previewDims.height - clampedSize, nextY))
+
+    setCrop({
+      x: nextX,
+      y: nextY,
+      size: clampedSize,
+    })
   }
 
-  // Pointer Events para arrastrar (Touch + Mouse)
-  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return
-    isDraggingRef.current = true
-    lastPointerPosRef.current = { x: e.clientX, y: e.clientY }
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-  }
+  // ── GESTIÓN DE ARRASTRE DE MARCAS Y CUADRO DE RECORTE (POINTER EVENTS) ──
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDraggingRef.current || !imageObj || !canvasRef.current) return
-
-    const rect = canvasRef.current.getBoundingClientRect()
-    const coordRatio = CANVAS_SIZE / (rect.width || CANVAS_SIZE)
-
-    const dx = (e.clientX - lastPointerPosRef.current.x) * coordRatio
-    const dy = (e.clientY - lastPointerPosRef.current.y) * coordRatio
-
-    lastPointerPosRef.current = { x: e.clientX, y: e.clientY }
-
-    setPan((prev) =>
-      getClampedPan({ x: prev.x + dx, y: prev.y + dy }, zoom, rotation, imageObj)
-    )
-  }
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    isDraggingRef.current = false
-    try {
-      ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
-    } catch {
-      // Ignorar si no estaba capturado
-    }
-  }
-
-  // Soporte de zoom con rueda de ratón
-  const handleWheel = (e: React.WheelEvent) => {
+  const handlePointerDown = (e: React.PointerEvent, mode: DragMode) => {
     e.preventDefault()
-    if (!imageObj) return
-    const delta = e.deltaY < 0 ? 0.08 : -0.08
-    handleZoomChange(zoom + delta)
+    e.stopPropagation()
+
+    dragRef.current = {
+      mode,
+      startX: e.clientX,
+      startY: e.clientY,
+      startCrop: { ...crop },
+    }
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
 
-  // Soporte de pellizco táctil (Pinch to zoom) en móviles
-  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (e.touches.length === 2) {
-      const t1 = e.touches[0]
-      const t2 = e.touches[1]
-      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
-      initialPinchDistRef.current = dist
-      initialPinchZoomRef.current = zoom
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!dragRef.current) return
+    e.preventDefault()
+
+    const { mode, startX, startY, startCrop } = dragRef.current
+    const dx = e.clientX - startX
+    const dy = e.clientY - startY
+
+    const { width: pW, height: pH } = previewDims
+    const minSize = Math.min(MIN_CROP_SIZE, Math.min(pW, pH))
+
+    if (mode === 'move') {
+      // Arrastrar todo el cuadro de recorte horizontal y verticalmente
+      const nextX = Math.max(0, Math.min(pW - startCrop.size, startCrop.x + dx))
+      const nextY = Math.max(0, Math.min(pH - startCrop.size, startCrop.y + dy))
+
+      setCrop({
+        x: Math.round(nextX),
+        y: Math.round(nextY),
+        size: startCrop.size,
+      })
+      return
+    }
+
+    // Arrastrar esquinas (Marcas de recorte 1:1)
+    if (mode === 'br') {
+      // Esquina inferior derecha: anclada en top-left (startCrop.x, startCrop.y)
+      const anchorX = startCrop.x
+      const anchorY = startCrop.y
+      const desiredW = startCrop.size + dx
+      const desiredH = startCrop.size + dy
+      const nextSize = Math.max(minSize, Math.min(pW - anchorX, pH - anchorY, Math.round((desiredW + desiredH) / 2)))
+
+      setCrop({
+        x: anchorX,
+        y: anchorY,
+        size: nextSize,
+      })
+    } else if (mode === 'tl') {
+      // Esquina superior izquierda: anclada en bottom-right
+      const anchorX = startCrop.x + startCrop.size
+      const anchorY = startCrop.y + startCrop.size
+      const desiredW = anchorX - (startCrop.x + dx)
+      const desiredH = anchorY - (startCrop.y + dy)
+      const nextSize = Math.max(minSize, Math.min(anchorX, anchorY, Math.round((desiredW + desiredH) / 2)))
+
+      setCrop({
+        x: anchorX - nextSize,
+        y: anchorY - nextSize,
+        size: nextSize,
+      })
+    } else if (mode === 'tr') {
+      // Esquina superior derecha: anclada en bottom-left
+      const anchorX = startCrop.x
+      const anchorY = startCrop.y + startCrop.size
+      const desiredW = startCrop.size + dx
+      const desiredH = anchorY - (startCrop.y + dy)
+      const nextSize = Math.max(minSize, Math.min(pW - anchorX, anchorY, Math.round((desiredW + desiredH) / 2)))
+
+      setCrop({
+        x: anchorX,
+        y: anchorY - nextSize,
+        size: nextSize,
+      })
+    } else if (mode === 'bl') {
+      // Esquina inferior izquierda: anclada en top-right
+      const anchorX = startCrop.x + startCrop.size
+      const anchorY = startCrop.y
+      const desiredW = anchorX - (startCrop.x + dx)
+      const desiredH = startCrop.size + dy
+      const nextSize = Math.max(minSize, Math.min(anchorX, pH - anchorY, Math.round((desiredW + desiredH) / 2)))
+
+      setCrop({
+        x: anchorX - nextSize,
+        y: anchorY,
+        size: nextSize,
+      })
     }
   }
 
-  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (e.touches.length === 2 && initialPinchDistRef.current !== null && imageObj) {
-      const t1 = e.touches[0]
-      const t2 = e.touches[1]
-      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
-      const factor = dist / initialPinchDistRef.current
-      handleZoomChange(initialPinchZoomRef.current * factor)
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!dragRef.current) return
+    try {
+      ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+    } catch {
+      // Ignorar
     }
+    dragRef.current = null
   }
 
-  const handleTouchEnd = () => {
-    initialPinchDistRef.current = null
+  // Tocar fuera del cuadro para reubicarlo directamente en esa posición
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (dragRef.current) return
+    const container = containerRef.current
+    if (!container) return
+
+    const rect = container.getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+    const clickY = e.clientY - rect.top
+
+    const { width: pW, height: pH } = previewDims
+    const nextX = Math.max(0, Math.min(pW - crop.size, clickX - crop.size / 2))
+    const nextY = Math.max(0, Math.min(pH - crop.size, clickY - crop.size / 2))
+
+    setCrop((prev) => ({
+      ...prev,
+      x: Math.round(nextX),
+      y: Math.round(nextY),
+    }))
   }
 
-  // Exportar recorte a Blob de alta resolución (cuadrado 1:1, max 720px)
+  // Exportar recorte a Blob optimizado (cuadrado 1:1, máx 720px)
   const handleConfirm = async () => {
     if (!imageObj) return
     setIsProcessing(true)
 
     try {
-      const W0 = imageObj.naturalWidth || CANVAS_SIZE
-      const H0 = imageObj.naturalHeight || CANVAS_SIZE
-      const naturalMin = Math.min(W0, H0)
-      // Generar tamaño óptimo para el canvas de salida (hasta 720px, respetando dimensiones naturales)
-      const outputSize = Math.min(720, Math.max(360, Math.round(naturalMin * zoom)))
+      const W_nat = imageObj.naturalWidth || 800
+      const H_nat = imageObj.naturalHeight || 600
 
+      const isRotated90 = rotation === 90 || rotation === 270
+      const W_eff = isRotated90 ? H_nat : W_nat
+      const H_eff = isRotated90 ? W_nat : H_nat
+
+      // 1. Crear canvas de la imagen rotada en resolución completa
+      const rotCanvas = document.createElement('canvas')
+      rotCanvas.width = W_eff
+      rotCanvas.height = H_eff
+      const rotCtx = rotCanvas.getContext('2d')
+      if (!rotCtx) throw new Error('No se pudo inicializar canvas para rotación')
+
+      rotCtx.imageSmoothingEnabled = true
+      rotCtx.imageSmoothingQuality = 'high'
+
+      if (rotation === 90) {
+        rotCtx.translate(W_eff, 0)
+        rotCtx.rotate(Math.PI / 2)
+      } else if (rotation === 180) {
+        rotCtx.translate(W_eff, H_eff)
+        rotCtx.rotate(Math.PI)
+      } else if (rotation === 270) {
+        rotCtx.translate(0, H_eff)
+        rotCtx.rotate(-Math.PI / 2)
+      }
+      rotCtx.drawImage(imageObj, 0, 0)
+
+      // 2. Calcular coordenadas del recorte sobre la imagen en resolución real
+      const scaleToNat = W_eff / previewDims.width
+      const cropX_nat = Math.round(crop.x * scaleToNat)
+      const cropY_nat = Math.round(crop.y * scaleToNat)
+      const cropSize_nat = Math.round(crop.size * scaleToNat)
+
+      // 3. Crear canvas final cuadrado 1:1 limitado a 720px
+      const outputSize = Math.min(720, Math.max(100, cropSize_nat))
       const outCanvas = document.createElement('canvas')
       outCanvas.width = outputSize
       outCanvas.height = outputSize
 
       const outCtx = outCanvas.getContext('2d')
-      if (!outCtx) throw new Error('No se pudo inicializar canvas de salida')
-
-      const scaleBase = CANVAS_SIZE / naturalMin
-      const currentScale = scaleBase * zoom
-      const ratio = outputSize / CANVAS_SIZE
-
-      const clamped = getClampedPan(pan, zoom, rotation, imageObj)
-
-      outCtx.save()
-      outCtx.fillStyle = '#ffffff'
-      outCtx.fillRect(0, 0, outputSize, outputSize)
-
-      outCtx.translate(outputSize / 2 + clamped.x * ratio, outputSize / 2 + clamped.y * ratio)
-      outCtx.rotate((rotation * Math.PI) / 180)
-      outCtx.scale(currentScale * ratio, currentScale * ratio)
+      if (!outCtx) throw new Error('No se pudo inicializar canvas de recorte')
 
       outCtx.imageSmoothingEnabled = true
       outCtx.imageSmoothingQuality = 'high'
 
-      outCtx.drawImage(imageObj, -W0 / 2, -H0 / 2, W0, H0)
-      outCtx.restore()
+      // Fondo blanco por si acaso
+      outCtx.fillStyle = '#ffffff'
+      outCtx.fillRect(0, 0, outputSize, outputSize)
+
+      outCtx.drawImage(
+        rotCanvas,
+        cropX_nat,
+        cropY_nat,
+        cropSize_nat,
+        cropSize_nat,
+        0,
+        0,
+        outputSize,
+        outputSize
+      )
 
       outCanvas.toBlob(
         (blob) => {
@@ -298,12 +419,14 @@ export function ImageCropModal({
         0.9
       )
     } catch (err) {
-      console.error('Error al exportar recorte:', err)
+      console.error('Error al exportar recorte de imagen:', err)
       setIsProcessing(false)
     }
   }
 
   if (!open) return null
+
+  const maxSizePossible = Math.min(previewDims.width, previewDims.height)
 
   return (
     <AnimatePresence>
@@ -313,17 +436,17 @@ export function ImageCropModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           transition={{ duration: 0.2 }}
-          className="glass-card max-w-md w-full p-4 sm:p-5 flex flex-col items-center gap-3.5 my-auto"
+          className="glass-card max-w-md w-full p-4 sm:p-5 flex flex-col items-center gap-3 my-auto"
         >
           {/* Header */}
-          <div className="w-full flex items-center justify-between border-b border-border/40 pb-3">
+          <div className="w-full flex items-center justify-between border-b border-border/40 pb-2.5">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400">
                 <Crop size={17} />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                  Ajustar Fotografía
+                  Recortar y Girar
                   {queueTotal > 1 && (
                     <span className="text-[11px] font-normal text-muted-foreground">
                       ({queueIndex} de {queueTotal})
@@ -349,99 +472,162 @@ export function ImageCropModal({
             </div>
           </div>
 
-          {/* Viewport / Crop Box */}
-          <div className="relative w-full max-w-[320px] aspect-square rounded-2xl overflow-hidden bg-black border-2 border-emerald-500/40 shadow-2xl flex items-center justify-center">
+          {/* Área interactiva de recorte con marcas móviles */}
+          <div className="w-full flex items-center justify-center py-1">
             {loading ? (
-              <div className="flex flex-col items-center gap-2 text-muted-foreground text-xs">
+              <div className="w-full h-64 rounded-2xl bg-black/40 border border-white/10 flex flex-col items-center justify-center gap-2 text-muted-foreground text-xs">
                 <Sparkles size={20} className="animate-spin text-emerald-400" />
                 <span>Cargando imagen...</span>
               </div>
             ) : (
-              <>
+              <div
+                ref={containerRef}
+                onClick={handleBackdropClick}
+                style={{ width: previewDims.width, height: previewDims.height }}
+                className="relative rounded-2xl overflow-hidden bg-black shadow-2xl border border-white/15 select-none touch-none"
+              >
+                {/* Imagen previsualizada */}
                 <canvas
-                  ref={canvasRef}
-                  width={CANVAS_SIZE}
-                  height={CANVAS_SIZE}
-                  onPointerDown={handlePointerDown}
+                  ref={previewCanvasRef}
+                  width={previewDims.width}
+                  height={previewDims.height}
+                  className="block w-full h-full pointer-events-none"
+                />
+
+                {/* ── CUADRO DE RECORTE 1:1 INTERACTIVO (MOVIBLE HORIZONTAL Y VERTICALMENTE) ── */}
+                <div
+                  style={{
+                    left: crop.x,
+                    top: crop.y,
+                    width: crop.size,
+                    height: crop.size,
+                  }}
+                  onPointerDown={(e) => handlePointerDown(e, 'move')}
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}
                   onPointerCancel={handlePointerUp}
-                  onWheel={handleWheel}
-                  onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
-                  className="w-full h-full object-contain cursor-grab active:cursor-grabbing touch-none"
-                />
+                  className="absolute cursor-move border-2 border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] touch-none select-none z-10"
+                >
+                  {/* Regla de tercios (Líneas guía internas) */}
+                  <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3">
+                    <div className="border-r border-b border-white/30" />
+                    <div className="border-r border-b border-white/30" />
+                    <div className="border-b border-white/30" />
+                    <div className="border-r border-b border-white/30" />
+                    <div className="border-r border-b border-white/30" />
+                    <div className="border-b border-white/30" />
+                    <div className="border-r border-white/30" />
+                    <div className="border-r border-white/30" />
+                    <div />
+                  </div>
 
-                {/* Guías de Regla de Tercios (Rule of thirds) */}
-                <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 border border-white/10 rounded-2xl">
-                  <div className="border-r border-b border-white/15" />
-                  <div className="border-r border-b border-white/15" />
-                  <div className="border-b border-white/15" />
-                  <div className="border-r border-b border-white/15" />
-                  <div className="border-r border-b border-white/15" />
-                  <div className="border-b border-white/15" />
-                  <div className="border-r border-white/15" />
-                  <div className="border-r border-white/15" />
-                  <div />
+                  {/* Icono central de movimiento */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40">
+                    <Move size={22} className="text-white drop-shadow-md" />
+                  </div>
+
+                  {/* ── 4 MARCAS DE LAS ESQUINAS PARA REDIMENSIONAR (INTERACTIVAS) ── */}
+
+                  {/* Esquina Superior Izquierda (TL) */}
+                  <div
+                    onPointerDown={(e) => handlePointerDown(e, 'tl')}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
+                    className="absolute -top-3 -left-3 w-8 h-8 flex items-center justify-center cursor-nwse-resize touch-none z-30 group"
+                    title="Arrastra para redimensionar el recorte"
+                  >
+                    <div className="w-4 h-4 border-t-[3.5px] border-l-[3.5px] border-emerald-300 drop-shadow-[0_0_4px_rgba(0,0,0,0.9)] transition-transform group-hover:scale-125" />
+                  </div>
+
+                  {/* Esquina Superior Derecha (TR) */}
+                  <div
+                    onPointerDown={(e) => handlePointerDown(e, 'tr')}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
+                    className="absolute -top-3 -right-3 w-8 h-8 flex items-center justify-center cursor-nesw-resize touch-none z-30 group"
+                    title="Arrastra para redimensionar el recorte"
+                  >
+                    <div className="w-4 h-4 border-t-[3.5px] border-r-[3.5px] border-emerald-300 drop-shadow-[0_0_4px_rgba(0,0,0,0.9)] transition-transform group-hover:scale-125" />
+                  </div>
+
+                  {/* Esquina Inferior Izquierda (BL) */}
+                  <div
+                    onPointerDown={(e) => handlePointerDown(e, 'bl')}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
+                    className="absolute -bottom-3 -left-3 w-8 h-8 flex items-center justify-center cursor-nesw-resize touch-none z-30 group"
+                    title="Arrastra para redimensionar el recorte"
+                  >
+                    <div className="w-4 h-4 border-b-[3.5px] border-l-[3.5px] border-emerald-300 drop-shadow-[0_0_4px_rgba(0,0,0,0.9)] transition-transform group-hover:scale-125" />
+                  </div>
+
+                  {/* Esquina Inferior Derecha (BR) */}
+                  <div
+                    onPointerDown={(e) => handlePointerDown(e, 'br')}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
+                    className="absolute -bottom-3 -right-3 w-8 h-8 flex items-center justify-center cursor-nwse-resize touch-none z-30 group"
+                    title="Arrastra para redimensionar el recorte"
+                  >
+                    <div className="w-4 h-4 border-b-[3.5px] border-r-[3.5px] border-emerald-300 drop-shadow-[0_0_4px_rgba(0,0,0,0.9)] transition-transform group-hover:scale-125" />
+                  </div>
                 </div>
-
-                {/* Esquinas decorativas de visor fotográfico */}
-                <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-emerald-400 rounded-tl pointer-events-none" />
-                <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-emerald-400 rounded-tr pointer-events-none" />
-                <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-emerald-400 rounded-bl pointer-events-none" />
-                <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-emerald-400 rounded-br pointer-events-none" />
-              </>
+              </div>
             )}
           </div>
 
           <p className="text-[11px] text-muted-foreground text-center">
-            Arrastra para encuadrar · Pellizca o usa la rueda para zoom
+            Arrastra el cuadro para moverlo · Arrastra las esquinas verdes para cambiar el tamaño
           </p>
 
-          {/* Controles de Zoom */}
+          {/* Controles de Tamaño y Rotación */}
           <div className="w-full space-y-2 bg-white/[0.03] border border-white/10 rounded-2xl p-2.5">
+            {/* Control Deslizante de Tamaño del Cuadro de Recorte */}
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => handleZoomChange(zoom - 0.1)}
+                onClick={() => handleCropSizeChange(crop.size - 20)}
                 className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
-                title="Alejar"
+                title="Reducir área de recorte"
               >
                 <ZoomOut size={15} />
               </button>
 
               <input
                 type="range"
-                min="1"
-                max="3"
-                step="0.02"
-                value={zoom}
-                onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
+                min={MIN_CROP_SIZE}
+                max={maxSizePossible}
+                step={2}
+                value={crop.size}
+                onChange={(e) => handleCropSizeChange(parseFloat(e.target.value))}
                 className="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-emerald-500"
               />
 
               <button
                 type="button"
-                onClick={() => handleZoomChange(zoom + 0.1)}
+                onClick={() => handleCropSizeChange(crop.size + 20)}
                 className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
-                title="Acercar"
+                title="Agrandar área de recorte"
               >
                 <ZoomIn size={15} />
               </button>
 
-              <span className="text-[10px] font-mono text-muted-foreground w-9 text-right">
-                {(zoom * 100).toFixed(0)}%
+              <span className="text-[10px] font-mono text-muted-foreground w-12 text-right">
+                {Math.round((crop.size / maxSizePossible) * 100)}%
               </span>
             </div>
 
-            {/* Controles de Rotación y Centrado */}
+            {/* Botones de Rotación y Centrado */}
             <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-white/5">
               <button
                 type="button"
                 onClick={() => handleRotate('ccw')}
-                className="flex-1 py-1 px-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-medium text-foreground flex items-center justify-center gap-1.5 transition-all active:scale-95"
-                title="Girar 90° a la izquierda"
+                className="flex-1 py-1.5 px-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-medium text-foreground flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                title="Girar 90° en sentido antihorario"
               >
                 <RotateCcw size={13} />
                 <span>Girar -90°</span>
@@ -450,8 +636,8 @@ export function ImageCropModal({
               <button
                 type="button"
                 onClick={() => handleRotate('cw')}
-                className="flex-1 py-1 px-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-medium text-foreground flex items-center justify-center gap-1.5 transition-all active:scale-95"
-                title="Girar 90° a la derecha"
+                className="flex-1 py-1.5 px-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-medium text-foreground flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                title="Girar 90° en sentido horario"
               >
                 <RotateCw size={13} />
                 <span>Girar +90°</span>
@@ -459,12 +645,12 @@ export function ImageCropModal({
 
               <button
                 type="button"
-                onClick={handleReset}
-                className="py-1 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-medium text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 transition-all active:scale-95"
-                title="Centrar y reiniciar zoom"
+                onClick={handleMaximizeCrop}
+                className="py-1.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-medium text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
+                title="Maximizar y centrar recorte"
               >
                 <Maximize2 size={13} />
-                <span>Centrar</span>
+                <span>Maximizar</span>
               </button>
             </div>
           </div>
@@ -516,7 +702,7 @@ export function ImageCropModal({
               {isProcessing ? (
                 <>
                   <Sparkles size={14} className="animate-spin" />
-                  <span>Procesando...</span>
+                  <span>Optimizando...</span>
                 </>
               ) : (
                 <>
