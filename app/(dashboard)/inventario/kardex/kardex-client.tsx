@@ -24,7 +24,7 @@ export function KardexClient() {
   }
 
   return (
-    <div className="h-full flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3">
+    <div className="min-h-full sm:h-full flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3 pb-8 sm:pb-0">
       <div className="dashboard-bg" />
 
       {/* Header & Tabs */}

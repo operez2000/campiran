@@ -180,8 +180,12 @@ export function Header({
               />
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0">
-              <span className="text-white font-bold text-sm">C</span>
+            <div className="w-8 h-8 rounded-xl overflow-hidden bg-white/10 dark:bg-white/5 border border-white/10 flex items-center justify-center shadow-md flex-shrink-0 p-0.5">
+              <img
+                src="/logo.png"
+                alt="Campiran"
+                className="w-full h-full object-contain"
+              />
             </div>
           )}
           <div className="min-w-0">

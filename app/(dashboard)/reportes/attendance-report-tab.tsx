@@ -632,8 +632,8 @@ export function AttendanceReportTab({
             </div>
 
             {/* Daily Summaries Table with Sticky Header */}
-            <div className="scrollable-table scroll-modern border border-[var(--border)] rounded-2xl overflow-hidden max-h-[500px]">
-              <table className="w-full text-left border-collapse text-sm">
+            <div className="scrollable-table scroll-modern border border-[var(--border)] rounded-2xl overflow-hidden max-h-[500px] min-h-[360px] sm:min-h-0">
+              <table className="w-full min-w-[750px] sm:min-w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="glass-table-header sticky top-0 z-10 border-b border-[var(--border)] text-xs text-muted-foreground uppercase tracking-wider">
                     <TableColumnHeader

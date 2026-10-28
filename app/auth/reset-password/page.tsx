@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { GlassCard } from '@/components/glass-card'
 import { GlassButton } from '@/components/glass-button'
@@ -23,8 +24,15 @@ function ResetPasswordForm() {
       >
         <GlassCard padding="lg" hover={false} className="dark">
           <div className="text-center mb-7">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-xl shadow-emerald-500/25">
-              <span className="text-white text-xl font-bold">C</span>
+            <div className="relative w-16 h-16 mx-auto mb-3 flex items-center justify-center drop-shadow-[0_8px_16px_rgba(16,185,129,0.3)]">
+              <Image
+                src="/logo.png"
+                alt="Campiran Logo"
+                width={64}
+                height={64}
+                priority
+                className="object-contain"
+              />
             </div>
             <h1 className="text-xl font-bold text-white mb-1">Nueva contraseña</h1>
             <p className="text-sm text-white/40">

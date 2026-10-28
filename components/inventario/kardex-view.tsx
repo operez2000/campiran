@@ -610,7 +610,7 @@ export function KardexView({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3">
+    <div className="min-h-full sm:h-full flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3 pb-8 sm:pb-0">
       {/* Top Bar: Item Selector for Kardex + Selected Item Summary Card */}
       <GlassCard padding="none" className="p-3 shrink-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
@@ -934,7 +934,7 @@ export function KardexView({
       {/* Kardex Table */}
       <GlassCard
         padding="none"
-        className={`overflow-hidden shadow-xl flex-1 min-h-0 flex flex-col ${
+        className={`overflow-hidden shadow-xl flex-1 min-h-[460px] sm:min-h-0 flex flex-col ${
           compact ? 'max-h-[55vh]' : ''
         }`}
       >
@@ -942,9 +942,9 @@ export function KardexView({
           tabIndex={0}
           role="region"
           aria-label="Tabla de Kardex de Inventario"
-          className="overflow-x-auto overflow-y-auto flex-1 min-h-0 scroll-modern focus:outline-none"
+          className="overflow-x-auto overflow-y-auto flex-1 min-h-[360px] sm:min-h-0 scroll-modern focus:outline-none"
         >
-          <table className="w-full text-left text-sm border-separate border-spacing-0">
+          <table className="w-full min-w-[850px] sm:min-w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <th className="w-14 px-3 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">

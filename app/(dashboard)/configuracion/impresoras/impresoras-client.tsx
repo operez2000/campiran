@@ -372,7 +372,7 @@ export function ImpresorasClient({
   }, [sortedPrinters, currentPage, pageSize])
 
   return (
-    <div className="h-full flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3 w-full">
+    <div className="min-h-full sm:h-full flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3 w-full pb-8 sm:pb-0">
       <div className="dashboard-bg" />
 
       {/* Header & Tabs */}
@@ -504,9 +504,9 @@ export function ImpresorasClient({
       </div>
 
       {/* Printers Table */}
-      <GlassCard className="flex-1 min-h-0 flex flex-col overflow-hidden p-0 shadow-xl">
-        <div className="scrollable-table scroll-modern flex-1 min-h-0 overflow-auto">
-          <table className="w-full text-left border-collapse">
+      <GlassCard className="flex-1 min-h-[460px] sm:min-h-0 flex flex-col overflow-hidden p-0 shadow-xl">
+        <div className="scrollable-table scroll-modern flex-1 min-h-[360px] sm:min-h-0 overflow-auto">
+          <table className="w-full min-w-[750px] sm:min-w-full text-left border-collapse">
             <thead>
               <tr className="glass-table-header sticky top-0 z-10">
                 <TableColumnHeader

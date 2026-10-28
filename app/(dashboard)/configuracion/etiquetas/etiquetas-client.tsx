@@ -504,8 +504,8 @@ export function EtiquetasClient({
 
       {/* Tabla de Configuraciones de Etiquetas */}
       <GlassCard className="p-0 overflow-hidden">
-        <div className="scrollable-table scroll-modern">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="scrollable-table scroll-modern min-h-[360px] sm:min-h-0">
+          <table className="w-full min-w-[750px] sm:min-w-full text-left text-xs border-collapse">
             <thead>
               <tr className="glass-table-header border-b border-white/10">
                 <TableColumnHeader

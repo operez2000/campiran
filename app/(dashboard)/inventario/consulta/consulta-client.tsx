@@ -571,7 +571,7 @@ export function ConsultaInventarioClient() {
   const canResetStock = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER'
 
   return (
-    <div className="h-full flex-1 flex flex-col min-h-0 gap-3 pb-6">
+    <div className="min-h-full sm:h-full flex-1 flex flex-col min-h-0 gap-3 pb-8 sm:pb-6">
       <div className="dashboard-bg" />
 
       {/* Header & Tabs */}
@@ -815,9 +815,9 @@ export function ConsultaInventarioClient() {
       </GlassCard>
 
       {/* Main Table */}
-      <GlassCard padding="none" className="overflow-hidden shadow-xl flex-1 min-h-0 flex flex-col">
-        <div className="scrollable-table scroll-modern flex-1 overflow-auto">
-          <table className="w-full text-left text-sm border-separate border-spacing-0">
+      <GlassCard padding="none" className="overflow-hidden shadow-xl flex-1 min-h-[460px] sm:min-h-0 flex flex-col">
+        <div className="scrollable-table scroll-modern flex-1 min-h-[360px] sm:min-h-0 overflow-auto">
+          <table className="w-full text-left text-sm border-separate border-spacing-0 min-w-[850px] sm:min-w-full">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <th className="w-12 px-3 py-3.5 text-center sticky top-0 z-20 bg-white dark:bg-card">

@@ -14,7 +14,7 @@ import { openShiftAction } from '@/app/(dashboard)/pos/shift-actions'
 import { toast } from 'sonner'
 import {
   Store, Fingerprint, ScanFace, KeyRound, CheckCircle2,
-  AlertCircle, DollarSign, Banknote, RefreshCw, Lock, ShieldCheck
+  AlertCircle, DollarSign, Banknote, RefreshCw, Lock, ShieldCheck, X
 } from 'lucide-react'
 
 interface ShiftOpenModalProps {
@@ -22,6 +22,7 @@ interface ShiftOpenModalProps {
   storeId: string
   storeName: string
   user: Profile | null
+  onClose?: () => void
   onShiftOpened: (shift: CashShift) => void
 }
 
@@ -30,6 +31,7 @@ export function ShiftOpenModal({
   storeId,
   storeName,
   user,
+  onClose,
   onShiftOpened,
 }: ShiftOpenModalProps) {
   // Step 1: Biometrics, Step 2: Initial Cash Amounts
@@ -157,34 +159,46 @@ export function ShiftOpenModal({
     <>
       <AnimatePresence>
         {open && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.94, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 15 }}
-              className="glass-card border-border/50 rounded-2xl sm:rounded-3xl max-w-lg w-full relative overflow-hidden shadow-2xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col"
+              className="glass-card border-border/50 rounded-2xl sm:rounded-3xl max-w-lg w-full relative overflow-hidden shadow-2xl max-h-[94dvh] sm:max-h-[90vh] flex flex-col my-auto"
             >
               {/* Header Fijo */}
-              <div className="flex items-center gap-3 border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 shrink-0">
-                  <Lock size={20} />
+              <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+                <div className="flex items-center gap-3 min-w-0 pr-2">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 shrink-0">
+                    <Lock size={20} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm sm:text-base font-bold text-foreground truncate">
+                      Apertura de Caja y Jornada
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      Sucursal: <span className="font-semibold text-emerald-400">{storeName}</span> · Cajero:{' '}
+                      <span className="font-semibold text-foreground">{user?.full_name || user?.email}</span>
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0 pr-2">
-                  <h3 className="text-sm sm:text-base font-bold text-foreground truncate">
-                    Apertura de Caja y Jornada
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground truncate">
-                    Sucursal: <span className="font-semibold text-emerald-400">{storeName}</span> · Cajero:{' '}
-                    <span className="font-semibold text-foreground">{user?.full_name || user?.email}</span>
-                  </p>
-                </div>
+                {onClose && (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors shrink-0"
+                    title="Cerrar"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
               </div>
 
               {/* Cuerpo desplazable */}
               <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
                 {step === 'auth' ? (
                 /* PASO 1: Validación Biométrica */
-                <div className="space-y-4">
+                <div className="space-y-3.5">
                   <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-start gap-2.5">
                     <ShieldCheck size={18} className="shrink-0 text-emerald-400 mt-0.5" />
                     <div>
@@ -195,25 +209,25 @@ export function ShiftOpenModal({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {/* Opción 1: WebAuthn Face / Touch ID */}
                     <button
                       type="button"
                       disabled={verifying}
                       onClick={handleVerifyWebAuthn}
-                      className="p-4 rounded-2xl glass-card border border-border/40 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-left transition-all flex flex-col justify-between group"
+                      className="p-3 sm:p-4 rounded-2xl glass-card border border-border/40 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-left transition-all flex flex-row sm:flex-col items-center sm:items-start justify-between sm:justify-start gap-3 group cursor-pointer"
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Fingerprint size={22} />
+                      <div className="flex items-center gap-2.5 sm:w-full sm:justify-between sm:mb-2">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                          <Fingerprint size={20} />
                         </div>
                         {hasWebAuthn && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold shrink-0">
                             Enrolado
                           </span>
                         )}
                       </div>
-                      <div>
+                      <div className="min-w-0 flex-1 sm:flex-initial">
                         <h4 className="text-xs font-bold text-foreground group-hover:text-emerald-400 transition-colors">
                           Touch ID / Face ID
                         </h4>
@@ -228,19 +242,19 @@ export function ShiftOpenModal({
                       type="button"
                       disabled={verifying}
                       onClick={() => setFaceCameraOpen(true)}
-                      className="p-4 rounded-2xl glass-card border border-border/40 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-left transition-all flex flex-col justify-between group"
+                      className="p-3 sm:p-4 rounded-2xl glass-card border border-border/40 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-left transition-all flex flex-row sm:flex-col items-center sm:items-start justify-between sm:justify-start gap-3 group cursor-pointer"
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <ScanFace size={22} />
+                      <div className="flex items-center gap-2.5 sm:w-full sm:justify-between sm:mb-2">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
+                          <ScanFace size={20} />
                         </div>
                         {hasFace && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold shrink-0">
                             Registrado
                           </span>
                         )}
                       </div>
-                      <div>
+                      <div className="min-w-0 flex-1 sm:flex-initial">
                         <h4 className="text-xs font-bold text-foreground group-hover:text-emerald-400 transition-colors">
                           Escanear Rostro
                         </h4>
@@ -400,19 +414,33 @@ export function ShiftOpenModal({
             </div>
 
             {/* Footer Fijo */}
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
+              <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
                 {step === 'cash' ? (
                   <>
-                    <GlassButton
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setStep('auth')}
-                      disabled={submitting}
-                      className="w-full sm:w-auto"
-                    >
-                      Volver
-                    </GlassButton>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <GlassButton
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setStep('auth')}
+                        disabled={submitting}
+                        className="w-full sm:w-auto"
+                      >
+                        Volver
+                      </GlassButton>
+                      {onClose && (
+                        <GlassButton
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={onClose}
+                          disabled={submitting}
+                          className="w-full sm:w-auto text-muted-foreground"
+                        >
+                          Cancelar
+                        </GlassButton>
+                      )}
+                    </div>
                     <GlassButton
                       type="button"
                       variant="primary"
@@ -435,9 +463,24 @@ export function ShiftOpenModal({
                     </GlassButton>
                   </>
                 ) : (
-                  <p className="text-xs text-muted-foreground w-full text-center sm:text-right py-1">
-                    Selecciona un método biométrico o ingresa tu PIN para continuar
-                  </p>
+                  <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between w-full gap-2">
+                    {onClose ? (
+                      <GlassButton
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={onClose}
+                        className="w-full sm:w-auto"
+                      >
+                        Cancelar
+                      </GlassButton>
+                    ) : (
+                      <div className="hidden sm:block" />
+                    )}
+                    <p className="text-xs text-muted-foreground text-center sm:text-right py-1">
+                      Usa tu huella, rostro o PIN para validar tu turno
+                    </p>
+                  </div>
                 )}
               </div>
             </motion.div>

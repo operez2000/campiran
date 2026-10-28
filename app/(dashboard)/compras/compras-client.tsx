@@ -1043,7 +1043,7 @@ export function ComprasClient({ currentProfile }: ComprasClientProps) {
   }, [sortedAccounts, apPage, apPageSize])
 
   return (
-    <div className="h-full flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3">
+    <div className="min-h-full sm:h-full flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3 pb-8 sm:pb-0">
       <div className="dashboard-bg" />
 
       {/* ── Top Header & Navigation Tabs ───────────────────────── */}
@@ -1324,9 +1324,9 @@ export function ComprasClient({ currentProfile }: ComprasClientProps) {
           </GlassCard>
 
           {/* Purchases Table */}
-          <GlassCard padding="none" className="overflow-hidden shadow-xl flex-1 min-h-0 flex flex-col">
-            <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 scroll-modern">
-              <table className="w-full text-left text-sm border-separate border-spacing-0">
+          <GlassCard padding="none" className="overflow-hidden shadow-xl flex-1 min-h-[460px] sm:min-h-0 flex flex-col">
+            <div className="overflow-x-auto overflow-y-auto flex-1 min-h-[360px] sm:min-h-0 scroll-modern">
+              <table className="w-full min-w-[850px] sm:min-w-full text-left text-sm border-separate border-spacing-0">
                 <thead className="sticky top-0 z-20">
                   <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <th className="w-16 px-3 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">
@@ -1697,9 +1697,9 @@ export function ComprasClient({ currentProfile }: ComprasClientProps) {
             </GlassCard>
 
             {/* Lines Table with Live Kardex Projection */}
-            <GlassCard padding="none" className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 scroll-modern">
-                <table className="w-full text-left text-xs sm:text-sm border-separate border-spacing-0">
+            <GlassCard padding="none" className="flex-1 min-h-[350px] sm:min-h-0 flex flex-col overflow-hidden">
+              <div className="overflow-x-auto overflow-y-auto flex-1 min-h-[250px] sm:min-h-0 scroll-modern">
+                <table className="w-full min-w-[700px] sm:min-w-full text-left text-xs sm:text-sm border-separate border-spacing-0">
                   <thead className="sticky top-0 z-20">
                     <tr className="glass-table-header border-b border-border/40 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       <th className="px-3 py-3 sticky top-0 z-20 bg-card/95 backdrop-blur-md">
@@ -2210,9 +2210,9 @@ export function ComprasClient({ currentProfile }: ComprasClientProps) {
             </div>
           </GlassCard>
 
-          <GlassCard padding="none" className="overflow-hidden shadow-xl flex-1 min-h-0 flex flex-col">
-            <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 scroll-modern">
-              <table className="w-full text-left text-sm border-separate border-spacing-0">
+          <GlassCard padding="none" className="overflow-hidden shadow-xl flex-1 min-h-[460px] sm:min-h-0 flex flex-col">
+            <div className="overflow-x-auto overflow-y-auto flex-1 min-h-[360px] sm:min-h-0 scroll-modern">
+              <table className="w-full min-w-[850px] sm:min-w-full text-left text-sm border-separate border-spacing-0">
                 <thead className="sticky top-0 z-20">
                   <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <th className="w-16 px-3 py-3.5 text-center sticky top-0 z-20 bg-card/95 backdrop-blur-md">

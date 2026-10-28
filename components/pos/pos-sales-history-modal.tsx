@@ -136,12 +136,12 @@ export function PosSalesHistoryModal({
   return (
     <>
       <AnimatePresence>
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            className="glass-card border-border/50 rounded-2xl sm:rounded-3xl max-w-5xl w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden shadow-2xl relative"
+            className="glass-card border-border/50 rounded-2xl sm:rounded-3xl max-w-5xl w-full flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden shadow-2xl relative my-auto"
           >
             {/* Header Fijo */}
             <div className="p-3 sm:p-5 border-b border-border/40 flex items-center justify-between gap-3 shrink-0 bg-card/95 dark:bg-card/90 backdrop-blur-xl z-10">
@@ -272,7 +272,7 @@ export function PosSalesHistoryModal({
 
             {/* Scrollable Table with Sticky Header */}
             <div className="scrollable-table scroll-modern flex-1 overflow-auto">
-              <table className="w-full text-xs text-left border-collapse">
+              <table className="w-full min-w-[650px] sm:min-w-full text-xs text-left border-collapse">
                 <thead>
                   <tr className="glass-table-header border-b border-border/30">
                     <TableColumnHeader

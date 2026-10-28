@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Header } from './header'
 import { SidebarNav } from './sidebar'
@@ -13,6 +13,7 @@ import { UserAvatar } from '@/components/user-avatar'
 import { getRoleLabel } from '@/lib/utils'
 import { StoreGeoGuard } from '@/components/providers/store-geo-guard'
 import { CompanyProvider, useCompany } from '@/components/providers/company-provider'
+import { FloatingScrollIndicator } from '@/components/floating-scroll-indicator'
 
 interface DashboardLayoutProps {
   profile: Profile
@@ -43,6 +44,7 @@ function DashboardLayoutContent({
   profile: Profile
   children: React.ReactNode
 }) {
+  const mainRef = useRef<HTMLElement>(null)
   const { logoUrl, tradeName } = useCompany()
   const [logoError, setLogoError] = useState(false)
 
@@ -128,8 +130,12 @@ function DashboardLayoutContent({
                   />
                 </div>
               ) : (
-                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25 flex-shrink-0">
-                  <span className="text-white font-bold">C</span>
+                <div className="w-9 h-9 rounded-2xl overflow-hidden bg-white/10 dark:bg-white/5 border border-white/10 flex items-center justify-center shadow-md flex-shrink-0 p-1">
+                  <img
+                    src="/logo.png"
+                    alt="Campiran"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
               )}
               <div className="min-w-0">
@@ -214,8 +220,12 @@ function DashboardLayoutContent({
                       />
                     </div>
                   ) : (
-                    <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold">C</span>
+                    <div className="w-9 h-9 rounded-2xl overflow-hidden bg-white/10 dark:bg-white/5 border border-white/10 flex items-center justify-center shadow-md flex-shrink-0 p-1">
+                      <img
+                        src="/logo.png"
+                        alt="Campiran"
+                        className="w-full h-full object-contain"
+                      />
                     </div>
                   )}
                   <div className="min-w-0">
@@ -267,11 +277,15 @@ function DashboardLayoutContent({
           isDesktopOpen={desktopOpen}
         />
 
-        <main className="flex-1 overflow-y-auto scroll-modern relative p-3 sm:p-4 lg:p-5 flex flex-col min-h-0">
+        <main
+          ref={mainRef}
+          className="flex-1 overflow-y-auto scroll-modern relative p-3 sm:p-4 lg:p-5 flex flex-col min-h-0"
+        >
           <div className="dashboard-bg" />
           <div className="max-w-[1600px] mx-auto w-full flex-1 flex flex-col min-h-0">
             {children}
           </div>
+          <FloatingScrollIndicator targetRef={mainRef} />
         </main>
       </div>
     </div>

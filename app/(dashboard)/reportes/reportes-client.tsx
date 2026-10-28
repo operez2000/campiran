@@ -352,7 +352,7 @@ export function ReportesClient({ currentProfile = null }: ReportesClientProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-8 sm:pb-4">
       <div className="dashboard-bg" />
 
       {/* Header & Tabs */}
@@ -673,8 +673,8 @@ export function ReportesClient({ currentProfile = null }: ReportesClientProps) {
           </div>
         </div>
 
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] scroll-modern">
-          <table className="w-full text-left text-sm border-separate border-spacing-0">
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] min-h-[360px] sm:min-h-[300px] scroll-modern">
+          <table className="w-full min-w-[750px] sm:min-w-full text-left text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-20">
               <tr className="glass-table-header border-b border-border/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <TableColumnHeader

@@ -1377,6 +1377,7 @@ export function PosClient() {
         storeId={storeId || ''}
         storeName={currentStore?.description || 'Sucursal Matriz'}
         user={currentUser}
+        onClose={() => setShiftModalOpen(false)}
         onShiftOpened={(shift) => {
           setActiveShift(shift)
           setShiftModalOpen(false)

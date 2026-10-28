@@ -39,10 +39,12 @@ export async function proxy(request: NextRequest) {
   if (
     pathname.startsWith('/api/') ||
     pathname === '/manifest.json' ||
+    pathname === '/sw.js' ||
     pathname.endsWith('.json') ||
     pathname.endsWith('.svg') ||
     pathname.endsWith('.png') ||
-    pathname.endsWith('.ico')
+    pathname.endsWith('.ico') ||
+    pathname.endsWith('.webmanifest')
   ) {
     return NextResponse.next()
   }
@@ -136,6 +138,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|manifest.json|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|ico|webmanifest)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|ico|webmanifest)$).*)',
   ],
 }

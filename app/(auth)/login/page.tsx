@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { GlassButton } from '@/components/glass-button'
 import { GlassCard } from '@/components/glass-card'
@@ -49,12 +50,19 @@ function LoginForm() {
         {/* Logo + Title */}
         <div className="text-center mb-8">
           <motion.div
-            className="w-16 h-16 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl shadow-emerald-500/30"
+            className="relative w-20 h-20 mx-auto mb-3 flex items-center justify-center drop-shadow-[0_8px_16px_rgba(16,185,129,0.3)]"
             initial={{ scale: 0.7, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
           >
-            <span className="text-white text-2xl font-bold">C</span>
+            <Image
+              src="/logo.png"
+              alt="Campiran Logo"
+              width={80}
+              height={80}
+              priority
+              className="object-contain"
+            />
           </motion.div>
           <h1 className="text-2xl font-bold text-white mb-1">Campiran</h1>
           <p className="text-sm text-white/50">POS + Inventario</p>

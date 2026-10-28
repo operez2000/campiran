@@ -664,8 +664,8 @@ export function CommissionsReportTab({
 
         {/* VISTA 1: RESUMEN POR COLABORADOR */}
         {viewMode === 'summaries' ? (
-          <div className="scrollable-table scroll-modern flex-1">
-            <table className="w-full text-left text-xs">
+          <div className="scrollable-table scroll-modern flex-1 min-h-[360px] sm:min-h-0">
+            <table className="w-full min-w-[750px] sm:min-w-full text-left text-xs">
               <thead>
                 <tr className="glass-table-header">
                   <TableColumnHeader
@@ -799,8 +799,8 @@ export function CommissionsReportTab({
           </div>
         ) : (
           /* VISTA 2: AUDITORÍA DETALLADA POR TICKET */
-          <div className="scrollable-table scroll-modern flex-1">
-            <table className="w-full text-left text-xs">
+          <div className="scrollable-table scroll-modern flex-1 min-h-[360px] sm:min-h-0">
+            <table className="w-full min-w-[850px] sm:min-w-full text-left text-xs">
               <thead>
                 <tr className="glass-table-header">
                   <th className="px-4 py-3.5 text-xs font-semibold text-muted-foreground">No. Ticket</th>
