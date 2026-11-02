@@ -181,7 +181,8 @@ export function LabelPrintModal({
                 height: 52,
                 showText: false,
                 barWidth: 1,
-                quietZone: 4,
+                quietZone: 10,
+                barWidthReduction: 0.20,
               })
             : ''
 
@@ -297,16 +298,20 @@ export function LabelPrintModal({
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                margin: 0.3mm 0;
+                margin: 0.4mm 0;
                 overflow: hidden;
                 width: 100%;
                 flex: 1;
               }
               .barcode-container svg {
-                width: 100%;
-                max-width: 98%;
-                max-height: calc(${labelH}${unit} * 0.58);
+                width: auto;
+                max-width: 90%;
+                height: auto;
+                max-height: calc(${labelH}${unit} * 0.54);
                 shape-rendering: crispEdges;
+                image-rendering: pixelated;
+                image-rendering: -moz-crisp-edges;
+                image-rendering: crisp-edges;
               }
               .item-price {
                 display: flex;
@@ -412,13 +417,14 @@ export function LabelPrintModal({
             height: 52,
             showText: false,
             barWidth: 1,
-            quietZone: 4,
+            quietZone: 10,
+            barWidthReduction: 0.20,
           })
 
           const imgData = await svgToPngDataUrl(barcodeSvg)
           if (imgData) {
-            const barW = Math.min(widthMm - 2.4, 48)
-            const barH = Math.min(heightMm * 0.54, 18)
+            const barW = Math.min(widthMm - 4, 48)
+            const barH = Math.min(heightMm * 0.52, 18)
             const posX = (widthMm - barW) / 2
             const posY = heightMm * 0.32
             pdf.addImage(imgData, 'PNG', posX, posY, barW, barH)

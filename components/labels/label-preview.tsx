@@ -43,7 +43,8 @@ export function LabelPreview({
       height: barHeight,
       showText: false,
       barWidth: 1,
-      quietZone: 4,
+      quietZone: 10,
+      barWidthReduction: 0.20,
     })
   }, [barcodeValue, config.include_barcode, heightMm])
 
