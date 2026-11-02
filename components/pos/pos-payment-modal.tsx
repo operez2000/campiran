@@ -81,6 +81,7 @@ export function PosPaymentModal({
   const [inputAmount, setInputAmount] = useState<string>('')
   const [inputRef, setInputRef] = useState<string>('')
   const [notes, setNotes] = useState<string>('')
+  const [customCashAmount, setCustomCashAmount] = useState<string>('')
 
   // Reset or initialize on open
   useEffect(() => {
@@ -98,6 +99,7 @@ export function PosPaymentModal({
       setInputAmount('')
       setInputRef('')
       setNotes('')
+      setCustomCashAmount('')
     }
   }, [open, totalAmountMxn])
 
@@ -142,15 +144,81 @@ export function PosPaymentModal({
     return highestMethod
   }, [payments])
 
-  // Quick preset amount buttons for cash
-  const handleQuickPreset = (presetMxn: number) => {
-    setPayments([
-      {
-        method: '01',
-        amountMxn: presetMxn,
-        currency: 'MXN',
-      },
-    ])
+  // Current MXN cash amount in payments list
+  const currentCashMxn = useMemo(() => {
+    const cashItem = payments.find((p) => p.method === '01' && p.currency === 'MXN')
+    return cashItem ? cashItem.amountMxn : 0
+  }, [payments])
+
+  // Common Mexican bills and rounded presets
+  const suggestedPresets = useMemo(() => {
+    const commonBills = [50, 100, 200, 500, 1000]
+    const rounded = [
+      Math.ceil(totalAmountMxn / 50) * 50,
+      Math.ceil(totalAmountMxn / 100) * 100,
+    ]
+    const combined = Array.from(new Set([...rounded, ...commonBills]))
+      .filter((v) => v > totalAmountMxn)
+      .sort((a, b) => a - b)
+    return combined.slice(0, 4)
+  }, [totalAmountMxn])
+
+  // Apply a preset or custom cash amount to payments
+  const handleApplyCashAmount = (amount: number, isCustom = false) => {
+    if (isCustom) {
+      setCustomCashAmount(amount > 0 ? amount.toString() : '')
+    } else {
+      setCustomCashAmount(amount === totalAmountMxn ? '' : amount.toString())
+    }
+
+    setPayments((prev) => {
+      const nonCash = prev.filter((p) => !(p.method === '01' && p.currency === 'MXN'))
+      if (amount <= 0 && nonCash.length > 0) {
+        return nonCash
+      }
+      return [
+        ...nonCash,
+        {
+          method: '01',
+          amountMxn: Math.max(0, amount),
+          currency: 'MXN',
+        },
+      ]
+    })
+  }
+
+  // Handle free-form cash input change ("Paga con: $")
+  const handleCustomCashInputChange = (val: string) => {
+    setCustomCashAmount(val)
+    const num = parseFloat(val)
+    if (!isNaN(num) && num >= 0) {
+      setPayments((prev) => {
+        const nonCash = prev.filter((p) => !(p.method === '01' && p.currency === 'MXN'))
+        return [
+          ...nonCash,
+          {
+            method: '01',
+            amountMxn: num,
+            currency: 'MXN',
+          },
+        ]
+      })
+    } else if (val === '') {
+      // Revert back to exact total if single payment
+      setPayments((prev) => {
+        const nonCash = prev.filter((p) => !(p.method === '01' && p.currency === 'MXN'))
+        const coveredByOther = nonCash.reduce((acc, p) => acc + (p.amountMxn || 0), 0)
+        const defaultCash = Math.max(0, totalAmountMxn - coveredByOther)
+        return [
+          ...nonCash,
+          {
+            method: '01',
+            amountMxn: defaultCash,
+            currency: 'MXN',
+          },
+        ]
+      })
+    }
   }
 
   // Add a new payment line
@@ -187,6 +255,10 @@ export function PosPaymentModal({
 
   // Remove payment line
   const handleRemovePayment = (index: number) => {
+    const item = payments[index]
+    if (item && item.method === '01' && item.currency === 'MXN') {
+      setCustomCashAmount('')
+    }
     setPayments((prev) => prev.filter((_, idx) => idx !== index))
   }
 
@@ -224,7 +296,7 @@ export function PosPaymentModal({
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md overflow-hidden">
           {/* Backdrop click */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -238,7 +310,7 @@ export function PosPaymentModal({
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            className="glass-card border-border/50 rounded-2xl sm:rounded-3xl max-w-2xl w-full relative z-10 overflow-hidden shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] my-auto"
+            className="glass-card border-border/50 rounded-2xl sm:rounded-3xl max-w-2xl w-full relative z-10 overflow-hidden shadow-2xl flex flex-col h-[calc(100dvh-1rem)] sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))]"
           >
             {/* Header Fijo */}
             <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
@@ -257,7 +329,7 @@ export function PosPaymentModal({
                         ? `${selectedClient.first_name || ''} ${selectedClient.last_name || ''}`.trim()
                         : 'Público en General'}
                     </span>{' '}
-                    · TC: <span className="font-mono text-emerald-400 font-bold">${exchangeRate.toFixed(2)}</span>
+                    · TC: <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">${exchangeRate.toFixed(2)}</span>
                   </p>
                 </div>
               </div>
@@ -273,9 +345,9 @@ export function PosPaymentModal({
             {/* Cuerpo desplazable */}
             <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
               {/* Total Display Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 p-3 rounded-2xl bg-white/[0.03] border border-border/40 shrink-0">
-              <div>
-                <span className="text-[10px] text-muted-foreground block">Total a Pagar</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4 p-3 rounded-2xl bg-white/90 dark:bg-white/[0.03] border border-zinc-200/80 dark:border-border/40 shadow-xs shrink-0">
+              <div className="flex flex-col justify-center">
+                <span className="text-[10px] font-medium text-muted-foreground block">Total a Pagar</span>
                 <span className="text-base font-bold text-foreground font-mono">
                   {formatCurrency(totalAmountMxn)}
                 </span>
@@ -284,36 +356,63 @@ export function PosPaymentModal({
                 </span>
               </div>
 
-              <div>
-                <span className="text-[10px] text-muted-foreground block">Monto Cubierto</span>
+              <div className="flex flex-col justify-center">
+                <span className="text-[10px] font-medium text-muted-foreground block">Monto Cubierto</span>
                 <span
                   className={`text-base font-bold font-mono ${
-                    totalPaidMxn >= totalAmountMxn ? 'text-emerald-400' : 'text-amber-400'
+                    totalPaidMxn >= totalAmountMxn
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-amber-600 dark:text-amber-400'
                   }`}
                 >
                   {formatCurrency(totalPaidMxn)}
                 </span>
               </div>
 
-              <div>
-                <span className="text-[10px] text-muted-foreground block">Restante</span>
+              <div className="flex flex-col justify-center">
+                <span className="text-[10px] font-medium text-muted-foreground block">Restante</span>
                 <span
                   className={`text-base font-bold font-mono ${
-                    remainingMxn > 0 ? 'text-rose-400' : 'text-muted-foreground/60'
+                    remainingMxn > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-muted-foreground/60'
                   }`}
                 >
                   {formatCurrency(remainingMxn)}
                 </span>
               </div>
 
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-1.5 pl-2.5">
-                <span className="text-[10px] font-bold text-emerald-400 block">
+              {/* Cambio a Regresar: High contrast highlight box */}
+              <div
+                className={`p-2 sm:p-2.5 pl-3 rounded-xl border transition-all flex flex-col justify-center ${
+                  changeMxn > 0
+                    ? 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-emerald-500 shadow-md shadow-emerald-600/20 dark:from-emerald-600/40 dark:to-teal-700/30 dark:border-emerald-500/50 dark:text-emerald-100'
+                    : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/25 text-emerald-950 dark:text-emerald-300'
+                }`}
+              >
+                <span
+                  className={`text-[10px] font-bold block tracking-wide ${
+                    changeMxn > 0
+                      ? 'text-emerald-100 dark:text-emerald-200'
+                      : 'text-emerald-800 dark:text-emerald-400'
+                  }`}
+                >
                   Cambio a Regresar
                 </span>
-                <span className="text-base font-black text-emerald-300 font-mono block leading-tight">
+                <span
+                  className={`text-lg font-black font-mono block leading-tight ${
+                    changeMxn > 0
+                      ? 'text-white dark:text-emerald-100'
+                      : 'text-emerald-900 dark:text-emerald-300'
+                  }`}
+                >
                   {formatCurrency(changeMxn)}
                 </span>
-                <span className="text-[10px] text-emerald-400/80 font-mono font-bold block">
+                <span
+                  className={`text-[10px] font-bold font-mono block ${
+                    changeMxn > 0
+                      ? 'text-emerald-100/90 dark:text-emerald-300/90'
+                      : 'text-emerald-700/80 dark:text-emerald-400/80'
+                  }`}
+                >
                   ≈ ${changeUsd.toFixed(2)} USD
                 </span>
               </div>
@@ -396,37 +495,77 @@ export function PosPaymentModal({
                 )}
               </div>
 
-              {/* Quick Cash Presets if paying cash */}
+              {/* Quick Cash Presets & Captura Libre de Efectivo */}
               <div className="space-y-1.5 pt-1">
-                <span className="text-[11px] font-semibold text-muted-foreground block">
-                  Atajos de Efectivo Rápido (MXN):
-                </span>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-muted-foreground block">
+                    Atajos de Efectivo Rápido (MXN):
+                  </span>
+                  <span className="text-[10px] text-muted-foreground/75 hidden sm:inline">
+                    Selecciona un billete o ingresa el monto recibido
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Botón Exacto */}
                   <button
                     type="button"
-                    onClick={() => handleQuickPreset(totalAmountMxn)}
-                    className="px-2.5 py-1 rounded-xl text-xs font-semibold glass border border-border/40 hover:border-emerald-500/40 text-foreground"
+                    onClick={() => handleApplyCashAmount(totalAmountMxn)}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all ${
+                      currentCashMxn === totalAmountMxn && !customCashAmount
+                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs'
+                        : 'glass border-border/40 hover:border-emerald-500/40 text-foreground'
+                    }`}
                   >
                     Exacto ({formatCurrency(totalAmountMxn)})
                   </button>
-                  {[
-                    Math.ceil(totalAmountMxn / 50) * 50,
-                    Math.ceil(totalAmountMxn / 100) * 100,
-                    Math.ceil(totalAmountMxn / 200) * 200,
-                    Math.ceil(totalAmountMxn / 500) * 500,
-                  ]
-                    .filter((v, i, a) => v > totalAmountMxn && a.indexOf(v) === i)
-                    .slice(0, 3)
-                    .map((preset) => (
+
+                  {/* Billetes / Montos sugeridos */}
+                  {suggestedPresets.map((preset) => {
+                    const isSelected = currentCashMxn === preset && customCashAmount === preset.toString()
+                    return (
                       <button
                         key={preset}
                         type="button"
-                        onClick={() => handleQuickPreset(preset)}
-                        className="px-2.5 py-1 rounded-xl text-xs font-mono font-semibold glass border border-border/40 hover:border-emerald-500/40 text-emerald-400"
+                        onClick={() => handleApplyCashAmount(preset)}
+                        className={`px-2.5 py-1 rounded-xl text-xs font-mono font-semibold border transition-all ${
+                          isSelected
+                            ? 'bg-emerald-500/20 border-emerald-500 text-emerald-800 dark:text-emerald-300 font-bold shadow-xs'
+                            : 'glass border-border/40 hover:border-emerald-500/40 text-emerald-700 dark:text-emerald-400'
+                        }`}
                       >
                         {formatCurrency(preset)}
                       </button>
-                    ))}
+                    )
+                  })}
+
+                  {/* Captura Libre de Importe ("Paga con:") */}
+                  <div className="flex items-center gap-1.5 bg-white/80 dark:bg-white/[0.04] px-2.5 py-1 rounded-xl border border-zinc-200 dark:border-border/60 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500/30 transition-all shadow-xs">
+                    <span className="text-[11px] font-bold text-foreground/80 whitespace-nowrap flex items-center gap-1">
+                      <Banknote size={13} className="text-emerald-600 dark:text-emerald-400" />
+                      <span>Paga con: $</span>
+                    </span>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      placeholder="Otro importe..."
+                      value={customCashAmount}
+                      onChange={(e) => handleCustomCashInputChange(e.target.value)}
+                      onFocus={(e) => e.target.select()}
+                      className="w-24 sm:w-28 text-xs font-mono font-bold text-foreground bg-transparent focus:outline-none placeholder:font-sans placeholder:font-normal placeholder:text-muted-foreground/50"
+                    />
+                    {customCashAmount && (
+                      <button
+                        type="button"
+                        onClick={() => handleCustomCashInputChange('')}
+                        className="p-0.5 text-muted-foreground hover:text-foreground rounded transition-colors"
+                        title="Restablecer importe exacto"
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -674,42 +813,63 @@ export function PosPaymentModal({
             </div>
             </div>
 
-            {/* Footer Fijo */}
-            <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10">
-              <GlassButton
-                variant="ghost"
-                size="sm"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-                className="w-full sm:w-auto"
-              >
-                Cancelar
-              </GlassButton>
+            {/* Footer Fijo y Visible */}
+            <div className="border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-20 shadow-lg">
+              <div className="flex items-center justify-between gap-2.5 sm:gap-4">
+                <div className="flex items-center gap-2 min-w-0">
+                  <GlassButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onOpenChange(false)}
+                    disabled={isSubmitting}
+                    className="px-3 shrink-0"
+                  >
+                    Cancelar
+                  </GlassButton>
 
-              <GlassButton
-                variant="primary"
-                size="md"
-                disabled={
-                  totalPaidMxn < totalAmountMxn ||
-                  isSubmitting ||
-                  Boolean(hasProducts && !selectedSellerId) ||
-                  Boolean(hasServices && !selectedTechnicianId)
-                }
-                onClick={handleConfirm}
-                className="w-full sm:w-auto px-6 font-bold"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                    Registrando Venta...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 size={16} className="mr-2" />
-                    Completar Cobro ({formatCurrency(totalAmountMxn)})
-                  </>
-                )}
-              </GlassButton>
+                  {/* Indicador rápido de estado de pago */}
+                  {remainingMxn > 0 ? (
+                    <span className="hidden xs:inline-flex sm:inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 dark:text-rose-400 bg-rose-100 dark:bg-rose-500/10 border border-rose-300 dark:border-rose-500/20 px-2.5 py-1 rounded-xl truncate">
+                      Falta: {formatCurrency(remainingMxn)}
+                    </span>
+                  ) : changeMxn > 0 ? (
+                    <span className="hidden xs:inline-flex sm:inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/30 px-2.5 py-1 rounded-xl truncate shadow-xs">
+                      Cambio: {formatCurrency(changeMxn)}
+                    </span>
+                  ) : (
+                    <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-500/10 border border-emerald-300/70 dark:border-emerald-500/20 px-2.5 py-1 rounded-xl">
+                      Pago exacto
+                    </span>
+                  )}
+                </div>
+
+                <GlassButton
+                  variant="primary"
+                  size="md"
+                  disabled={isSubmitting}
+                  onClick={handleConfirm}
+                  className={`flex-1 sm:flex-initial px-5 sm:px-7 font-bold py-2.5 sm:py-3 shadow-lg shadow-emerald-500/25 transition-all text-xs sm:text-sm ${
+                    totalPaidMxn < totalAmountMxn ||
+                    Boolean(hasProducts && !selectedSellerId) ||
+                    Boolean(hasServices && !selectedTechnicianId)
+                      ? 'opacity-85 hover:opacity-100 ring-1 ring-amber-500/40'
+                      : ''
+                  }`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2 shrink-0" />
+                      <span>Registrando Venta...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={17} className="mr-2 shrink-0" />
+                      <span>Completar Cobro</span>
+                      <span className="ml-1.5 font-mono">({formatCurrency(totalAmountMxn)})</span>
+                    </>
+                  )}
+                </GlassButton>
+              </div>
             </div>
           </motion.div>
         </div>
