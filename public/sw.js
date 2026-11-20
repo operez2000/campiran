@@ -1,5 +1,5 @@
 // Campiran PWA Service Worker
-const CACHE_NAME = 'campiran-cache-v1'
+const CACHE_NAME = 'campiran-cache-v2'
 
 const PRECACHE_ASSETS = [
   '/',
@@ -17,6 +17,7 @@ const PRECACHE_ASSETS = [
 
 // Install event - precache core shell assets
 self.addEventListener('install', (event) => {
+  self.skipWaiting()
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(PRECACHE_ASSETS).catch((err) => {
@@ -53,6 +54,11 @@ self.addEventListener('message', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
+
+  // 0. Bypass all caching in local development so HMR / Turbopack chunks are never stale
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+    return
+  }
 
   // 1. Bypass non-GET requests
   if (request.method !== 'GET') {

@@ -14,12 +14,13 @@ import { toast } from 'sonner'
 import {
   Tags, Search, Plus, Edit3, Trash2, RotateCcw,
   X, Check, Filter, Layers, DollarSign, Barcode,
-  Image as ImageIcon, Package, Wrench, Sparkles, Percent, Loader2, Tag, FileText
+  Image as ImageIcon, Package, Wrench, Sparkles, Percent, Loader2, Tag, FileText, CreditCard
 } from 'lucide-react'
 import { ProductImageManager, type ManagedImageItem } from '@/components/catalogo/product-image-manager'
 import { ProductImageCarouselModal } from '@/components/catalogo/product-image-carousel-modal'
 import { TableActionMenu, TableColumnHeader, TablePagination } from '@/components/tables'
 import { useStore } from '@/components/providers/store-provider'
+import { useCompany } from '@/components/providers/company-provider'
 import { LabelPrintModal } from '@/components/labels/label-print-modal'
 import { type LabelPrintQueueItem } from '@/lib/types'
 
@@ -43,6 +44,7 @@ interface ItemFormData {
   price3: number
   tax: number
   comission: number
+  apply_card_commission: boolean
   id_category: string
   id_area: string
   id_department: string
@@ -66,6 +68,7 @@ const INITIAL_FORM: ItemFormData = {
   price3: 0,
   tax: 16,
   comission: 0,
+  apply_card_commission: false,
   id_category: '',
   id_area: '',
   id_department: '',
@@ -220,6 +223,7 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
 
   // Contexto de Sucursal e Impresión de Etiquetas
   const { storeId } = useStore()
+  const { cardCommissionPct } = useCompany()
   const [printModalOpen, setPrintModalOpen] = useState(false)
   const [printQueue, setPrintQueue] = useState<LabelPrintQueueItem[]>([])
 
@@ -611,6 +615,7 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
       price3: Number(item.price3) || 0,
       tax: Number(item.tax) ?? 16,
       comission: Number(item.comission) || 0,
+      apply_card_commission: Boolean(item.apply_card_commission),
       id_category: item.id_category || '',
       id_area: item.id_area || '',
       id_department: item.id_department || '',
@@ -795,6 +800,7 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
       price3: Number(formData.price3) || 0,
       tax: Number(formData.tax) || 0,
       comission: Number(formData.comission) || 0,
+      apply_card_commission: formData.type === 'P' ? Boolean(formData.apply_card_commission) : false,
       id_category: formData.id_category || null,
       id_area: formData.id_area || null,
       id_department: formData.id_department || null,
@@ -1213,7 +1219,7 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                   />
                 )}
                 <TableColumnHeader
-                  title={activeTab === 'S' ? 'Tarifa 1 (Menudeo)' : 'P1 (Menudeo)'}
+                  title={activeTab === 'S' ? 'Tarifa 1 (SIN IVA)' : 'P1 (SIN IVA)'}
                   sortKey="price1"
                   currentSortKey={sortKey}
                   sortDirection={sortDirection}
@@ -1221,7 +1227,7 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                   align="right"
                 />
                 <TableColumnHeader
-                  title={activeTab === 'S' ? 'Tarifa 2 (Mayoreo)' : 'P2 (Mayoreo)'}
+                  title={activeTab === 'S' ? 'Tarifa 2 (SIN IVA)' : 'P2 (SIN IVA)'}
                   sortKey="price2"
                   currentSortKey={sortKey}
                   sortDirection={sortDirection}
@@ -1229,7 +1235,7 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                   align="right"
                 />
                 <TableColumnHeader
-                  title={activeTab === 'S' ? 'Tarifa 3' : 'Precio 3'}
+                  title={activeTab === 'S' ? 'Tarifa 3 (SIN IVA)' : 'Precio 3 (SIN IVA)'}
                   sortKey="price3"
                   currentSortKey={sortKey}
                   sortDirection={sortDirection}
@@ -1445,7 +1451,16 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                       )}
 
                       <td className="px-4 py-3.5 text-right font-mono text-xs font-bold text-emerald-400">
-                        {formatCurrency(Number(item.price1 || item.price))}
+                        <div>{formatCurrency(Number(item.price1 || item.price))}</div>
+                        {item.type !== 'S' && item.apply_card_commission && (
+                          <div
+                            title={`Aumenta ${cardCommissionPct}% al pagar con tarjeta`}
+                            className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-sans font-semibold bg-indigo-500/15 text-indigo-400 border border-indigo-500/25"
+                          >
+                            <CreditCard size={9} />
+                            +{cardCommissionPct}% Tarjeta
+                          </div>
+                        )}
                       </td>
 
                       <td className="px-4 py-3.5 text-right font-mono text-xs text-foreground">
@@ -1559,314 +1574,374 @@ export function ItemsClient({ currentProfile }: ItemsClientProps = {}) {
                     </button>
                   </div>
 
-                {/* Segmented Switch: Clasificación (Regular vs Pieza Técnica) */}
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                    Clasificación del Artículo
-                  </label>
-                  <div className="p-1 rounded-xl glass border border-white/10 flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          classification: 'REGULAR',
-                        }))
-                      }
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${formData.classification === 'REGULAR'
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                        }`}
-                    >
-                      <Tag size={14} />
-                      <span>Regular</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          classification: 'FICHA_TECNICA',
-                        }))
-                      }
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${formData.classification === 'FICHA_TECNICA'
-                        ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                        }`}
-                    >
-                      <FileText size={14} />
-                      <span>Pieza Técnica</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Basic Identification */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Segmented Switch: Clasificación (Regular vs Pieza Técnica) */}
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-semibold text-muted-foreground block">
-                        Código Interno
-                      </label>
-                      <span className="text-[10px] text-emerald-400 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                        Solo lectura
-                      </span>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                      Clasificación del Artículo
+                    </label>
+                    <div className="p-1 rounded-xl glass border border-white/10 flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            classification: 'REGULAR',
+                          }))
+                        }
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${formData.classification === 'REGULAR'
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                          }`}
+                      >
+                        <Tag size={14} />
+                        <span>Regular</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            classification: 'FICHA_TECNICA',
+                          }))
+                        }
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${formData.classification === 'FICHA_TECNICA'
+                          ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                          }`}
+                      >
+                        <FileText size={14} />
+                        <span>Pieza Técnica</span>
+                      </button>
                     </div>
-                    <GlassInput
-                      placeholder="00000000000001"
-                      value={formData.code}
-                      readOnly
-                      className="bg-black/25 text-muted-foreground cursor-not-allowed select-all font-mono tracking-wider border-dashed opacity-85 focus:ring-0 focus:border-white/10"
-                      title="El Código Interno es generado automáticamente y no se puede modificar"
-                    />
-                    <p className="text-[10px] text-zinc-500 mt-1">
-                      {editingItem
-                        ? 'Código interno asignado al artículo (inmutable).'
-                        : 'Calculado automáticamente (consecutivo con 14 dígitos).'}
-                    </p>
                   </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-semibold text-muted-foreground block">
-                        Código de Barras
-                      </label>
-                      {formData.barcode === formData.code && formData.code ? (
-                        <span className="text-[10px] text-zinc-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
-                          Default = Cód. Interno
+
+                  {/* Basic Identification */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-semibold text-muted-foreground block">
+                          Código Interno
+                        </label>
+                        <span className="text-[10px] text-emerald-400 font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                          Solo lectura
                         </span>
-                      ) : (
-                        <span className="text-[10px] text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20">
-                          Personalizado
-                        </span>
-                      )}
-                    </div>
-                    <GlassInput
-                      placeholder="Escanee o ingrese código de barras"
-                      value={formData.barcode}
-                      onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                      className="font-mono tracking-wider"
-                    />
-                    <p className="text-[10px] text-zinc-500 mt-1">
-                      Por defecto es igual al código interno. Puede escanear o escribir un código diferente.
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                    {formData.type === 'S' ? 'Nombre del Servicio *' : 'Descripción / Nombre *'}
-                  </label>
-                  <GlassInput
-                    placeholder={
-                      formData.type === 'S'
-                        ? 'Ej. Mantenimiento Preventivo, Cambio de Aceite, Asesoría...'
-                        : 'Nombre completo del producto...'
-                    }
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Categoría
-                    </label>
-                    <select
-                      value={formData.id_category}
-                      onChange={(e) => setFormData({ ...formData, id_category: e.target.value })}
-                      className="w-full glass-input px-3 py-2 text-xs text-foreground bg-transparent focus:outline-none cursor-pointer"
-                    >
-                      <option value="" className="bg-zinc-900 text-white">Sin categoría</option>
-                      {categories.map((c) => (
-                        <option key={c.id_category} value={c.id_category} className="bg-zinc-900 text-white">
-                          {c.description}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Área
-                    </label>
-                    <select
-                      value={formData.id_area}
-                      onChange={(e) => setFormData({ ...formData, id_area: e.target.value })}
-                      className="w-full glass-input px-3 py-2 text-xs text-foreground bg-transparent focus:outline-none cursor-pointer"
-                    >
-                      <option value="" className="bg-zinc-900 text-white">Sin área</option>
-                      {areas.map((a) => (
-                        <option key={a.id_area} value={a.id_area} className="bg-zinc-900 text-white">
-                          {a.description}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                      Departamento
-                    </label>
-                    <select
-                      value={formData.id_department}
-                      onChange={(e) => setFormData({ ...formData, id_department: e.target.value })}
-                      className="w-full glass-input px-3 py-2 text-xs text-foreground bg-transparent focus:outline-none cursor-pointer"
-                    >
-                      <option value="" className="bg-zinc-900 text-white">Sin departamento</option>
-                      {departments.map((d) => (
-                        <option key={d.id_department} value={d.id_department} className="bg-zinc-900 text-white">
-                          {d.description}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Fotografías: Solo para Productos; los servicios no llevan fotos */}
-                {formData.type === 'P' ? (
-                  <div className="pt-2 border-t border-border/20">
-                    <ProductImageManager
-                      key={editingItem?.id_item || 'new-product-images'}
-                      initialImages={itemImages}
-                      onChange={(nextImgs, nextDels) => {
-                        setItemImages(nextImgs)
-                        setDeletedImageIds(nextDels)
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 flex items-start gap-3 text-xs">
-                    <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 shrink-0">
-                      <Wrench size={16} />
+                      </div>
+                      <GlassInput
+                        placeholder="00000000000001"
+                        value={formData.code}
+                        readOnly
+                        className="bg-black/25 text-muted-foreground cursor-not-allowed select-all font-mono tracking-wider border-dashed opacity-85 focus:ring-0 focus:border-white/10"
+                        title="El Código Interno es generado automáticamente y no se puede modificar"
+                      />
+                      <p className="text-[10px] text-zinc-500 mt-1">
+                        {editingItem
+                          ? 'Código interno asignado al artículo (inmutable).'
+                          : 'Calculado automáticamente (consecutivo con 14 dígitos).'}
+                      </p>
                     </div>
                     <div>
-                      <p className="font-semibold text-foreground">Servicio sin soporte fotográfico</p>
-                      <p className="text-muted-foreground text-[11px] mt-0.5 leading-relaxed">
-                        Los servicios profesionales no requieren galería de fotos ni control de inventario de existencias. La clave SAT recomendada para la mayoría de servicios es <strong className="text-indigo-300">E48 (Unidad de Servicio)</strong>.
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-semibold text-muted-foreground block">
+                          Código de Barras
+                        </label>
+                        {formData.barcode === formData.code && formData.code ? (
+                          <span className="text-[10px] text-zinc-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
+                            Default = Cód. Interno
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20">
+                            Personalizado
+                          </span>
+                        )}
+                      </div>
+                      <GlassInput
+                        placeholder="Escanee o ingrese código de barras"
+                        value={formData.barcode}
+                        onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                        className="font-mono tracking-wider"
+                      />
+                      <p className="text-[10px] text-zinc-500 mt-1">
+                        Por defecto es igual al código interno. Puede escanear o escribir un código diferente.
                       </p>
                     </div>
                   </div>
-                )}
 
-                {/* Costs, Prices and Commission */}
-                <div className="pt-2 border-t border-border/20">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">
-                    {formData.type === 'S'
-                      ? (isAdmin ? 'Tarifas, Costo y Comisión' : 'Tarifas y Comisión')
-                      : (isAdmin ? 'Precios y Costos' : 'Precios de Venta')}
-                  </h4>
-                  <div className={`grid grid-cols-2 ${isAdmin ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-3`}>
-                    {isAdmin && (
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                      {formData.type === 'S' ? 'Nombre del Servicio *' : 'Descripción / Nombre *'}
+                    </label>
+                    <GlassInput
+                      placeholder={
+                        formData.type === 'S'
+                          ? 'Ej. Mantenimiento Preventivo, Cambio de Aceite, Asesoría...'
+                          : 'Nombre completo del producto...'
+                      }
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                        Categoría
+                      </label>
+                      <select
+                        value={formData.id_category}
+                        onChange={(e) => setFormData({ ...formData, id_category: e.target.value })}
+                        className="w-full glass-input px-3 py-2 text-xs text-foreground bg-transparent focus:outline-none cursor-pointer"
+                      >
+                        <option value="" className="bg-zinc-900 text-white">Sin categoría</option>
+                        {categories.map((c) => (
+                          <option key={c.id_category} value={c.id_category} className="bg-zinc-900 text-white">
+                            {c.description}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                        Área
+                      </label>
+                      <select
+                        value={formData.id_area}
+                        onChange={(e) => setFormData({ ...formData, id_area: e.target.value })}
+                        className="w-full glass-input px-3 py-2 text-xs text-foreground bg-transparent focus:outline-none cursor-pointer"
+                      >
+                        <option value="" className="bg-zinc-900 text-white">Sin área</option>
+                        {areas.map((a) => (
+                          <option key={a.id_area} value={a.id_area} className="bg-zinc-900 text-white">
+                            {a.description}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                        Departamento
+                      </label>
+                      <select
+                        value={formData.id_department}
+                        onChange={(e) => setFormData({ ...formData, id_department: e.target.value })}
+                        className="w-full glass-input px-3 py-2 text-xs text-foreground bg-transparent focus:outline-none cursor-pointer"
+                      >
+                        <option value="" className="bg-zinc-900 text-white">Sin departamento</option>
+                        {departments.map((d) => (
+                          <option key={d.id_department} value={d.id_department} className="bg-zinc-900 text-white">
+                            {d.description}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Fotografías: Solo para Productos; los servicios no llevan fotos */}
+                  {formData.type === 'P' ? (
+                    <div className="pt-2 border-t border-border/20">
+                      <ProductImageManager
+                        key={editingItem?.id_item || 'new-product-images'}
+                        initialImages={itemImages}
+                        onChange={(nextImgs, nextDels) => {
+                          setItemImages(nextImgs)
+                          setDeletedImageIds(nextDels)
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 flex items-start gap-3 text-xs">
+                      <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 shrink-0">
+                        <Wrench size={16} />
+                      </div>
                       <div>
-                        <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                          {formData.type === 'S' ? 'Costo Insumos' : 'Costo Compra'}
+                        <p className="font-semibold text-foreground">Servicio sin soporte fotográfico</p>
+                        <p className="text-muted-foreground text-[11px] mt-0.5 leading-relaxed">
+                          Los servicios profesionales no requieren galería de fotos ni control de inventario de existencias. La clave SAT recomendada para la mayoría de servicios es <strong className="text-indigo-300">E48 (Unidad de Servicio)</strong>.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Costs, Prices and Commission */}
+                  <div className="pt-2 border-t border-border/20">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                        {formData.type === 'S'
+                          ? (isAdmin ? 'Tarifas, Costo y Comisión' : 'Tarifas y Comisión')
+                          : (isAdmin ? 'Precios (Sin IVA) y Costos' : 'Precios de Venta')}
+                      </h4>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                        Capturar precios SIN IVA
+                      </span>
+                    </div>
+                    <div className={`grid grid-cols-2 ${isAdmin ? 'sm:grid-cols-5' : 'sm:grid-cols-4'} gap-3`}>
+                      {isAdmin && (
+                        <div>
+                          <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                            {formData.type === 'S' ? 'Costo Insumos' : 'Costo Compra'}
+                          </label>
+                          <GlassInput
+                            type="number"
+                            step="any"
+                            value={formData.cost}
+                            onChange={(e) => setFormData({ ...formData, cost: Number(e.target.value) })}
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <label className="text-xs font-semibold text-emerald-400 flex items-center justify-between gap-1 mb-1">
+                          <span>{formData.type === 'S' ? 'Tarifa 1 * (Menudeo)' : 'Precio 1 * (Menudeo)'}</span>
+                          {/* <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-500 border border-amber-500/25 shrink-0">
+                            SIN IVA
+                          </span> */}
                         </label>
                         <GlassInput
                           type="number"
                           step="any"
-                          value={formData.cost}
-                          onChange={(e) => setFormData({ ...formData, cost: Number(e.target.value) })}
+                          value={formData.price1}
+                          onChange={(e) => setFormData({ ...formData, price1: Number(e.target.value) })}
+                          required
                         />
                       </div>
-                    )}
-                    <div>
-                      <label className="text-xs font-semibold text-emerald-400 block mb-1">
-                        {formData.type === 'S' ? 'Tarifa 1 * (Menudeo)' : 'Precio 1 * (Menudeo)'}
-                      </label>
-                      <GlassInput
-                        type="number"
-                        step="any"
-                        value={formData.price1}
-                        onChange={(e) => setFormData({ ...formData, price1: Number(e.target.value) })}
-                        required
-                      />
+                      <div>
+                        <label className="text-xs font-semibold text-blue-400 flex items-center justify-between gap-1 mb-1">
+                          <span>{formData.type === 'S' ? 'Tarifa 2 (Mayoreo)' : 'Precio 2 (Mayoreo)'}</span>
+                          {/* <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-500 border border-amber-500/25 shrink-0">
+                            SIN IVA
+                          </span> */}
+                        </label>
+                        <GlassInput
+                          type="number"
+                          step="any"
+                          value={formData.price2}
+                          onChange={(e) => setFormData({ ...formData, price2: Number(e.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground flex items-center justify-between gap-1 mb-1">
+                          <span>{formData.type === 'S' ? 'Tarifa 3' : 'Precio 3'}</span>
+                          {/* <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-500 border border-amber-500/25 shrink-0">
+                            SIN IVA
+                          </span> */}
+                        </label>
+                        <GlassInput
+                          type="number"
+                          step="any"
+                          value={formData.price3}
+                          onChange={(e) => setFormData({ ...formData, price3: Number(e.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-indigo-400 block mb-1">
+                          Comisión %
+                        </label>
+                        <GlassInput
+                          type="number"
+                          step="any"
+                          placeholder="0"
+                          value={formData.comission}
+                          onChange={(e) => setFormData({ ...formData, comission: Number(e.target.value) })}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-xs font-semibold text-blue-400 block mb-1">
-                        {formData.type === 'S' ? 'Tarifa 2 (Mayoreo)' : 'Precio 2 (Mayoreo)'}
-                      </label>
-                      <GlassInput
-                        type="number"
-                        step="any"
-                        value={formData.price2}
-                        onChange={(e) => setFormData({ ...formData, price2: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                        {formData.type === 'S' ? 'Tarifa 3' : 'Precio 3'}
-                      </label>
-                      <GlassInput
-                        type="number"
-                        step="any"
-                        value={formData.price3}
-                        onChange={(e) => setFormData({ ...formData, price3: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-indigo-400 block mb-1">
-                        Comisión %
-                      </label>
-                      <GlassInput
-                        type="number"
-                        step="any"
-                        placeholder="0"
-                        value={formData.comission}
-                        onChange={(e) => setFormData({ ...formData, comission: Number(e.target.value) })}
-                      />
-                    </div>
-                  </div>
-                </div>
 
-                {/* Fiscal & Tax */}
-                <div className="pt-2 border-t border-border/20">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                    Datos Fiscales (SAT) & Unidad de Medida
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                        Unidad
-                      </label>
-                      <GlassInput
-                        placeholder={formData.type === 'S' ? 'Servicio / Hora' : 'Pza / Kg'}
-                        value={formData.unit}
-                        onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                        IVA %
-                      </label>
-                      <GlassInput
-                        type="number"
-                        value={formData.tax}
-                        onChange={(e) => setFormData({ ...formData, tax: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                        Clave SAT (id_sat)
-                      </label>
-                      <GlassInput
-                        placeholder={formData.type === 'S' ? 'Ej. 72101500' : 'Ej. 01010101'}
-                        value={formData.id_sat}
-                        onChange={(e) => setFormData({ ...formData, id_sat: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground block mb-1">
-                        Unidad SAT
-                      </label>
-                      <GlassInput
-                        placeholder={formData.type === 'S' ? 'E48 (Servicio)' : 'H87 (Pieza)'}
-                        value={formData.unit_sat}
-                        onChange={(e) => setFormData({ ...formData, unit_sat: e.target.value })}
-                      />
+                    {formData.type === 'P' && (
+                      <div className="mt-3 p-3.5 rounded-2xl border border-indigo-500/25 bg-indigo-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-start gap-2.5">
+                          <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-400 shrink-0 mt-0.5">
+                            <CreditCard size={16} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-foreground">
+                              Aumentar comisión por pago con tarjeta ({cardCommissionPct}%)
+                            </p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              Si el cliente paga con tarjeta de crédito (04) o débito (28) en el POS, se sumará el {cardCommissionPct}% configurado en Configuración al precio base de este producto.
+                            </p>
+                            {formData.apply_card_commission && Number(formData.price1) > 0 && (
+                              <p className="text-[11px] font-mono text-indigo-400 font-semibold mt-1">
+                                Precio 1 con tarjeta: {formatCurrency(Number(formData.price1) * (1 + cardCommissionPct / 100))} (+{cardCommissionPct}%)
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={formData.apply_card_commission}
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              apply_card_commission: !formData.apply_card_commission,
+                            })
+                          }
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+                            formData.apply_card_commission
+                              ? 'bg-indigo-500 shadow-md shadow-indigo-500/30'
+                              : 'bg-muted-foreground/30'
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              formData.apply_card_commission ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Fiscal & Tax */}
+                  <div className="pt-2 border-t border-border/20">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                      Datos Fiscales (SAT) & Unidad de Medida
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                          Unidad
+                        </label>
+                        <GlassInput
+                          placeholder={formData.type === 'S' ? 'Servicio / Hora' : 'Pza / Kg'}
+                          value={formData.unit}
+                          onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                          IVA %
+                        </label>
+                        <GlassInput
+                          type="number"
+                          value={formData.tax}
+                          onChange={(e) => setFormData({ ...formData, tax: Number(e.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                          Clave SAT (id_sat)
+                        </label>
+                        <GlassInput
+                          placeholder={formData.type === 'S' ? 'Ej. 72101500' : 'Ej. 01010101'}
+                          value={formData.id_sat}
+                          onChange={(e) => setFormData({ ...formData, id_sat: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                          Unidad SAT
+                        </label>
+                        <GlassInput
+                          placeholder={formData.type === 'S' ? 'E48 (Servicio)' : 'H87 (Pieza)'}
+                          value={formData.unit_sat}
+                          onChange={(e) => setFormData({ ...formData, unit_sat: e.target.value })}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </form>
-            </div>
+                </form>
+              </div>
 
               {/* Footer Fijo */}
               <div className="border-t border-border/40 p-3 sm:p-4 bg-card/95 dark:bg-card/90 backdrop-blur-xl shrink-0 z-10 space-y-1.5">

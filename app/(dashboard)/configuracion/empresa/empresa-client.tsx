@@ -16,7 +16,8 @@ import { toast } from 'sonner'
 import {
   Building2, UploadCloud, Save, CheckCircle2, ShieldCheck,
   AlertCircle, Globe, Phone, Mail, FileText, Image as ImageIcon,
-  KeyRound, ChevronDown, ChevronUp, Sparkles, RefreshCw
+  KeyRound, ChevronDown, ChevronUp, Sparkles, RefreshCw,
+  CreditCard, Percent
 } from 'lucide-react'
 
 // Regímenes fiscales comunes del SAT
@@ -39,9 +40,15 @@ interface EmpresaClientProps {
 export function EmpresaClient({ initialCompany, userRole }: EmpresaClientProps) {
   const supabase = createClient()
   const isAdmin = userRole === 'ADMIN'
-  const { setLogoUrl, setTradeName } = useCompany()
+  const { setLogoUrl, setTradeName, setCardCommissionPct } = useCompany()
 
-  const [company, setCompany] = useState<CompanySettings>(initialCompany)
+  const [company, setCompany] = useState<CompanySettings>({
+    ...initialCompany,
+    card_commission_pct:
+      initialCompany.card_commission_pct !== null && initialCompany.card_commission_pct !== undefined
+        ? Number(initialCompany.card_commission_pct)
+        : 4,
+  })
   const [saving, setSaving] = useState(false)
 
   // Logo upload state
@@ -60,7 +67,13 @@ export function EmpresaClient({ initialCompany, userRole }: EmpresaClientProps) 
       .on('postgres_changes', { event: '*', schema: 'public', table: 'company_settings' }, (payload) => {
         if (payload.new) {
           const updated = payload.new as CompanySettings
-          setCompany(updated)
+          setCompany({
+            ...updated,
+            card_commission_pct:
+              updated.card_commission_pct !== null && updated.card_commission_pct !== undefined
+                ? Number(updated.card_commission_pct)
+                : 4,
+          })
           if (!processedLogo) {
             setLogoPreview(updated.logo_url)
           }
@@ -70,6 +83,9 @@ export function EmpresaClient({ initialCompany, userRole }: EmpresaClientProps) 
           if (updated.trade_name) {
             setTradeName(updated.trade_name)
           }
+          if (updated.card_commission_pct !== undefined && updated.card_commission_pct !== null) {
+            setCardCommissionPct(Number(updated.card_commission_pct))
+          }
         }
       })
       .subscribe()
@@ -77,7 +93,7 @@ export function EmpresaClient({ initialCompany, userRole }: EmpresaClientProps) 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase, processedLogo])
+  }, [supabase, processedLogo, setLogoUrl, setTradeName, setCardCommissionPct])
 
   // Handle Logo selection and automatic compression
   const handleLogoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,14 +193,24 @@ export function EmpresaClient({ initialCompany, userRole }: EmpresaClientProps) 
 
       const updated = await updateCompanySettingsAction({
         ...company,
+        card_commission_pct: Number(company.card_commission_pct ?? 4),
         logo_url: finalLogoUrl,
       })
 
-      setCompany(updated)
+      setCompany({
+        ...updated,
+        card_commission_pct:
+          updated.card_commission_pct !== null && updated.card_commission_pct !== undefined
+            ? Number(updated.card_commission_pct)
+            : 4,
+      })
       setProcessedLogo(null)
       setLogoUrl(updated.logo_url)
       if (updated.trade_name) {
         setTradeName(updated.trade_name)
+      }
+      if (updated.card_commission_pct !== undefined && updated.card_commission_pct !== null) {
+        setCardCommissionPct(Number(updated.card_commission_pct))
       }
       toast.success('Datos de la empresa guardados exitosamente')
     } catch (err: unknown) {
@@ -623,6 +649,72 @@ export function EmpresaClient({ initialCompany, userRole }: EmpresaClientProps) 
           </div>
         </GlassCard>
 
+        {/* Row 3.5: Comisiones y Punto de Venta */}
+        <GlassCard className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <CreditCard size={18} className="text-emerald-500" />
+            <div>
+              <h2 className="text-sm font-bold text-foreground">Comisión por Pago con Tarjeta (POS)</h2>
+              <p className="text-xs text-muted-foreground">
+                Porcentaje que se suma al precio base en productos configurados con comisión al pagar con tarjeta de crédito (04) o débito (28)
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">
+                Porcentaje de Comisión por Tarjeta (%)
+              </label>
+              <div className="relative">
+                <GlassInput
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.01"
+                  value={company.card_commission_pct ?? 4}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setCompany({
+                      ...company,
+                      card_commission_pct: val === '' ? 0 : Math.min(100, Math.max(0, Number(val))),
+                    })
+                  }}
+                  disabled={!isAdmin}
+                  placeholder="4.00"
+                  className="font-mono pr-10"
+                />
+                <Percent
+                  size={15}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                Valor predeterminado: <span className="font-mono font-semibold text-foreground">4%</span>.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs space-y-1">
+              <p className="font-semibold text-emerald-500 flex items-center gap-1.5">
+                <Sparkles size={14} />
+                Vista previa del cálculo en POS
+              </p>
+              <p className="text-muted-foreground">
+                Ejemplo con producto de <span className="font-mono font-semibold text-foreground">$3,000.00</span>:
+              </p>
+              <p className="text-foreground font-mono text-sm font-bold">
+                $3,000.00 + {Number(company.card_commission_pct ?? 4).toFixed(2)}% ={' '}
+                <span className="text-emerald-500">
+                  ${(3000 * (1 + Number(company.card_commission_pct ?? 4) / 100)).toLocaleString('es-MX', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </p>
+            </div>
+          </div>
+        </GlassCard>
+
         {/* Row 4: Certificados Digitales QZ Tray (Avanzado) */}
         <GlassCard className="p-6">
           <button
@@ -692,7 +784,7 @@ export function EmpresaClient({ initialCompany, userRole }: EmpresaClientProps) 
 
         {/* Action Button for Admin */}
         {isAdmin && (
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex items-center justify-end gap-3 mb-4">
             <GlassButton
               type="submit"
               variant="primary"

@@ -54,6 +54,16 @@ interface PosPaymentModalProps {
   onSellerChange?: (sellerId: string | null) => void
   onTechnicianChange?: (techId: string | null) => void
   employees?: Profile[]
+  // Comisión por pago con tarjeta
+  defaultPaymentMethod?: SatPaymentCode
+  isCardPayment?: boolean
+  cardCommissionPct?: number
+  cardCommissionAmount?: number
+  hasCardCommissionItems?: boolean
+  onSelectCardPaymentType?: (type: 'NONE' | '04' | '28') => void
+  // Facturación (IVA)
+  requiresInvoice?: boolean
+  onRequiresInvoiceChange?: (requires: boolean) => void
 }
 
 export function PosPaymentModal({
@@ -71,12 +81,20 @@ export function PosPaymentModal({
   onSellerChange,
   onTechnicianChange,
   employees = [],
+  defaultPaymentMethod = '01',
+  isCardPayment = false,
+  cardCommissionPct = 4,
+  cardCommissionAmount = 0,
+  hasCardCommissionItems = false,
+  onSelectCardPaymentType,
+  requiresInvoice = false,
+  onRequiresInvoiceChange,
 }: PosPaymentModalProps) {
   // Active payment entries
   const [payments, setPayments] = useState<PaymentBreakdownItem[]>([])
 
   // Current entry input fields
-  const [selectedMethod, setSelectedMethod] = useState<SatPaymentCode>('01')
+  const [selectedMethod, setSelectedMethod] = useState<SatPaymentCode>(defaultPaymentMethod)
   const [inputCurrency, setInputCurrency] = useState<'MXN' | 'USD'>('MXN')
   const [inputAmount, setInputAmount] = useState<string>('')
   const [inputRef, setInputRef] = useState<string>('')
@@ -86,22 +104,22 @@ export function PosPaymentModal({
   // Reset or initialize on open
   useEffect(() => {
     if (open) {
-      // Default initial payment: full amount in cash
+      const initialMethod = defaultPaymentMethod || '01'
       setPayments([
         {
-          method: '01',
+          method: initialMethod,
           amountMxn: totalAmountMxn,
           currency: 'MXN',
         },
       ])
-      setSelectedMethod('01')
+      setSelectedMethod(initialMethod)
       setInputCurrency('MXN')
       setInputAmount('')
       setInputRef('')
       setNotes('')
       setCustomCashAmount('')
     }
-  }, [open, totalAmountMxn])
+  }, [open, totalAmountMxn, defaultPaymentMethod])
 
   // Total paid calculation (all converted to MXN)
   const totalPaidMxn = useMemo(() => {
@@ -344,6 +362,93 @@ export function PosPaymentModal({
 
             {/* Cuerpo desplazable */}
             <div className="flex-1 min-h-0 overflow-y-auto scroll-modern p-4 sm:p-6 space-y-4">
+              {/* Pregunta rápida: ¿El cliente requiere factura? (IVA) */}
+              {onRequiresInvoiceChange && (
+                <div className="p-3 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-zinc-200/80 dark:border-border/40 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText
+                      size={16}
+                      className={requiresInvoice ? 'text-emerald-500 shrink-0' : 'text-muted-foreground shrink-0'}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-foreground">¿El cliente requiere factura?</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {requiresInvoice
+                          ? 'Con factura: se suma y desglosa el IVA en el total y en el ticket.'
+                          : 'Sin factura: no se calcula IVA ni se imprime desglose en el ticket.'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => onRequiresInvoiceChange(false)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                        !requiresInvoice
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
+                          : 'bg-transparent text-muted-foreground border-border/40 hover:text-foreground'
+                      }`}
+                    >
+                      No
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRequiresInvoiceChange(true)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                        requiresInvoice
+                          ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                          : 'bg-transparent text-muted-foreground border-border/40 hover:text-foreground'
+                      }`}
+                    >
+                      Sí (+IVA)
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Banner de comisión por pago con tarjeta (solo visible para el cajero) */}
+              {isCardPayment && cardCommissionAmount > 0 && (
+                <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-indigo-400">
+                    <CreditCard size={15} className="shrink-0" />
+                    <span>
+                      Comisión por tarjeta (<strong>{cardCommissionPct}%</strong>) aplicada en productos configurados:{' '}
+                      <strong className="font-mono">+{formatCurrency(cardCommissionAmount)}</strong>. El ticket imprimirá únicamente el precio final.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {!isCardPayment &&
+                hasCardCommissionItems &&
+                (selectedMethod === '04' ||
+                  selectedMethod === '28' ||
+                  payments.some((p) => p.method === '04' || p.method === '28')) && (
+                  <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <div className="flex items-start gap-2 text-amber-500">
+                      <AlertTriangle size={15} className="shrink-0 mt-0.5" />
+                      <span>
+                        Hay productos en el carrito que causan <strong>+{cardCommissionPct}%</strong> por pago con tarjeta, pero la venta no está marcada como pago con tarjeta.
+                      </span>
+                    </div>
+                    {onSelectCardPaymentType && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cardCode: '04' | '28' =
+                            selectedMethod === '28' || payments.some((p) => p.method === '28')
+                              ? '28'
+                              : '04'
+                          onSelectCardPaymentType(cardCode)
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500 text-zinc-950 font-bold text-[11px] hover:bg-amber-400 transition-colors shrink-0"
+                      >
+                        Aplicar +{cardCommissionPct}% tarjeta
+                      </button>
+                    )}
+                  </div>
+                )}
+
               {/* Total Display Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4 p-3 rounded-2xl bg-white/90 dark:bg-white/[0.03] border border-zinc-200/80 dark:border-border/40 shadow-xs shrink-0">
               <div className="flex flex-col justify-center">

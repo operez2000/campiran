@@ -30,6 +30,7 @@ const DEFAULT_COMPANY: CompanySettings = {
   website: '',
   logo_url: null,
   ticket_footer_message: '¡Gracias por su compra!',
+  card_commission_pct: 4,
   qz_cert: null,
   qz_private_key: null,
 }
@@ -70,7 +71,13 @@ export async function getCompanySettingsAction(): Promise<{
   }
 
   return {
-    company: data as CompanySettings,
+    company: {
+      ...(data as CompanySettings),
+      card_commission_pct:
+        data.card_commission_pct !== null && data.card_commission_pct !== undefined
+          ? Number(data.card_commission_pct)
+          : 4,
+    },
     userRole: profile.role,
     userStoreId: profile.id_store,
   }
@@ -92,6 +99,13 @@ export async function updateCompanySettingsAction(
     throw new Error('Solo el Administrador tiene autorización para modificar los datos globales de la empresa.')
   }
 
+  if (data.card_commission_pct !== undefined && data.card_commission_pct !== null) {
+    const pct = Number(data.card_commission_pct)
+    if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+      throw new Error('El porcentaje de comisión por tarjeta debe estar entre 0% y 100%.')
+    }
+  }
+
   const adminClient = createAdminClient()
 
   // Buscar si ya existe un registro
@@ -103,6 +117,9 @@ export async function updateCompanySettingsAction(
 
   const payload = {
     ...data,
+    ...(data.card_commission_pct !== undefined && data.card_commission_pct !== null
+      ? { card_commission_pct: Number(Number(data.card_commission_pct).toFixed(2)) }
+      : {}),
     updated_at: new Date().toISOString(),
   }
 

@@ -85,6 +85,7 @@ export interface CompanySettings {
   website: string | null
   logo_url: string | null
   ticket_footer_message: string | null
+  card_commission_pct?: number | null
   qz_cert?: string | null
   qz_private_key?: string | null
   created_at?: string
@@ -207,6 +208,7 @@ export interface Item {
   price: number | null
   tax: number
   comission: number | null
+  apply_card_commission?: boolean | null
   status: 'A' | 'I'
   id_sat: string | null
   unit_sat: string | null
@@ -460,6 +462,11 @@ export interface Order {
   seller_commission_amount?: number
   technician_commission_pct?: number
   technician_commission_amount?: number
+  // Comisión por pago con tarjeta y facturación
+  is_card_payment?: boolean
+  card_commission_pct?: number
+  card_commission_amount?: number
+  requires_invoice?: boolean
   // Relations
   client?: Client
   store?: Store

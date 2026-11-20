@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/utils/supabase/client'
 import { useStore } from '@/components/providers/store-provider'
+import { useCompany } from '@/components/providers/company-provider'
 import { GlassCard } from '@/components/glass-card'
 import { GlassButton } from '@/components/glass-button'
 import { GlassInput } from '@/components/glass-input'
@@ -26,7 +27,7 @@ import {
   CreditCard, Banknote, ArrowRightLeft, Printer, CheckCircle2,
   X, Layers, ScanLine, DollarSign, Store as StoreIcon, ImageIcon,
   Users, Lock, ShieldCheck, DoorClosed, RotateCcw, History,
-  UserCheck, Wrench
+  UserCheck, Wrench, FileText
 } from 'lucide-react'
 import { PosClientModal } from '@/components/pos/pos-client-modal'
 import { ShiftOpenModal } from '@/components/pos/shift-open-modal'
@@ -47,6 +48,7 @@ interface CartLine {
 export function PosClient() {
   const supabase = createClient()
   const { currentStore, storeId } = useStore()
+  const { cardCommissionPct } = useCompany()
 
   // Authenticated User & Active Cash Shift
   const [currentUser, setCurrentUser] = useState<Profile | null>(null)
@@ -62,8 +64,11 @@ export function PosClient() {
   const [search, setSearch] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  // Cart
+  // Cart, Card Payment Option ('NONE' | '04' Crédito | '28' Débito) & Invoice (IVA)
   const [cart, setCart] = useState<CartLine[]>([])
+  const [cardPaymentType, setCardPaymentType] = useState<'NONE' | '04' | '28'>('NONE')
+  const isCardPayment = cardPaymentType !== 'NONE'
+  const [requiresInvoice, setRequiresInvoice] = useState<boolean>(false)
 
   // Employees & Commissions Assignment
   const [employees, setEmployees] = useState<Profile[]>([])
@@ -109,6 +114,7 @@ export function PosClient() {
     subtotal: number
     tax: number
     total: number
+    requiresInvoice: boolean
     clientName: string
     primaryMethod: SatPaymentCode
     payments: PaymentBreakdownItem[]
@@ -125,8 +131,8 @@ export function PosClient() {
 
   const handlePrintTicket = async () => {
     if (!completedOrder) return
-    setPrintingWithQz(true)
 
+    setPrintingWithQz(true)
     try {
       // 1. Check if there's an active branch printer for this store
       if (storeId) {
@@ -161,6 +167,7 @@ export function PosClient() {
               subtotal: completedOrder.subtotal,
               tax: completedOrder.tax,
               total: completedOrder.total,
+              requiresInvoice: completedOrder.requiresInvoice,
               primaryMethod: completedOrder.primaryMethod,
               payments: completedOrder.payments.map((p) => ({
                 method: SAT_PAYMENT_METHODS.find((m) => m.code === p.method)?.label || p.method,
@@ -536,6 +543,8 @@ export function PosClient() {
   // Clear Cart
   const handleClearCart = () => {
     setCart([])
+    setCardPaymentType('NONE')
+    setRequiresInvoice(false)
     setSelectedClient(null)
     setIsClientSelected(false)
     initialClientPromptDone.current = false
@@ -578,39 +587,91 @@ export function PosClient() {
     }
   }
 
+  // Effective Cart Lines (applies card commission on eligible products when paying with card 04/28)
+  const effectiveCart = useMemo(() => {
+    return cart.map((line) => {
+      const eligibleForCardCommission =
+        line.item.type !== 'S' && Boolean(line.item.apply_card_commission) && cardCommissionPct > 0
+      const appliesCardCommission = isCardPayment && eligibleForCardCommission
+      const baseUnitPrice = line.unitPrice
+      const baseTotalPrice = Number((baseUnitPrice * line.quantity).toFixed(2))
+      const effectiveUnitPrice = appliesCardCommission
+        ? Number((baseUnitPrice * (1 + cardCommissionPct / 100)).toFixed(2))
+        : baseUnitPrice
+      const effectiveTotalPrice = Number((effectiveUnitPrice * line.quantity).toFixed(2))
+      const cardCommissionLineAmount = Number((effectiveTotalPrice - baseTotalPrice).toFixed(2))
+
+      return {
+        ...line,
+        eligibleForCardCommission,
+        appliesCardCommission,
+        baseUnitPrice,
+        baseTotalPrice,
+        effectiveUnitPrice,
+        effectiveTotalPrice,
+        cardCommissionLineAmount,
+      }
+    })
+  }, [cart, isCardPayment, cardCommissionPct])
+
   // Cart Totals
-  const { subtotal, taxAmount, total, hasProducts, hasServices, productsSubtotal, servicesSubtotal } = useMemo(() => {
+  const {
+    subtotal,
+    baseSubtotal,
+    cardCommissionTotal,
+    hasCardCommissionItems,
+    taxAmount,
+    total,
+    hasProducts,
+    hasServices,
+    productsSubtotal,
+    servicesSubtotal,
+  } = useMemo(() => {
     let sub = 0
+    let baseSub = 0
+    let cardComm = 0
+    let hasCardCommItems = false
     let tax = 0
     let pSub = 0
     let sSub = 0
     let hProd = false
     let hServ = false
 
-    cart.forEach((line) => {
-      const lineTotal = line.totalPrice
+    effectiveCart.forEach((line) => {
+      const lineTotal = line.effectiveTotalPrice
       const lineTaxRate = (line.item.tax ?? 16) / 100
       sub += lineTotal
-      tax += lineTotal * lineTaxRate
+      baseSub += line.baseTotalPrice
+      cardComm += line.cardCommissionLineAmount
+      if (line.eligibleForCardCommission) hasCardCommItems = true
+      if (requiresInvoice) {
+        tax += lineTotal * lineTaxRate
+      }
 
       if (line.item.type === 'S') {
         hServ = true
-        sSub += lineTotal
+        sSub += line.baseTotalPrice
       } else {
         hProd = true
-        pSub += lineTotal
+        // Comisión de vendedor se calcula sobre precio base (sin comisión bancaria de terminal)
+        pSub += line.baseTotalPrice
       }
     })
+    const finalSub = Number(sub.toFixed(2))
+    const finalTax = requiresInvoice ? Number(tax.toFixed(2)) : 0
     return {
-      subtotal: sub,
-      taxAmount: tax,
-      total: sub + tax,
+      subtotal: finalSub,
+      baseSubtotal: Number(baseSub.toFixed(2)),
+      cardCommissionTotal: Number(cardComm.toFixed(2)),
+      hasCardCommissionItems: hasCardCommItems,
+      taxAmount: finalTax,
+      total: Number((finalSub + finalTax).toFixed(2)),
       hasProducts: hProd,
       hasServices: hServ,
-      productsSubtotal: pSub,
-      servicesSubtotal: sSub,
+      productsSubtotal: Number(pSub.toFixed(2)),
+      servicesSubtotal: Number(sSub.toFixed(2)),
     }
-  }, [cart])
+  }, [effectiveCart, requiresInvoice])
 
   // Open Checkout Modal
   const handleOpenCheckout = () => {
@@ -704,6 +765,10 @@ export function PosClient() {
       orderPayload.cash_received_usd = paymentData.cashReceivedUsd
       orderPayload.change_mxn = paymentData.changeMxn
       orderPayload.change_usd = paymentData.changeUsd
+      orderPayload.is_card_payment = isCardPayment
+      orderPayload.card_commission_pct = isCardPayment && cardCommissionTotal > 0 ? cardCommissionPct : 0
+      orderPayload.card_commission_amount = isCardPayment ? cardCommissionTotal : 0
+      orderPayload.requires_invoice = requiresInvoice
 
       let orderData: any = null
       const { data: insertedOrder, error: orderError } = await supabase
@@ -738,20 +803,20 @@ export function PosClient() {
       const orderId = orderData.id_order
       const orderNumber = orderData.order_number ?? Math.floor(1000 + Math.random() * 9000)
 
-      // 2. Insert items into `order_items`
-      const orderItemsToInsert = cart.map((line) => ({
+      // 2. Insert items into `order_items` (con precio final cobrado al cliente, sin desglose de comisión)
+      const orderItemsToInsert = effectiveCart.map((line) => ({
         id_order: orderId,
         id_item: line.item.id_item,
         quantity: line.quantity,
-        unit_price: line.unitPrice,
-        total_price: line.totalPrice,
+        unit_price: line.effectiveUnitPrice,
+        total_price: line.effectiveTotalPrice,
       }))
 
       const { error: itemsError } = await supabase.from('order_items').insert(orderItemsToInsert)
       if (itemsError) throw new Error(itemsError.message)
 
       // 3. Update stock & register transactions
-      for (const line of cart) {
+      for (const line of effectiveCart) {
         const { data: stockEntry } = await supabase
           .from('stocks')
           .select('id_stock, current, id_location')
@@ -778,7 +843,7 @@ export function PosClient() {
             amount_enrty: 0,
             amount_exit: line.quantity,
             cost: line.item.cost ?? 0,
-            price: line.unitPrice,
+            price: line.effectiveUnitPrice,
             reference: `VENTA-ORDEN-#${orderNumber}`,
             concept: 'Venta Punto de Venta (POS)',
             origin: 'POS',
@@ -787,15 +852,24 @@ export function PosClient() {
         }
       }
 
-      // 4. Set completed order for Ticket receipt preview
+      // 4. Set completed order for Ticket receipt preview (precio final sin mencionar comisión)
+      const ticketItems: CartLine[] = effectiveCart.map((line) => ({
+        item: line.item,
+        quantity: line.quantity,
+        unitPrice: line.effectiveUnitPrice,
+        totalPrice: line.effectiveTotalPrice,
+        stockAvailable: line.stockAvailable,
+      }))
+
       setCompletedOrder({
         orderId,
         orderNumber,
         date: new Date().toISOString(),
-        items: [...cart],
+        items: ticketItems,
         subtotal,
         tax: taxAmount,
         total,
+        requiresInvoice,
         clientName: selectedClient
           ? `${selectedClient.first_name ?? ''} ${selectedClient.last_name ?? ''}`.trim()
           : 'Público en General',
@@ -825,6 +899,8 @@ export function PosClient() {
       setSelectedTechnicianId(null)
 
       setCart([])
+      setCardPaymentType('NONE')
+      setRequiresInvoice(false)
       setSelectedClient(null)
       setIsClientSelected(false)
       initialClientPromptDone.current = false
@@ -1250,11 +1326,95 @@ export function PosClient() {
                   </div>
                 )}
               </div>
+
+              {/* Pregunta: ¿Pago con Tarjeta? (SAT 04 Crédito / 28 Débito) */}
+              <div className="mt-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-border/30 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+                    <CreditCard size={13} className="text-indigo-400" />
+                    ¿Pagará con tarjeta?
+                  </span>
+                  {isCardPayment && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/25">
+                      +{cardCommissionPct}% aplicable
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCardPaymentType('NONE')}
+                    className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
+                      cardPaymentType === 'NONE'
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40 shadow-xs'
+                        : 'bg-white/[0.02] text-muted-foreground border-border/30 hover:text-foreground'
+                    }`}
+                  >
+                    No
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCardPaymentType('04')}
+                    className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
+                      cardPaymentType === '04'
+                        ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-xs'
+                        : 'bg-white/[0.02] text-muted-foreground border-border/30 hover:text-foreground'
+                    }`}
+                  >
+                    Crédito (04)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCardPaymentType('28')}
+                    className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
+                      cardPaymentType === '28'
+                        ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-xs'
+                        : 'bg-white/[0.02] text-muted-foreground border-border/30 hover:text-foreground'
+                    }`}
+                  >
+                    Débito (28)
+                  </button>
+                </div>
+              </div>
+
+              {/* Pregunta: ¿Requiere Factura? (Suma y desglosa IVA en POS y Ticket) */}
+              <div className="mt-2 p-2.5 rounded-xl bg-white/[0.03] border border-border/30 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <FileText size={13} className={requiresInvoice ? 'text-emerald-400 shrink-0' : 'text-muted-foreground shrink-0'} />
+                  <span className="text-[11px] font-semibold text-foreground truncate">
+                    ¿Requiere factura?
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setRequiresInvoice(false)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
+                      !requiresInvoice
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40 shadow-xs'
+                        : 'bg-white/[0.02] text-muted-foreground border-border/30 hover:text-foreground'
+                    }`}
+                  >
+                    No
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRequiresInvoice(true)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
+                      requiresInvoice
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-xs'
+                        : 'bg-white/[0.02] text-muted-foreground border-border/30 hover:text-foreground'
+                    }`}
+                  >
+                    Sí (+IVA)
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Cart Items List with Thumbnail */}
             <div className="flex-1 overflow-y-auto scroll-modern divide-y divide-border/20 p-2">
-              {cart.length === 0 ? (
+              {effectiveCart.length === 0 ? (
                 <div className="py-16 text-center text-muted-foreground px-4">
                   <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-3 text-muted-foreground/60">
                     <ScanLine size={24} />
@@ -1265,7 +1425,7 @@ export function PosClient() {
                   </p>
                 </div>
               ) : (
-                cart.map((line) => {
+                effectiveCart.map((line) => {
                   const cartImg =
                     line.item.item_images?.find((i) => i.is_cover) || line.item.item_images?.[0]
 
@@ -1291,11 +1451,35 @@ export function PosClient() {
                         <p className="text-xs font-semibold text-foreground truncate">
                           {line.item.description}
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground font-mono">
-                          <span>{formatCurrency(line.unitPrice)}</span>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground font-mono flex-wrap">
+                          {line.appliesCardCommission ? (
+                            <>
+                              <span className="line-through opacity-60">
+                                {formatCurrency(line.baseUnitPrice)}
+                              </span>
+                              <span className="text-indigo-400 font-semibold">
+                                {formatCurrency(line.effectiveUnitPrice)}
+                              </span>
+                            </>
+                          ) : (
+                            <span>{formatCurrency(line.effectiveUnitPrice)}</span>
+                          )}
                           <span>×</span>
                           <span className="text-foreground font-semibold">{line.quantity}</span>
                         </div>
+                        {line.appliesCardCommission ? (
+                          <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-[10px] font-medium text-indigo-300">
+                            <CreditCard size={10} />
+                            <span>
+                              Comisión tarjeta +{cardCommissionPct}% (Base {formatCurrency(line.baseUnitPrice)} → {formatCurrency(line.effectiveUnitPrice)})
+                            </span>
+                          </div>
+                        ) : line.eligibleForCardCommission ? (
+                          <div className="mt-0.5 text-[10px] text-muted-foreground/80 flex items-center gap-1">
+                            <CreditCard size={9} className="text-indigo-400/70" />
+                            <span>Causa +{cardCommissionPct}% con tarjeta</span>
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="flex items-center gap-1">
@@ -1318,7 +1502,7 @@ export function PosClient() {
 
                       <div className="text-right min-w-[65px]">
                         <span className="text-xs font-bold text-foreground font-mono block">
-                          {formatCurrency(line.totalPrice)}
+                          {formatCurrency(line.effectiveTotalPrice)}
                         </span>
                         <button
                           onClick={() => handleRemoveFromCart(line.item.id_item)}
@@ -1335,16 +1519,40 @@ export function PosClient() {
 
             {/* Cart Footer / Totals & Pay Button */}
             <div className="p-4 border-t border-border/40 space-y-3 bg-black/20">
+              {isCardPayment && cardCommissionTotal > 0 && (
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-[11px] space-y-0.5">
+                  <div className="flex items-center justify-between text-indigo-300 font-semibold">
+                    <span className="flex items-center gap-1">
+                      <CreditCard size={12} />
+                      Vista cajero · Comisión tarjeta ({cardCommissionPct}%)
+                    </span>
+                    <span className="font-mono">+{formatCurrency(cardCommissionTotal)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-muted-foreground font-mono text-[10px]">
+                    <span>Precio base: {formatCurrency(baseSubtotal)}</span>
+                    <span>Con tarjeta: {formatCurrency(subtotal)}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1.5 text-xs text-muted-foreground">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span className="font-mono text-foreground">{formatCurrency(subtotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Impuestos (IVA)</span>
-                  <span className="font-mono text-foreground">{formatCurrency(taxAmount)}</span>
-                </div>
-                <div className="flex justify-between text-base font-bold text-foreground pt-1.5 border-t border-border/20">
+                {requiresInvoice && (
+                  <>
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
+                      <span className="font-mono text-foreground">{formatCurrency(subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Impuestos (IVA)</span>
+                      <span className="font-mono text-foreground">{formatCurrency(taxAmount)}</span>
+                    </div>
+                  </>
+                )}
+                <div
+                  className={`flex justify-between text-base font-bold text-foreground ${
+                    requiresInvoice ? 'pt-1.5 border-t border-border/20' : ''
+                  }`}
+                >
                   <div>
                     <span>Total MXN:</span>
                     <span className="text-[11px] text-muted-foreground block font-normal">
@@ -1423,6 +1631,14 @@ export function PosClient() {
         onSellerChange={handleSellerChange}
         onTechnicianChange={setSelectedTechnicianId}
         employees={employees}
+        defaultPaymentMethod={cardPaymentType === 'NONE' ? '01' : cardPaymentType}
+        isCardPayment={isCardPayment}
+        cardCommissionPct={cardCommissionPct}
+        cardCommissionAmount={cardCommissionTotal}
+        hasCardCommissionItems={hasCardCommissionItems}
+        onSelectCardPaymentType={setCardPaymentType}
+        requiresInvoice={requiresInvoice}
+        onRequiresInvoiceChange={setRequiresInvoice}
       />
 
       {/* Modal 4: Completed Ticket Receipt Preview with SAT breakdown & Bilingual Change */}
@@ -1485,14 +1701,18 @@ export function PosClient() {
 
                 {/* Totals & SAT Payments Breakdown */}
                 <div className="space-y-1 text-xs font-mono border-b border-dashed border-zinc-300 pb-3">
-                  <div className="flex justify-between text-zinc-600">
-                    <span>Subtotal:</span>
-                    <span>{formatCurrency(completedOrder.subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-zinc-600">
-                    <span>IVA:</span>
-                    <span>{formatCurrency(completedOrder.tax)}</span>
-                  </div>
+                  {completedOrder.requiresInvoice && (
+                    <>
+                      <div className="flex justify-between text-zinc-600">
+                        <span>Subtotal:</span>
+                        <span>{formatCurrency(completedOrder.subtotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-zinc-600">
+                        <span>IVA:</span>
+                        <span>{formatCurrency(completedOrder.tax)}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between font-bold text-sm text-zinc-950 pt-1">
                     <span>TOTAL:</span>
                     <span>{formatCurrency(completedOrder.total)}</span>
@@ -1606,6 +1826,10 @@ export function PosClient() {
             subtotal: Number(order.total_amount) - Number(order.tax_amount || 0),
             tax: Number(order.tax_amount || 0),
             total: Number(order.total_amount),
+            requiresInvoice:
+              order.requires_invoice !== undefined && order.requires_invoice !== null
+                ? Boolean(order.requires_invoice)
+                : Number(order.tax_amount || 0) > 0,
             clientName: order.client
               ? `${order.client.first_name || ''} ${order.client.last_name || ''}`.trim()
               : 'Público en General',

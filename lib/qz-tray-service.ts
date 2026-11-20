@@ -306,6 +306,7 @@ export interface CompletedOrderReceiptData {
   subtotal: number
   tax: number
   total: number
+  requiresInvoice?: boolean
   primaryMethod?: string
   payments?: { method: string; amount: number; reference?: string }[]
   cashReceivedMxn?: number
@@ -372,9 +373,12 @@ export async function printOrderReceipt(
 
   lines.push(dash)
 
-  // Totals
-  lines.push(formatTwoColumns('Subtotal:', `$${order.subtotal.toFixed(2)}`, cpl))
-  lines.push(formatTwoColumns('IVA:', `$${order.tax.toFixed(2)}`, cpl))
+  // Totals (desglose de Subtotal + IVA únicamente si el cliente requiere factura)
+  const showTaxBreakdown = order.requiresInvoice ?? order.tax > 0
+  if (showTaxBreakdown) {
+    lines.push(formatTwoColumns('Subtotal:', `$${order.subtotal.toFixed(2)}`, cpl))
+    lines.push(formatTwoColumns('IVA:', `$${order.tax.toFixed(2)}`, cpl))
+  }
   lines.push(ESC_POS.BOLD_ON)
   lines.push(formatTwoColumns('TOTAL:', `$${order.total.toFixed(2)} MXN`, cpl))
   lines.push(ESC_POS.BOLD_OFF)

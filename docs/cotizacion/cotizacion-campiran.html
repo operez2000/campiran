@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><title>Cotización — Sistema Campiran</title>
+<style>
+@page{size:Letter;margin:16mm 14mm}
+body{font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;color:#1e293b;font-size:10.5pt;line-height:1.45}
+h1{margin:0;font-size:22pt;background:linear-gradient(90deg,#059669,#0d9488);-webkit-background-clip:text;color:transparent}
+h2{color:#047857;border-bottom:2px solid #10b981;padding-bottom:3px;margin-top:22px;font-size:13.5pt}
+h3{margin:14px 0 4px;color:#4338ca;font-size:11.5pt}
+.head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #6366f1;padding-bottom:10px}
+.meta{text-align:right;font-size:9.5pt;color:#475569}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:10pt}
+th{background:#ecfdf5;color:#065f46;text-align:left;padding:6px;border-bottom:2px solid #10b981}
+td{padding:5px 6px;border-bottom:1px solid #e2e8f0}
+td.n{text-align:right;white-space:nowrap}
+tr.tot td{font-weight:700;background:#eef2ff}
+tr.grand td{font-weight:800;font-size:12pt;background:#d1fae5;color:#065f46}
+ul{margin:3px 0 6px 18px;padding:0} li{margin:1px 0}
+.mod{page-break-inside:avoid}
+.note{background:#fffbeb;border-left:4px solid #f59e0b;padding:8px 10px;margin-top:10px;font-size:9.5pt}
+.tag{display:inline-block;background:#eef2ff;color:#4338ca;border-radius:8px;padding:0 6px;font-size:8.5pt;margin-left:6px}
+.firmas{display:flex;justify-content:space-around;margin-top:50px}
+.firmas div{border-top:1px solid #334155;width:40%;text-align:center;padding-top:4px;font-size:9.5pt}
+</style></head><body>
+
+<div class="head">
+ <div><h1>Campiran</h1><div>Sistema de Punto de Venta, Inventario y Gestión Multisucursal</div></div>
+ <div class="meta"><b>COTIZACIÓN No. CMP-2026-001</b><br>Tijuana, B.C., 19 de noviembre de 2026<br>Vigencia: 30 días naturales<br>Moneda: Pesos mexicanos (MXN)</div>
+</div>
+
+<h2>1. Resumen del proyecto</h2>
+<p>Desarrollo a la medida de una aplicación web progresiva (PWA) que funciona en computadora, tableta y celular. Integra punto de venta, control de inventarios, compras, traspasos entre sucursales, asistencia de personal con geolocalización y biometría, comisiones, impresión de tickets y etiquetas, y reportes ejecutivos. Toda la información se actualiza <b>en tiempo real</b> entre sucursales y usuarios.</p>
+<p><b>Tecnología:</b> Next.js 16, React 19, TypeScript, Supabase (PostgreSQL, autenticación, almacenamiento y tiempo real), TailwindCSS 4, con diseño moderno tipo Apple (glassmorphism) en modo claro y oscuro.<br>
+<b>Dimensión:</b> ~48,700 líneas de código, 27 pantallas, 24 migraciones de base de datos y más de 1,300 horas de ingeniería.</p>
+
+<h2>2. Alcance y características por módulo</h2>
+
+<div class="mod"><h3>2.1 Punto de Venta (POS) <span class="tag">180 h</span></h3><ul>
+<li>Búsqueda instantánea de artículos por código interno, código de barras (lector o cámara) o descripción.</li>
+<li>Carrito con cantidades, descuentos y <b>tres listas de precios</b> asignables por cliente.</li>
+<li>Cliente "Público en General" predeterminado y alta rápida de clientes desde la venta.</li>
+<li>Cobro con varios métodos de pago, cálculo de cambio y notas u observaciones por venta.</li>
+<li>Impresión directa de tickets en impresora térmica (QZ Tray), sin cuadros de diálogo.</li>
+<li>Historial de ventas del turno con detalle de cada orden y reimpresión.</li>
+<li><b>Cancelación de ventas con autorización y motivo</b>; el inventario se repone automáticamente y queda bitácora.</li>
+<li>Asignación de vendedor y técnico a cada venta para el cálculo de comisiones.</li>
+<li>Existencias en tiempo real durante la venta.</li></ul></div>
+
+<div class="mod"><h3>2.2 Turnos de caja y biometría <span class="tag">110 h</span></h3><ul>
+<li>Apertura y cierre de caja <b>en dos monedas (pesos y dólares)</b>, con fondo inicial y arqueo.</li>
+<li>Diferencias (sobrantes y faltantes) calculadas automáticamente al cierre.</li>
+<li><b>Identificación biométrica</b> del cajero: huella o Face ID del dispositivo (WebAuthn) y detección facial con cámara.</li>
+<li>Registro biométrico de cada empleado desde la administración de usuarios.</li></ul></div>
+
+<div class="mod"><h3>2.3 Asistencia y prenómina <span class="tag">90 h</span></h3><ul>
+<li>El trabajador registra su <b>entrada y salida desde la app, sin reloj checador</b>.</li>
+<li><b>Geocerca por sucursal:</b> la app valida la ubicación GPS del empleado y solo permite el registro dentro del radio configurado, para evitar registros desde otro lugar.</li>
+<li>Verificación de identidad con fotografía o biometría al checar, para evitar que otra persona registre por el empleado.</li>
+<li>Modo kiosco para una tableta compartida en la sucursal y botón de asistencia en el encabezado.</li>
+<li>Configuración de coordenadas y radio de cada tienda.</li>
+<li>Reporte de asistencia por empleado y periodo, con horas trabajadas, base para la prenómina.</li></ul></div>
+
+<div class="mod"><h3>2.4 Catálogo de artículos <span class="tag">130 h</span></h3><ul>
+<li>Alta completa: código interno consecutivo de 14 dígitos, código de barras, descripción, unidad, costo, tres precios, impuestos, <b>clave y unidad SAT</b>, y clasificación (regular o pieza técnica).</li>
+<li>Validación de códigos únicos para evitar artículos duplicados.</li>
+<li><b>Fotografías de producto tomadas con la cámara del celular</b> o subidas desde archivo.</li>
+<li><b>Editor integrado para girar y recortar la imagen</b> antes de guardarla.</li>
+<li><b>Compresión y validación automática del tamaño</b> de la imagen, para no exceder lo necesario y ahorrar almacenamiento y datos.</li>
+<li>Varias imágenes por artículo, con portada seleccionable y carrusel de visualización.</li>
+<li>Catálogos auxiliares: categorías, áreas, departamentos y ubicaciones por sucursal.</li>
+<li>Tablas con encabezado fijo, búsqueda, ordenamiento por columna, paginación y menú de acciones.</li></ul></div>
+
+<div class="mod"><h3>2.5 Inventarios <span class="tag">260 h</span></h3><ul>
+<li><b>Consulta de existencias</b> por sucursal y ubicación, con alertas de artículos por debajo del mínimo.</li>
+<li><b>Inventario físico con escáner:</b> sesiones de conteo, captura continua con lector o cámara del celular, cantidades negativas para corregir y filtro por ubicación.</li>
+<li>Comparativo en vivo entre el stock del sistema, el conteo físico y la diferencia; varios capturistas pueden contar al mismo tiempo.</li>
+<li>Reinicio controlado del inventario de la sucursal con respaldo previo (antes y después).</li>
+<li>Exportación del conteo a PDF con firma del responsable y a Excel.</li>
+<li><b>Ajustes de inventario</b> con motivo y autorización.</li>
+<li><b>Traspasos entre sucursales</b> con envío, tránsito y recepción, y afectación automática de existencias.</li>
+<li><b>Kardex por artículo</b>: entradas, salidas, saldo y costo, con la trazabilidad de cada movimiento.</li>
+<li>Historial completo de movimientos.</li></ul></div>
+
+<div class="mod"><h3>2.6 Compras, proveedores y cuentas por pagar <span class="tag">90 h</span></h3><ul>
+<li>Proveedores con días y límite de crédito.</li>
+<li>Registro de compras con entrada automática al inventario y actualización de costos.</li>
+<li>Control de saldos y cuentas por pagar por proveedor.</li></ul></div>
+
+<div class="mod"><h3>2.7 Clientes <span class="tag">50 h</span></h3><ul>
+<li>Datos fiscales para CFDI (RFC único, régimen y domicilio).</li>
+<li>Varias direcciones de envío y lista de precios asignada a cada cliente.</li>
+<li>Historial de compras por cliente.</li></ul></div>
+
+<div class="mod"><h3>2.8 Comisiones <span class="tag">50 h</span></h3><ul>
+<li>Comisiones de vendedores por venta y de técnicos por servicio.</li>
+<li>Reporte de comisiones por periodo y empleado.</li></ul></div>
+
+<div class="mod"><h3>2.9 Etiquetas, impresoras y configuración de la empresa <span class="tag">80 h</span></h3><ul>
+<li>Diseño de etiquetas con código de barras <b>configurable por sucursal</b> (tamaño y campos), con vista previa.</li>
+<li>Impresión masiva de etiquetas desde el catálogo.</li>
+<li>Configuración de impresoras de tickets y etiquetas por sucursal.</li>
+<li>Datos generales de la empresa (logotipo, razón social y encabezado de tickets).</li></ul></div>
+
+<div class="mod"><h3>2.10 Reportes <span class="tag">110 h</span></h3><ul>
+<li>Ventas del día, la semana y el mes con gráficas; productos más vendidos; utilidad bruta.</li>
+<li>Stock bajo mínimos, movimientos de inventario e historial de inventarios físicos.</li>
+<li>Cuentas por pagar, asistencia y comisiones.</li>
+<li>Exportación a PDF y Excel según el rol.</li></ul></div>
+
+<div class="mod"><h3>2.11 Seguridad, usuarios y multisucursal <span class="tag">90 h</span></h3><ul>
+<li>Inicio de sesión con correo y contraseña o con Google; recuperación de contraseña.</li>
+<li>Cinco roles (Administrador, Gerente, Cajero, Almacenista y Pendiente), cada uno con acceso solo a sus módulos.</li>
+<li>Aprobación de usuarios nuevos y <b>bloqueo inmediato en tiempo real</b> al desactivar a un empleado.</li>
+<li>El administrador cambia de sucursal desde el encabezado; los demás roles quedan fijos en su tienda.</li>
+<li>Seguridad a nivel de base de datos (RLS) y eliminación lógica, para que ningún dato se pierda.</li></ul></div>
+
+<div class="mod"><h3>2.12 Plataforma, tiempo real y experiencia de usuario <span class="tag">80 h</span></h3><ul>
+<li>Aplicación instalable en celular y tableta (PWA), con actualizaciones automáticas.</li>
+<li>Sincronización en tiempo real de ventas, existencias, conteos y usuarios, sin recargar la página.</li>
+<li>Diseño responsivo, modo oscuro y claro, y animaciones fluidas.</li></ul></div>
+
+<div class="mod"><h3>2.13 Gestión del proyecto, pruebas y puesta en marcha <span class="tag">110 h</span></h3><ul>
+<li>Análisis de requerimientos, diseño de la base de datos, pruebas funcionales, despliegue en producción y migración de datos.</li>
+<li>Capacitación por rol (administradores, cajeros y almacenistas).</li></ul></div>
+
+<h2>3. Inversión</h2>
+<table>
+<tr><th>Módulo</th><th class="n">Horas</th><th class="n">Importe (MXN)</th></tr>
+<tr><td>Punto de Venta (POS)</td><td class="n">180</td><td class="n">$64,350</td></tr>
+<tr><td>Turnos de caja y biometría</td><td class="n">110</td><td class="n">$39,325</td></tr>
+<tr><td>Asistencia con geocerca y prenómina</td><td class="n">90</td><td class="n">$32,175</td></tr>
+<tr><td>Catálogo de artículos e imágenes</td><td class="n">130</td><td class="n">$46,475</td></tr>
+<tr><td>Inventarios (físico, ajustes, traspasos, Kardex)</td><td class="n">260</td><td class="n">$92,950</td></tr>
+<tr><td>Compras, proveedores y cuentas por pagar</td><td class="n">90</td><td class="n">$32,175</td></tr>
+<tr><td>Clientes</td><td class="n">50</td><td class="n">$17,875</td></tr>
+<tr><td>Comisiones</td><td class="n">50</td><td class="n">$17,875</td></tr>
+<tr><td>Etiquetas, impresoras y configuración</td><td class="n">80</td><td class="n">$28,600</td></tr>
+<tr><td>Reportes</td><td class="n">110</td><td class="n">$39,325</td></tr>
+<tr><td>Seguridad, usuarios y multisucursal</td><td class="n">90</td><td class="n">$32,175</td></tr>
+<tr><td>Plataforma, tiempo real y PWA</td><td class="n">80</td><td class="n">$28,600</td></tr>
+<tr><td>Gestión, pruebas, puesta en marcha y capacitación</td><td class="n">110</td><td class="n">$39,325</td></tr>
+<tr class="tot"><td>Subtotal (1,430 h × $357.50 MXN por hora)</td><td class="n">1,430</td><td class="n">$511,225</td></tr>
+<tr><td>IVA (16%)</td><td></td><td class="n">$81,796</td></tr>
+<tr class="grand"><td>TOTAL</td><td></td><td class="n">$593,021</td></tr>
+</table>
+
+<h3>Forma de pago</h3>
+<ul><li>30% de anticipo al firmar: $177,906.30</li><li>40% a la entrega de módulos: $237,208.40</li><li>30% al arrancar en producción: $177,906.30</li></ul>
+
+<h2>4. Servicios recurrentes (opcionales)</h2>
+<table>
+<tr><th>Concepto</th><th class="n">Mensual (MXN + IVA)</th></tr>
+<tr><td>Soporte y mantenimiento (correctivo, actualizaciones de seguridad y hasta 8 h de ajustes)</td><td class="n">$7,800</td></tr>
+<tr><td>Infraestructura en la nube (Supabase Pro, hosting y dominio), administrada</td><td class="n">$1,170</td></tr>
+<tr><td>Horas adicionales y nuevos desarrollos</td><td class="n">$357.50 por hora</td></tr>
+</table>
+
+<h2>5. Condiciones</h2>
+<ul>
+<li>Garantía de 90 días por defectos de funcionamiento a partir de la puesta en producción.</li>
+<li>El código fuente y la base de datos se entregan al cliente al liquidar el total.</li>
+<li>No incluye equipo físico (impresoras, lectores, tabletas), timbrado de CFDI ni licencias de terceros.</li>
+<li>Los cambios de alcance se cotizan por separado.</li>
+</ul>
+<div class="note">Precios de referencia para el mercado de Tijuana, B.C. (noviembre de 2026). Cotización sujeta a revisión al cumplirse la vigencia.</div>
+
+<div class="firmas"><div>Desarrollador</div><div>Cliente — Aceptación</div></div>
+</body></html>

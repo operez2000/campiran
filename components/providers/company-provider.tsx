@@ -7,8 +7,10 @@ import { type CompanySettings } from '@/lib/types'
 interface CompanyContextValue {
   logoUrl: string | null
   tradeName: string
+  cardCommissionPct: number
   setLogoUrl: (url: string | null) => void
   setTradeName: (name: string) => void
+  setCardCommissionPct: (pct: number) => void
 }
 
 const CompanyContext = createContext<CompanyContextValue | null>(null)
@@ -17,30 +19,34 @@ export function CompanyProvider({
   children,
   initialLogoUrl = null,
   initialTradeName = 'Campiran',
+  initialCardCommissionPct = 4,
 }: {
   children: ReactNode
   initialLogoUrl?: string | null
   initialTradeName?: string
+  initialCardCommissionPct?: number
 }) {
   const [logoUrl, setLogoUrl] = useState<string | null>(initialLogoUrl)
   const [tradeName, setTradeName] = useState<string>(initialTradeName)
+  const [cardCommissionPct, setCardCommissionPct] = useState<number>(initialCardCommissionPct)
   const supabase = createClient()
 
-  // Fetch on mount if initial is missing, and subscribe to Realtime
+  // Fetch on mount and subscribe to Realtime
   useEffect(() => {
-    if (!initialLogoUrl) {
-      supabase
-        .from('company_settings')
-        .select('logo_url, trade_name')
-        .limit(1)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data) {
-            if (data.logo_url !== undefined) setLogoUrl(data.logo_url)
-            if (data.trade_name) setTradeName(data.trade_name)
+    supabase
+      .from('company_settings')
+      .select('logo_url, trade_name, card_commission_pct')
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          if (data.logo_url !== undefined) setLogoUrl(data.logo_url)
+          if (data.trade_name) setTradeName(data.trade_name)
+          if (data.card_commission_pct !== null && data.card_commission_pct !== undefined) {
+            setCardCommissionPct(Number(data.card_commission_pct))
           }
-        })
-    }
+        }
+      })
 
     const channel = supabase
       .channel('company-settings-global-realtime')
@@ -56,6 +62,9 @@ export function CompanyProvider({
             if (updated.trade_name !== undefined && updated.trade_name) {
               setTradeName(updated.trade_name)
             }
+            if (updated.card_commission_pct !== undefined && updated.card_commission_pct !== null) {
+              setCardCommissionPct(Number(updated.card_commission_pct))
+            }
           }
         }
       )
@@ -64,15 +73,17 @@ export function CompanyProvider({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase, initialLogoUrl])
+  }, [supabase])
 
   return (
     <CompanyContext.Provider
       value={{
         logoUrl,
         tradeName,
+        cardCommissionPct,
         setLogoUrl,
         setTradeName,
+        setCardCommissionPct,
       }}
     >
       {children}
@@ -86,8 +97,10 @@ export function useCompany(): CompanyContextValue {
     return {
       logoUrl: null,
       tradeName: 'Campiran',
+      cardCommissionPct: 4,
       setLogoUrl: () => {},
       setTradeName: () => {},
+      setCardCommissionPct: () => {},
     }
   }
   return ctx

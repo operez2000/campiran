@@ -246,17 +246,25 @@ export function PosOrderDetailModal({
 
             {/* Totales */}
             <div className="p-3.5 rounded-2xl bg-white/5 border border-border/30 space-y-1.5 text-xs">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Subtotal:</span>
-                <span>{formatCurrency(Number(order.total_amount) - Number(order.tax_amount || 0))}</span>
-              </div>
-              {Number(order.tax_amount) > 0 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Impuestos (IVA):</span>
-                  <span>{formatCurrency(order.tax_amount)}</span>
-                </div>
+              {(order.requires_invoice ?? Number(order.tax_amount || 0) > 0) && (
+                <>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(Number(order.total_amount) - Number(order.tax_amount || 0))}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Impuestos (IVA):</span>
+                    <span>{formatCurrency(Number(order.tax_amount || 0))}</span>
+                  </div>
+                </>
               )}
-              <div className="flex justify-between border-t border-border/20 pt-2 text-base font-bold">
+              <div
+                className={`flex justify-between text-base font-bold ${
+                  (order.requires_invoice ?? Number(order.tax_amount || 0) > 0)
+                    ? 'border-t border-border/20 pt-2'
+                    : ''
+                }`}
+              >
                 <span className="text-foreground">Total:</span>
                 <span className={isCancelled ? 'text-rose-400 line-through' : 'text-emerald-400'}>
                   {formatCurrency(order.total_amount)}
